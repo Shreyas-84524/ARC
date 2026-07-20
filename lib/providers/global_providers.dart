@@ -6,6 +6,8 @@ import 'package:arc/features/task_manager/repository/task_repository.dart';
 import 'package:arc/features/habit_tracker/models/habit_model.dart';
 import 'package:arc/features/habit_tracker/models/habit_entry_model.dart';
 import 'package:arc/features/habit_tracker/repository/habit_repository.dart';
+import 'package:arc/features/money_tracker/models/transaction_model.dart';
+import 'package:arc/features/money_tracker/repository/money_repository.dart';
 import 'package:arc/core/notifications/notification_service.dart';
 
 // Theme Mode Provider (Light vs Dark)
@@ -394,6 +396,80 @@ Map<String, dynamic> getHabitMetrics(String habitId, List<HabitEntry> entries, D
   };
 }
 
+// Money Repository Provider
+final moneyRepositoryProvider = Provider<MoneyRepository>((ref) {
+  return MoneyRepository();
+});
+
+// Current Month Helper Provider ("yyyy-MM")
+final currentMonthProvider = Provider<String>((ref) {
+  return DateFormat('yyyy-MM').format(DateTime.now());
+});
+
+// Monthly Budget State Notifier Provider
+final monthlyBudgetProvider = StateNotifierProvider<MonthlyBudgetNotifier, double>((ref) {
+  final repo = ref.watch(moneyRepositoryProvider);
+  final month = ref.watch(currentMonthProvider);
+  return MonthlyBudgetNotifier(repo, month);
+});
+
+class MonthlyBudgetNotifier extends StateNotifier<double> {
+  final MoneyRepository _repository;
+  final String _currentMonth;
+
+  MonthlyBudgetNotifier(this._repository, this._currentMonth) : super(0.0) {
+    _loadBudget();
+  }
+
+  void _loadBudget() {
+    state = _repository.getMonthlyBudget(_currentMonth);
+  }
+
+  Future<void> setBudget(double amount) async {
+    await _repository.saveMonthlyBudget(_currentMonth, amount);
+    state = _repository.getMonthlyBudget(_currentMonth);
+  }
+}
+
+// Money Transactions State Notifier Provider
+final moneyProvider = StateNotifierProvider<MoneyNotifier, List<Transaction>>((ref) {
+  final repo = ref.watch(moneyRepositoryProvider);
+  return MoneyNotifier(repo);
+});
+
+class MoneyNotifier extends StateNotifier<List<Transaction>> {
+  final MoneyRepository _repository;
+
+  MoneyNotifier(this._repository) : super([]) {
+    _loadTransactions();
+  }
+
+  void _loadTransactions() {
+    state = _repository.getTransactions();
+    syncTransactions();
+  }
+
+  Future<void> syncTransactions() async {
+    await _repository.syncPending();
+    state = _repository.getTransactions();
+  }
+
+  Future<void> addTransaction(Transaction tx) async {
+    await _repository.saveTransaction(tx);
+    state = _repository.getTransactions();
+  }
+
+  Future<void> updateTransaction(Transaction tx) async {
+    await _repository.saveTransaction(tx);
+    state = _repository.getTransactions();
+  }
+
+  Future<void> deleteTransaction(String id) async {
+    await _repository.deleteTransaction(id);
+    state = _repository.getTransactions();
+  }
+}
+
 // Dashboard State Provider
 final dashboardProvider = Provider<Map<String, dynamic>>((ref) {
   final tasks = ref.watch(tasksProvider);
@@ -416,34 +492,37 @@ final dashboardProvider = Provider<Map<String, dynamic>>((ref) {
     }
   }
 
+  // Dynamic Money calculations
+  final transactions = ref.watch(moneyProvider);
+  final currentMonth = ref.watch(currentMonthProvider);
+  final monthlyBudget = ref.watch(monthlyBudgetProvider);
+
+  double totalIncome = 0.0;
+  double totalExpenses = 0.0;
+
+  for (final tx in transactions) {
+    final txMonthStr = DateFormat('yyyy-MM').format(tx.date);
+    if (txMonthStr == currentMonth) {
+      if (tx.type == 'Income') {
+        totalIncome += tx.amount;
+      } else {
+        totalExpenses += tx.amount;
+      }
+    }
+  }
+
+  final remainingBudget = monthlyBudget + totalIncome - totalExpenses;
+
   return {
     'completedTasks': completedTasks,
     'totalTasks': totalTasks,
     'completedHabits': completedHabits,
     'totalHabits': totalHabits,
-    'remainingBudget': 420.50,
-    'totalBudget': 800.00,
+    'remainingBudget': remainingBudget,
+    'totalBudget': monthlyBudget,
     'streakDays': maxStreak,
   };
 });
-
-// Money State Provider (Placeholder)
-final moneyProvider = StateNotifierProvider<MoneyNotifier, List<Map<String, dynamic>>>((ref) {
-  return MoneyNotifier();
-});
-
-class MoneyNotifier extends StateNotifier<List<Map<String, dynamic>>> {
-  MoneyNotifier() : super([
-    {'id': '1', 'title': 'Salary Deposit', 'category': 'Salary', 'amount': 300.00, 'isIncome': true},
-    {'id': '2', 'title': 'Grocery Shopping', 'category': 'Food', 'amount': -42.50, 'isIncome': false},
-    {'id': '3', 'title': 'Gas Station', 'category': 'Fuel', 'amount': -35.00, 'isIncome': false},
-    {'id': '4', 'title': 'Movie Tickets', 'category': 'Entertainment', 'amount': -24.00, 'isIncome': false},
-  ]);
-
-  void addTransaction(Map<String, dynamic> tx) {
-    state = [tx, ...state];
-  }
-}
 
 // Notifications Configuration State Provider (Placeholder)
 final notificationsSettingsProvider = StateProvider<Map<String, bool>>((ref) {

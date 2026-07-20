@@ -6,6 +6,8 @@ import 'package:arc/features/task_manager/repository/task_repository.dart';
 import 'package:arc/features/habit_tracker/models/habit_model.dart';
 import 'package:arc/features/habit_tracker/models/habit_entry_model.dart';
 import 'package:arc/features/habit_tracker/repository/habit_repository.dart';
+import 'package:arc/features/money_tracker/models/transaction_model.dart';
+import 'package:arc/features/money_tracker/repository/money_repository.dart';
 import 'package:arc/providers/global_providers.dart';
 
 class FakeTaskRepository implements TaskRepository {
@@ -80,14 +82,47 @@ class FakeHabitRepository implements HabitRepository {
   Future<void> syncPending() async {}
 }
 
+class FakeMoneyRepository implements MoneyRepository {
+  final List<Transaction> _txs = [];
+  final Map<String, double> _budgets = {};
+
+  @override
+  List<Transaction> getTransactions() => _txs;
+
+  @override
+  double getMonthlyBudget(String yearMonth) {
+    return _budgets[yearMonth] ?? 0.0;
+  }
+
+  @override
+  Future<void> saveMonthlyBudget(String yearMonth, double amount) async {
+    _budgets[yearMonth] = amount;
+  }
+
+  @override
+  Future<void> saveTransaction(Transaction tx) async {
+    _txs.removeWhere((t) => t.id == tx.id);
+    _txs.add(tx);
+  }
+
+  @override
+  Future<void> deleteTransaction(String id) async {
+    _txs.removeWhere((t) => t.id == id);
+  }
+
+  @override
+  Future<void> syncPending() async {}
+}
+
 void main() {
   testWidgets('App renders successfully and shows dashboard contents', (WidgetTester tester) async {
-    // Build our app with the fake repository overrides and trigger a frame.
+    // Build our app with all fake overrides and trigger a frame.
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           taskRepositoryProvider.overrideWithValue(FakeTaskRepository()),
           habitRepositoryProvider.overrideWithValue(FakeHabitRepository()),
+          moneyRepositoryProvider.overrideWithValue(FakeMoneyRepository()),
         ],
         child: const ProjectArcApp(),
       ),
