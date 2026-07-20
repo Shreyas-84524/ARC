@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "729643761637",
+    "project_id": "arc-productivity-shreyas",
+    "storage_bucket": "arc-productivity-shreyas.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:729643761637:android:39bc738c98a05bd4dc790c",
+        "android_client_info": {
+          "package_name": "com.arc.arc"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCTp6kyYEFN_yBX-cnRAR45E66dGk4UHVo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
