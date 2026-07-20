@@ -209,17 +209,29 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
 
           // Task List
           Expanded(
-            child: filteredTasks.isEmpty
-                ? _buildEmptyState(context)
-                : ListView.separated(
-                    padding: const EdgeInsets.only(left: 20, right: 20, bottom: 96),
-                    itemCount: filteredTasks.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final task = filteredTasks[index];
-                      return _buildTaskSlidable(context, task);
-                    },
-                  ),
+            child: RefreshIndicator(
+              onRefresh: () async {
+                await ref.read(tasksProvider.notifier).syncTasks();
+              },
+              child: filteredTasks.isEmpty
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        const SizedBox(height: 80),
+                        _buildEmptyState(context),
+                      ],
+                    )
+                  : ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.only(left: 20, right: 20, bottom: 96),
+                      itemCount: filteredTasks.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final task = filteredTasks[index];
+                        return _buildTaskSlidable(context, task);
+                      },
+                    ),
+            ),
           ),
         ],
       ),

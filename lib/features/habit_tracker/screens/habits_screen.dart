@@ -180,9 +180,14 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
               controller: _tabController,
               children: [
                 // ------------------ CHECK-IN VIEW ------------------
-                SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  child: Column(
+                RefreshIndicator(
+                  onRefresh: () async {
+                    await ref.read(habitsProvider.notifier).syncHabits();
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Overview metrics
@@ -399,11 +404,17 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
                     ],
                   ),
                 ),
+              ),
 
                 // ------------------ ANALYTICS VIEW ------------------
-                SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  child: Column(
+                RefreshIndicator(
+                  onRefresh: () async {
+                    await ref.read(habitsProvider.notifier).syncHabits();
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Goal Filter Dropdown
@@ -558,6 +569,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
                     ],
                   ),
                 ),
+              ),
               ],
             ),
           ),

@@ -139,11 +139,18 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: const CustomTopBar(title: 'Dashboard'),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await ref.read(tasksProvider.notifier).syncTasks();
+          await ref.read(habitsProvider.notifier).syncHabits();
+          await ref.read(moneyProvider.notifier).syncTransactions();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // 1. Today's Progress Card
             Card(
               child: Padding(
@@ -470,6 +477,7 @@ class DashboardScreen extends ConsumerWidget {
           ],
         ),
       ),
+    ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.accent,
         foregroundColor: AppColors.textPrimaryLight,

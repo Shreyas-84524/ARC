@@ -77,6 +77,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
             onPressed: () {
               final double? amount = double.tryParse(controller.text.trim());
               if (amount != null && amount >= 0) {
+                HapticFeedback.mediumImpact();
                 ref.read(monthlyBudgetProvider.notifier).setBudget(amount);
                 Navigator.of(context).pop();
               }
@@ -198,9 +199,14 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
               controller: _tabController,
               children: [
                 // ------------------ TRANSACTIONS VIEW ------------------
-                SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  child: Column(
+                RefreshIndicator(
+                  onRefresh: () async {
+                    await ref.read(moneyProvider.notifier).syncTransactions();
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Set Budget Banner
@@ -329,11 +335,17 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
                     ],
                   ),
                 ),
+              ),
 
                 // ------------------ ANALYTICS VIEW ------------------
-                SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  child: Column(
+                RefreshIndicator(
+                  onRefresh: () async {
+                    await ref.read(moneyProvider.notifier).syncTransactions();
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // 1. Monthly Summary Card
@@ -654,6 +666,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
                     ],
                   ),
                 ),
+              ),
               ],
             ),
           ),

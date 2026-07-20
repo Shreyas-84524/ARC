@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
@@ -137,6 +138,7 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
       createdAt: widget.transactionToEdit?.createdAt ?? now,
     );
 
+    HapticFeedback.mediumImpact();
     if (widget.transactionToEdit == null) {
       ref.read(moneyProvider.notifier).addTransaction(tx);
     } else {
@@ -148,6 +150,7 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
 
   void _deleteTransaction() {
     if (widget.transactionToEdit != null) {
+      HapticFeedback.mediumImpact();
       ref.read(moneyProvider.notifier).deleteTransaction(widget.transactionToEdit!.id);
       Navigator.of(context).pop();
     }
