@@ -162,6 +162,49 @@ class NotificationService {
     debugPrint('Canceled all notifications for task ID: $taskId');
   }
 
+  Future<void> scheduleEveningReminder(int incompleteCount) async {
+    if (incompleteCount <= 0) {
+      await cancelEveningReminder();
+      return;
+    }
+
+    final now = DateTime.now();
+    var scheduledTime = DateTime(now.year, now.month, now.day, 20, 0); // 8:00 PM
+    if (scheduledTime.isBefore(now)) {
+      scheduledTime = scheduledTime.add(const Duration(days: 1));
+    }
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'arc_habits_reminder_channel',
+      'Habit Reminders',
+      channelDescription: 'Evening alerts for incomplete habits',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails();
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _localNotificationsPlugin.zonedSchedule(
+      999999,
+      'Incomplete Habits Left!',
+      'You still have $incompleteCount habits left to complete today. Keep your streak alive!',
+      tz.TZDateTime.from(scheduledTime, tz.local),
+      details,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+    debugPrint('Scheduled evening reminder for $scheduledTime, incomplete count: $incompleteCount');
+  }
+
+  Future<void> cancelEveningReminder() async {
+    await _localNotificationsPlugin.cancel(999999);
+    debugPrint('Canceled evening habit reminder.');
+  }
+
   Future<void> showInstantNotification({
     required int id,
     required String title,

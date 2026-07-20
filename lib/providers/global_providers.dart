@@ -211,27 +211,56 @@ class HabitsNotifier extends StateNotifier<List<Habit>> {
 
   void _loadHabits() {
     state = _repository.getHabits();
+    _updateReminder();
     syncHabits();
   }
 
   Future<void> syncHabits() async {
     await _repository.syncPending();
     state = _repository.getHabits();
+    _updateReminder();
   }
 
   Future<void> addHabit(Habit habit) async {
     await _repository.saveHabit(habit);
     state = _repository.getHabits();
+    _updateReminder();
   }
 
   Future<void> updateHabit(Habit habit) async {
     await _repository.saveHabit(habit);
     state = _repository.getHabits();
+    _updateReminder();
   }
 
   Future<void> deleteHabit(String id) async {
     await _repository.deleteHabit(id);
     state = _repository.getHabits();
+    _updateReminder();
+  }
+
+  void _updateReminder() {
+    final habits = _repository.getHabits();
+    final entries = _repository.getEntries();
+    
+    final dailyHabits = habits.where((h) => h.goalType == 'Daily').toList();
+    if (dailyHabits.isEmpty) {
+      NotificationService().cancelEveningReminder();
+      return;
+    }
+
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    int incompleteCount = 0;
+    for (final habit in dailyHabits) {
+      final completed = entries.any(
+        (e) => e.habitId == habit.id && e.dateStr == todayStr && e.completed,
+      );
+      if (!completed) {
+        incompleteCount++;
+      }
+    }
+
+    NotificationService().scheduleEveningReminder(incompleteCount);
   }
 }
 
@@ -250,11 +279,37 @@ class HabitEntriesNotifier extends StateNotifier<List<HabitEntry>> {
 
   void _loadEntries() {
     state = _repository.getEntries();
+    _updateReminder();
   }
 
   Future<void> toggleEntry(String habitId, String dateStr, bool completed) async {
     await _repository.toggleEntry(habitId, dateStr, completed);
     state = _repository.getEntries();
+    _updateReminder();
+  }
+
+  void _updateReminder() {
+    final habits = _repository.getHabits();
+    final entries = _repository.getEntries();
+    
+    final dailyHabits = habits.where((h) => h.goalType == 'Daily').toList();
+    if (dailyHabits.isEmpty) {
+      NotificationService().cancelEveningReminder();
+      return;
+    }
+
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    int incompleteCount = 0;
+    for (final habit in dailyHabits) {
+      final completed = entries.any(
+        (e) => e.habitId == habit.id && e.dateStr == todayStr && e.completed,
+      );
+      if (!completed) {
+        incompleteCount++;
+      }
+    }
+
+    NotificationService().scheduleEveningReminder(incompleteCount);
   }
 }
 
