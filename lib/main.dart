@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:timezone/data/latest.dart' as tz;
 import 'package:arc/firebase_options.dart';
 import 'package:arc/core/theme/app_theme.dart';
 import 'package:arc/routes/app_router.dart';
@@ -11,6 +12,9 @@ import 'package:arc/providers/global_providers.dart';
 void main() async {
   // Ensure widget bindings are initialized
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Timezones
+  tz.initializeTimeZones();
 
   // Initialize Firebase Cloud services
   try {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:arc/features/task_manager/models/task_model.dart';
 import 'package:arc/features/task_manager/repository/task_repository.dart';
+import 'package:arc/core/notifications/notification_service.dart';
 
 // Theme Mode Provider (Light vs Dark)
 final themeModeProvider = StateProvider<ThemeMode>((ref) {
@@ -38,11 +39,14 @@ class TasksNotifier extends StateNotifier<List<Task>> {
 
   Future<void> addTask(Task task) async {
     await _repository.saveTask(task);
+    await NotificationService().scheduleTaskReminders(task);
     state = _repository.getTasks();
   }
 
   Future<void> updateTask(Task task) async {
     await _repository.saveTask(task);
+    await NotificationService().cancelTaskReminders(task.id);
+    await NotificationService().scheduleTaskReminders(task);
     state = _repository.getTasks();
   }
 
@@ -53,11 +57,19 @@ class TasksNotifier extends StateNotifier<List<Task>> {
       updatedAt: DateTime.now(),
     );
     await _repository.saveTask(updatedTask);
+    
+    if (updatedTask.completed) {
+      await NotificationService().cancelTaskReminders(task.id);
+    } else {
+      await NotificationService().scheduleTaskReminders(updatedTask);
+    }
+    
     state = _repository.getTasks();
   }
 
   Future<void> deleteTask(String id) async {
     await _repository.deleteTask(id);
+    await NotificationService().cancelTaskReminders(id);
     state = _repository.getTasks();
   }
 }

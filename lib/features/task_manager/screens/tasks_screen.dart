@@ -67,8 +67,6 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     // Subscriptions
     final filteredTasks = ref.watch(filteredTasksProvider);
     final activeStatus = ref.watch(taskStatusFilterProvider);
