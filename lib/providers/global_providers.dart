@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:arc/features/task_manager/models/task_model.dart';
 import 'package:arc/features/task_manager/repository/task_repository.dart';
+import 'package:arc/features/habit_tracker/models/habit_model.dart';
+import 'package:arc/features/habit_tracker/models/habit_entry_model.dart';
+import 'package:arc/features/habit_tracker/repository/habit_repository.dart';
 import 'package:arc/core/notifications/notification_service.dart';
 
 // Theme Mode Provider (Light vs Dark)
@@ -187,45 +191,186 @@ int _priorityValue(String priority) {
   }
 }
 
+// Habit Repository Provider
+final habitRepositoryProvider = Provider<HabitRepository>((ref) {
+  return HabitRepository();
+});
+
+// Habits State Provider
+final habitsProvider = StateNotifierProvider<HabitsNotifier, List<Habit>>((ref) {
+  final repo = ref.watch(habitRepositoryProvider);
+  return HabitsNotifier(repo);
+});
+
+class HabitsNotifier extends StateNotifier<List<Habit>> {
+  final HabitRepository _repository;
+
+  HabitsNotifier(this._repository) : super([]) {
+    _loadHabits();
+  }
+
+  void _loadHabits() {
+    state = _repository.getHabits();
+    syncHabits();
+  }
+
+  Future<void> syncHabits() async {
+    await _repository.syncPending();
+    state = _repository.getHabits();
+  }
+
+  Future<void> addHabit(Habit habit) async {
+    await _repository.saveHabit(habit);
+    state = _repository.getHabits();
+  }
+
+  Future<void> updateHabit(Habit habit) async {
+    await _repository.saveHabit(habit);
+    state = _repository.getHabits();
+  }
+
+  Future<void> deleteHabit(String id) async {
+    await _repository.deleteHabit(id);
+    state = _repository.getHabits();
+  }
+}
+
+// Habit Entries State Provider
+final habitEntriesProvider = StateNotifierProvider<HabitEntriesNotifier, List<HabitEntry>>((ref) {
+  final repo = ref.watch(habitRepositoryProvider);
+  return HabitEntriesNotifier(repo);
+});
+
+class HabitEntriesNotifier extends StateNotifier<List<HabitEntry>> {
+  final HabitRepository _repository;
+
+  HabitEntriesNotifier(this._repository) : super([]) {
+    _loadEntries();
+  }
+
+  void _loadEntries() {
+    state = _repository.getEntries();
+  }
+
+  Future<void> toggleEntry(String habitId, String dateStr, bool completed) async {
+    await _repository.toggleEntry(habitId, dateStr, completed);
+    state = _repository.getEntries();
+  }
+}
+
+// Helper to calculate habit metrics
+Map<String, dynamic> getHabitMetrics(String habitId, List<HabitEntry> entries, DateTime createdAt) {
+  final habitEntries = entries
+      .where((e) => e.habitId == habitId && e.completed)
+      .toList();
+      
+  final completedDates = habitEntries
+      .map((e) {
+        try {
+          return DateTime.parse(e.dateStr);
+        } catch (_) {
+          return null;
+        }
+      })
+      .whereType<DateTime>()
+      .map((d) => DateTime(d.year, d.month, d.day))
+      .toList();
+
+  completedDates.sort((a, b) => b.compareTo(a));
+
+  if (completedDates.isEmpty) {
+    return {
+      'currentStreak': 0,
+      'longestStreak': 0,
+      'completionRate': 0.0,
+    };
+  }
+
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final yesterday = today.subtract(const Duration(days: 1));
+
+  int currentStreak = 0;
+  DateTime checkDate = today;
+
+  if (!completedDates.contains(today) && !completedDates.contains(yesterday)) {
+    currentStreak = 0;
+  } else {
+    checkDate = completedDates.contains(today) ? today : yesterday;
+    while (completedDates.contains(checkDate)) {
+      currentStreak++;
+      checkDate = checkDate.subtract(const Duration(days: 1));
+    }
+  }
+
+  final chronological = List<DateTime>.from(completedDates)..sort();
+  int longestStreak = 0;
+  int currentRun = 0;
+  DateTime? prevDate;
+
+  for (final date in chronological) {
+    if (prevDate == null) {
+      currentRun = 1;
+    } else {
+      final diff = date.difference(prevDate).inDays;
+      if (diff == 1) {
+        currentRun++;
+      } else if (diff > 1) {
+        if (currentRun > longestStreak) {
+          longestStreak = currentRun;
+        }
+        currentRun = 1;
+      }
+    }
+    prevDate = date;
+  }
+  if (currentRun > longestStreak) {
+    longestStreak = currentRun;
+  }
+
+  final createdDate = DateTime(createdAt.year, createdAt.month, createdAt.day);
+  final totalDays = today.difference(createdDate).inDays + 1;
+  final double rate = (completedDates.length / totalDays).clamp(0.0, 1.0);
+
+  return {
+    'currentStreak': currentStreak,
+    'longestStreak': longestStreak,
+    'completionRate': rate,
+  };
+}
+
 // Dashboard State Provider
 final dashboardProvider = Provider<Map<String, dynamic>>((ref) {
   final tasks = ref.watch(tasksProvider);
   final completedTasks = tasks.where((t) => t.completed).length;
   final totalTasks = tasks.length;
 
+  final habits = ref.watch(habitsProvider);
+  final entries = ref.watch(habitEntriesProvider);
+
+  final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+  final completedHabits = entries.where((e) => e.dateStr == todayStr && e.completed).length;
+  final totalHabits = habits.length;
+
+  int maxStreak = 0;
+  for (final h in habits) {
+    final metrics = getHabitMetrics(h.id, entries, h.createdAt);
+    final streak = metrics['currentStreak'] as int;
+    if (streak > maxStreak) {
+      maxStreak = streak;
+    }
+  }
+
   return {
     'completedTasks': completedTasks,
     'totalTasks': totalTasks,
-    'completedHabits': 2,
-    'totalHabits': 4,
+    'completedHabits': completedHabits,
+    'totalHabits': totalHabits,
     'remainingBudget': 420.50,
     'totalBudget': 800.00,
-    'streakDays': 8,
+    'streakDays': maxStreak,
   };
 });
-
-// Habits State Provider (Placeholder)
-final habitsProvider = StateNotifierProvider<HabitsNotifier, List<Map<String, dynamic>>>((ref) {
-  return HabitsNotifier();
-});
-
-class HabitsNotifier extends StateNotifier<List<Map<String, dynamic>>> {
-  HabitsNotifier() : super([
-    {'id': '1', 'name': 'Read 10 Pages', 'category': 'Study', 'streak': 5, 'completedToday': true},
-    {'id': '2', 'name': 'Morning Meditation', 'category': 'Mind', 'streak': 8, 'completedToday': false},
-    {'id': '3', 'name': 'Gym / Workout', 'category': 'Fitness', 'streak': 3, 'completedToday': true},
-  ]);
-
-  void toggleHabit(String id) {
-    state = [
-      for (final h in state)
-        if (h['id'] == id)
-          {...h, 'completedToday': !h['completedToday']}
-        else
-          h,
-    ];
-  }
-}
 
 // Money State Provider (Placeholder)
 final moneyProvider = StateNotifierProvider<MoneyNotifier, List<Map<String, dynamic>>>((ref) {

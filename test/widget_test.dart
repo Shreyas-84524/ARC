@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:arc/main.dart';
 import 'package:arc/features/task_manager/models/task_model.dart';
 import 'package:arc/features/task_manager/repository/task_repository.dart';
+import 'package:arc/features/habit_tracker/models/habit_model.dart';
+import 'package:arc/features/habit_tracker/models/habit_entry_model.dart';
+import 'package:arc/features/habit_tracker/repository/habit_repository.dart';
 import 'package:arc/providers/global_providers.dart';
 
 class FakeTaskRepository implements TaskRepository {
@@ -42,13 +45,49 @@ class FakeTaskRepository implements TaskRepository {
   Future<void> syncPending() async {}
 }
 
+class FakeHabitRepository implements HabitRepository {
+  final List<Habit> _habits = [];
+  final List<HabitEntry> _entries = [];
+
+  @override
+  List<Habit> getHabits() => _habits;
+
+  @override
+  List<HabitEntry> getEntries() => _entries;
+
+  @override
+  Future<void> saveHabit(Habit habit) async {
+    _habits.removeWhere((h) => h.id == habit.id);
+    _habits.add(habit);
+  }
+
+  @override
+  Future<void> deleteHabit(String id) async {
+    _habits.removeWhere((h) => h.id == id);
+    _entries.removeWhere((e) => e.habitId == id);
+  }
+
+  @override
+  Future<void> toggleEntry(String habitId, String dateStr, bool completed) async {
+    final entryId = '${habitId}_$dateStr';
+    _entries.removeWhere((e) => e.id == entryId);
+    if (completed) {
+      _entries.add(HabitEntry(id: entryId, habitId: habitId, dateStr: dateStr, completed: true));
+    }
+  }
+
+  @override
+  Future<void> syncPending() async {}
+}
+
 void main() {
   testWidgets('App renders successfully and shows dashboard contents', (WidgetTester tester) async {
-    // Build our app with the FakeTaskRepository override and trigger a frame.
+    // Build our app with the fake repository overrides and trigger a frame.
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           taskRepositoryProvider.overrideWithValue(FakeTaskRepository()),
+          habitRepositoryProvider.overrideWithValue(FakeHabitRepository()),
         ],
         child: const ProjectArcApp(),
       ),
