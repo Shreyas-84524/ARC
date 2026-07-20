@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:arc/features/task_manager/models/task_model.dart';
 
 class HiveService {
   static final HiveService _instance = HiveService._internal();
@@ -11,6 +12,7 @@ class HiveService {
 
   // Box names
   static const String tasksBoxName = 'tasks_box';
+  static const String tasksSyncQueueBoxName = 'tasks_sync_queue_box';
   static const String habitsBoxName = 'habits_box';
   static const String moneyBoxName = 'money_box';
   static const String settingsBoxName = 'settings_box';
@@ -22,8 +24,12 @@ class HiveService {
       // Initialize Hive for Flutter
       await Hive.initFlutter();
 
+      // Register Adapters
+      Hive.registerAdapter(TaskAdapter());
+
       // Open caching boxes
-      await Hive.openBox(tasksBoxName);
+      await Hive.openBox<Task>(tasksBoxName);
+      await Hive.openBox(tasksSyncQueueBoxName);
       await Hive.openBox(habitsBoxName);
       await Hive.openBox(moneyBoxName);
       await Hive.openBox(settingsBoxName);
