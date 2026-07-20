@@ -41,6 +41,7 @@ class NotificationService {
       );
       _initialized = true;
       debugPrint('NotificationService: successfully initialized.');
+      await scheduleDailyMoneyReminders();
     } catch (e) {
       debugPrint('NotificationService initialization failed: $e');
     }
@@ -203,6 +204,62 @@ class NotificationService {
   Future<void> cancelEveningReminder() async {
     await _localNotificationsPlugin.cancel(999999);
     debugPrint('Canceled evening habit reminder.');
+  }
+
+  Future<void> scheduleDailyMoneyReminders() async {
+    final now = DateTime.now();
+    
+    // 8 PM Daily Reminder
+    var time8pm = DateTime(now.year, now.month, now.day, 20, 0);
+    if (time8pm.isBefore(now)) {
+      time8pm = time8pm.add(const Duration(days: 1));
+    }
+    
+    // 10 PM Daily Reminder
+    var time10pm = DateTime(now.year, now.month, now.day, 22, 0);
+    if (time10pm.isBefore(now)) {
+      time10pm = time10pm.add(const Duration(days: 1));
+    }
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'arc_money_reminder_channel',
+      'Money Reminders',
+      channelDescription: 'Daily alerts to log transaction entries',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails();
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    // Schedule 8 PM Daily
+    await _localNotificationsPlugin.zonedSchedule(
+      888888,
+      "Money Tracker",
+      "Have you recorded today's transactions?",
+      tz.TZDateTime.from(time8pm, tz.local),
+      details,
+      matchDateTimeComponents: DateTimeComponents.time,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+
+    // Schedule 10 PM Daily (Final Reminder)
+    await _localNotificationsPlugin.zonedSchedule(
+      101010,
+      "Money Tracker - Final Reminder",
+      "Don't forget to log your daily expenses to keep your balance up to date!",
+      tz.TZDateTime.from(time10pm, tz.local),
+      details,
+      matchDateTimeComponents: DateTimeComponents.time,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+    debugPrint('Scheduled daily money reminders at 8 PM and 10 PM.');
   }
 
   Future<void> showInstantNotification({

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:arc/core/theme/app_theme.dart';
@@ -11,8 +12,38 @@ import 'package:arc/features/money_tracker/models/transaction_model.dart';
 import 'package:arc/features/money_tracker/widgets/transaction_editor_sheet.dart';
 import 'package:arc/providers/global_providers.dart';
 
-class MoneyScreen extends ConsumerWidget {
+class MoneyScreen extends ConsumerStatefulWidget {
   const MoneyScreen({super.key});
+
+  @override
+  ConsumerState<MoneyScreen> createState() => _MoneyScreenState();
+}
+
+class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  final Map<String, Color> _categoryColors = {
+    'Food': AppColors.warning,
+    'Transport': AppColors.info,
+    'Rent': AppColors.accentPressed,
+    'Bills': AppColors.danger,
+    'Entertainment': AppColors.accent,
+    'Shopping': AppColors.priorityMuch,
+    'Health': Colors.teal,
+    'Other': Colors.blueGrey,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   void _showTransactionEditor(BuildContext context, [Transaction? tx]) {
     showModalBottomSheet(
@@ -23,7 +54,7 @@ class MoneyScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _showSetBudgetDialog(BuildContext context, WidgetRef ref, double currentBudget) async {
+  Future<void> _showSetBudgetDialog(BuildContext context, double currentBudget) async {
     final controller = TextEditingController(text: currentBudget > 0 ? currentBudget.toString() : '');
     return showDialog<void>(
       context: context,
@@ -85,7 +116,7 @@ class MoneyScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -93,7 +124,7 @@ class MoneyScreen extends ConsumerWidget {
     final monthlyBudget = ref.watch(monthlyBudgetProvider);
     final currentMonthStr = ref.watch(currentMonthProvider);
 
-    // Calculate current month's transactions, income, and expenses
+    // Filter current month transactions
     final currentMonthTransactions = transactions.where((tx) {
       final txMonthStr = DateFormat('yyyy-MM').format(tx.date);
       return txMonthStr == currentMonthStr;
@@ -101,165 +132,532 @@ class MoneyScreen extends ConsumerWidget {
 
     currentMonthTransactions.sort((a, b) => b.date.compareTo(a.date));
 
+    // Calculate dynamic budget details
     double totalIncome = 0.0;
     double totalExpenses = 0.0;
+    Map<String, double> categoryExpenses = {};
+    Map<int, double> dailySpending = {};
 
     for (final tx in currentMonthTransactions) {
       if (tx.type == 'Income') {
         totalIncome += tx.amount;
       } else {
         totalExpenses += tx.amount;
+        // Category breakdown
+        categoryExpenses[tx.category] = (categoryExpenses[tx.category] ?? 0.0) + tx.amount;
+        // Daily breakdown
+        final day = tx.date.day;
+        dailySpending[day] = (dailySpending[day] ?? 0.0) + tx.amount;
       }
     }
 
+    final double savings = totalIncome - totalExpenses;
     final double remainingBudget = monthlyBudget + totalIncome - totalExpenses;
+    
+    // Savings Progress calculations
+    final double savingsRate = totalIncome > 0 ? (savings / totalIncome).clamp(0.0, 1.0) : 0.0;
 
     return Scaffold(
       appBar: const CustomTopBar(title: 'Money Tracker'),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. Unset Monthly Budget Alert Banner
-            if (monthlyBudget == 0.0)
-              Card(
-                color: AppColors.accent.withValues(alpha: 0.1),
-                child: Padding(
-                  padding: const EdgeInsets.all(18.0),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(LucideIcons.wallet, color: AppColors.accent, size: 24),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              "Set your monthly budget for ${DateFormat('MMMM yyyy').format(DateTime.now())} to start tracking balance!",
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => _showSetBudgetDialog(context, ref, monthlyBudget),
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(double.infinity, 44),
-                        ),
-                        child: const Text('Configure Monthly Budget'),
-                      ),
-                    ],
-                  ),
-                ),
-              ).animate().fade(duration: 200.ms).slideY(begin: -0.1)
-            else
-              const SizedBox.shrink(),
-
-            if (monthlyBudget == 0.0) const SizedBox(height: 16),
-
-            // 2. Remaining Budget Summary Card
-            Card(
-              color: isDark ? AppColors.darkCard : AppColors.lightCard,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-                side: BorderSide(
-                  color: isDark ? AppColors.borderStrong : AppColors.borderStrongLight,
-                  width: 1.5,
+      body: Column(
+        children: [
+          // Tab bar selection
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkCard : AppColors.lightCard,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight,
                 ),
               ),
-              child: InkWell(
-                onTap: () => _showSetBudgetDialog(context, ref, monthlyBudget),
-                borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
+              child: TabBar(
+                controller: _tabController,
+                indicatorSize: TabBarIndicatorSize.tab,
+                indicator: BoxDecoration(
+                  color: AppColors.accent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                labelColor: AppColors.textPrimaryLight,
+                unselectedLabelColor: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                tabs: const [
+                  Tab(text: 'Transactions'),
+                  Tab(text: 'Analytics'),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Tab views
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // ------------------ TRANSACTIONS VIEW ------------------
+                SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        "REMAINING BALANCE",
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-                          letterSpacing: 1.2,
+                      // Set Budget Banner
+                      if (monthlyBudget == 0.0)
+                        Card(
+                          color: AppColors.accent.withValues(alpha: 0.1),
+                          child: Padding(
+                            padding: const EdgeInsets.all(18.0),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(LucideIcons.wallet, color: AppColors.accent, size: 24),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        "Set your monthly budget for ${DateFormat('MMMM yyyy').format(DateTime.now())} to start tracking balance!",
+                                        style: theme.textTheme.bodyMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: () => _showSetBudgetDialog(context, monthlyBudget),
+                                  style: ElevatedButton.styleFrom(
+                                    minimumSize: const Size(double.infinity, 44),
+                                  ),
+                                  child: const Text('Configure Monthly Budget'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ).animate().fade(duration: 200.ms).slideY(begin: -0.1),
+
+                      if (monthlyBudget == 0.0) const SizedBox(height: 16),
+
+                      // Balance card
+                      Card(
+                        color: isDark ? AppColors.darkCard : AppColors.lightCard,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+                          side: BorderSide(
+                            color: isDark ? AppColors.borderStrong : AppColors.borderStrongLight,
+                            width: 1.5,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "\$${remainingBudget.toStringAsFixed(2)}",
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: remainingBudget >= 0 ? AppColors.success : AppColors.danger,
-                          letterSpacing: -0.5,
+                        child: InkWell(
+                          onTap: () => _showSetBudgetDialog(context, monthlyBudget),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+                          child: Padding(
+                            padding: const EdgeInsets.all(24.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "REMAINING BALANCE",
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  "\$${remainingBudget.toStringAsFixed(2)}",
+                                  style: theme.textTheme.headlineMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: remainingBudget >= 0 ? AppColors.success : AppColors.danger,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    _buildBudgetStat(
+                                      context,
+                                      label: 'Budget Limit',
+                                      value: '\$${monthlyBudget.toStringAsFixed(2)}',
+                                    ),
+                                    _buildBudgetStat(
+                                      context,
+                                      label: 'Total Income',
+                                      value: '\$${totalIncome.toStringAsFixed(2)}',
+                                      isIncome: true,
+                                    ),
+                                    _buildBudgetStat(
+                                      context,
+                                      label: 'Total Expense',
+                                      value: '\$${totalExpenses.toStringAsFixed(2)}',
+                                      isNegative: true,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
+                      ).animate().fade(duration: 200.ms),
+
+                      const SizedBox(height: 24),
+                      Text(
+                        "Recent Transactions",
+                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildBudgetStat(
-                            context,
-                            label: 'Budget Limit',
-                            value: '\$${monthlyBudget.toStringAsFixed(2)}',
-                          ),
-                          _buildBudgetStat(
-                            context,
-                            label: 'Total Income',
-                            value: '\$${totalIncome.toStringAsFixed(2)}',
-                            isIncome: true,
-                          ),
-                          _buildBudgetStat(
-                            context,
-                            label: 'Total Expense',
-                            value: '\$${totalExpenses.toStringAsFixed(2)}',
-                            isNegative: true,
-                          ),
-                        ],
-                      ),
+                      const SizedBox(height: 12),
+
+                      // Transactions list
+                      if (currentMonthTransactions.isEmpty)
+                        _buildEmptyState(context)
+                      else
+                        ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: currentMonthTransactions.length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final tx = currentMonthTransactions[index];
+                            return _buildTransactionSlidable(context, tx);
+                          },
+                        ).animate().fade(delay: 100.ms, duration: 300.ms).slideY(begin: 0.08),
+                      const SizedBox(height: 80),
                     ],
                   ),
                 ),
-              ),
-            ).animate().fade(duration: 300.ms).slideY(begin: 0.1),
 
-            const SizedBox(height: 24),
+                // ------------------ ANALYTICS VIEW ------------------
+                SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 1. Monthly Summary Card
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Monthly Summary (${DateFormat('MMMM').format(DateTime.now())})",
+                                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 16),
+                              _buildSummaryRow(context, 'Monthly Budget Limit', monthlyBudget, isMuted: true),
+                              const SizedBox(height: 10),
+                              _buildSummaryRow(context, 'Total Monthly Income', totalIncome, color: AppColors.success),
+                              const SizedBox(height: 10),
+                              _buildSummaryRow(context, 'Total Monthly Expenses', totalExpenses, color: AppColors.danger),
+                              const SizedBox(height: 10),
+                              _buildSummaryRow(context, 'Savings (Income - Expense)', savings, color: savings >= 0 ? AppColors.accent : AppColors.danger),
+                              const Divider(height: 24),
+                              _buildSummaryRow(context, 'Remaining Budget Balance', remainingBudget, color: remainingBudget >= 0 ? AppColors.success : AppColors.danger, isBold: true),
+                            ],
+                          ),
+                        ),
+                      ).animate().fade(duration: 200.ms),
 
-            // 3. Transactions Section Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Recent Transactions",
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                      const SizedBox(height: 24),
+
+                      // 2. Savings Progress Card (Ring)
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Savings Rate",
+                                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      savings >= 0
+                                          ? "You've saved ${savingsRate > 0 ? (savingsRate * 100).toInt() : 0}% of your total earnings this month."
+                                          : "You are spending more than your earnings this month.",
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 24),
+                              Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  SizedBox(
+                                    height: 72,
+                                    width: 72,
+                                    child: CircularProgressIndicator(
+                                      value: savingsRate,
+                                      strokeWidth: 7,
+                                      backgroundColor: isDark ? AppColors.darkBgSecondary : AppColors.lightBgSecondary,
+                                      valueColor: AlwaysStoppedAnimation<Color>(savings >= 0 ? AppColors.accent : AppColors.danger),
+                                    ),
+                                  ),
+                                  Text(
+                                    "${(savingsRate * 100).toInt()}%",
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ).animate().fade(delay: 100.ms, duration: 250.ms),
+
+                      const SizedBox(height: 24),
+
+                      // 3. Income vs Expense Bar Chart
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Income vs Expense Compare",
+                                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 24),
+                              SizedBox(
+                                height: 160,
+                                child: BarChart(
+                                  BarChartData(
+                                    alignment: BarChartAlignment.spaceEvenly,
+                                    maxY: totalIncome > totalExpenses ? (totalIncome * 1.2 + 10) : (totalExpenses * 1.2 + 10),
+                                    barTouchData: BarTouchData(enabled: true),
+                                    titlesData: FlTitlesData(
+                                      show: true,
+                                      leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                      bottomTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                          showTitles: true,
+                                          getTitlesWidget: (value, meta) {
+                                            if (value == 0) return const Text('Income', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12));
+                                            if (value == 1) return const Text('Expense', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12));
+                                            return const Text('');
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                    gridData: const FlGridData(show: false),
+                                    borderData: FlBorderData(show: false),
+                                    barGroups: [
+                                      BarChartGroupData(
+                                        x: 0,
+                                        barRods: [
+                                          BarChartRodData(
+                                            toY: totalIncome,
+                                            color: AppColors.success,
+                                            width: 32,
+                                            borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                                          ),
+                                        ],
+                                      ),
+                                      BarChartGroupData(
+                                        x: 1,
+                                        barRods: [
+                                          BarChartRodData(
+                                            toY: totalExpenses,
+                                            color: AppColors.danger,
+                                            width: 32,
+                                            borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ).animate().fade(delay: 150.ms, duration: 250.ms),
+
+                      const SizedBox(height: 24),
+
+                      // 4. Category Spending Breakdown (Pie Chart)
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Category Spending breakdown",
+                                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 24),
+                              
+                              if (categoryExpenses.isEmpty)
+                                SizedBox(
+                                  height: 120,
+                                  child: Center(
+                                    child: Text(
+                                      "No expense logs this month",
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              else ...[
+                                SizedBox(
+                                  height: 160,
+                                  child: PieChart(
+                                    PieChartData(
+                                      sectionsSpace: 4,
+                                      centerSpaceRadius: 40,
+                                      sections: categoryExpenses.entries.map((e) {
+                                        final color = _categoryColors[e.key] ?? Colors.blueGrey;
+                                        return PieChartSectionData(
+                                          color: color,
+                                          value: e.value,
+                                          title: '\$${e.value.toInt()}',
+                                          radius: 44,
+                                          titleStyle: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                // Legend list
+                                Wrap(
+                                  spacing: 12,
+                                  runSpacing: 8,
+                                  children: categoryExpenses.keys.map((catName) {
+                                    final col = _categoryColors[catName] ?? Colors.blueGrey;
+                                    return Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          height: 10,
+                                          width: 10,
+                                          decoration: BoxDecoration(shape: BoxShape.circle, color: col),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          '$catName: \$${categoryExpenses[catName]!.toStringAsFixed(0)}',
+                                          style: const TextStyle(fontSize: 11),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ).animate().fade(delay: 200.ms, duration: 250.ms),
+
+                      const SizedBox(height: 24),
+
+                      // 5. Monthly Spending Trend Line Chart
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Monthly Spending Trend",
+                                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 24),
+                              
+                              SizedBox(
+                                height: 160,
+                                child: currentMonthTransactions.isEmpty
+                                    ? Center(
+                                        child: Text(
+                                          "No transactions this month",
+                                          style: theme.textTheme.bodyMedium?.copyWith(
+                                            color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                                          ),
+                                        ),
+                                      )
+                                    : LineChart(
+                                        LineChartData(
+                                          lineTouchData: const LineTouchData(enabled: true),
+                                          gridData: const FlGridData(show: false),
+                                          titlesData: FlTitlesData(
+                                            show: true,
+                                            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                            bottomTitles: AxisTitles(
+                                              sideTitles: SideTitles(
+                                                showTitles: true,
+                                                interval: 5,
+                                                getTitlesWidget: (value, meta) {
+                                                  return Text(
+                                                    '${value.toInt()}',
+                                                    style: const TextStyle(fontSize: 10),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                          borderData: FlBorderData(show: false),
+                                          lineBarsData: [
+                                            LineChartBarData(
+                                              spots: List.generate(31, (index) {
+                                                final day = index + 1;
+                                                final val = dailySpending[day] ?? 0.0;
+                                                return FlSpot(day.toDouble(), val);
+                                              }),
+                                              isCurved: true,
+                                              color: AppColors.accent,
+                                              barWidth: 3,
+                                              isStrokeCapRound: true,
+                                              dotData: const FlDotData(show: false),
+                                              belowBarData: BarAreaData(
+                                                show: true,
+                                                color: AppColors.accent.withValues(alpha: 0.1),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        duration: const Duration(milliseconds: 300),
+                                        curve: Curves.easeInOut,
+                                      ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ).animate().fade(delay: 250.ms, duration: 250.ms),
+                      const SizedBox(height: 80),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-
-            // 4. Transactions List Card list
-            if (currentMonthTransactions.isEmpty)
-              _buildEmptyState(context)
-            else
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: currentMonthTransactions.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final tx = currentMonthTransactions[index];
-                  
-                  return _buildTransactionSlidable(context, ref, tx);
-                },
-              ).animate().fade(delay: 150.ms, duration: 300.ms).slideY(begin: 0.08),
-
-            const SizedBox(height: 80),
-          ],
-        ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.accent,
@@ -272,11 +670,28 @@ class MoneyScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTransactionSlidable(BuildContext context, WidgetRef ref, Transaction tx) {
+  Widget _buildSummaryRow(BuildContext context, String label, double amount, {Color? color, bool isBold = false, bool isMuted = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final style = Theme.of(context).textTheme.bodyMedium?.copyWith(
+          fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          color: color ?? (isMuted 
+              ? (isDark ? AppColors.textMutedDark : AppColors.textMutedLight)
+              : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)),
+        );
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: style),
+        Text('\$${amount.toStringAsFixed(2)}', style: style),
+      ],
+    );
+  }
+
+  Widget _buildTransactionSlidable(BuildContext context, Transaction tx) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isIncome = tx.type == 'Income';
     
-    // Choose icon depending on category
     IconData icon = LucideIcons.wallet;
     Color color = AppColors.info;
     
@@ -343,7 +758,6 @@ class MoneyScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
             child: Row(
               children: [
-                // Category circular icon
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
@@ -353,8 +767,6 @@ class MoneyScreen extends ConsumerWidget {
                   child: Icon(icon, color: color, size: 20),
                 ),
                 const SizedBox(width: 16),
-                
-                // Details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -378,8 +790,6 @@ class MoneyScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 16),
-
-                // Amount
                 Text(
                   '${isIncome ? '+' : '-'}\$${tx.amount.toStringAsFixed(2)}',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
