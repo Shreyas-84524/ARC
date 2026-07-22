@@ -54,4 +54,19 @@ class HabitEntry extends HiveObject {
       completed: map['completed'] ?? false,
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is HabitEntry &&
+        other.id == id &&
+        other.habitId == habitId &&
+        other.dateStr == dateStr &&
+        other.completed == completed;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(id, habitId, dateStr, completed);
+  }
 }

@@ -21,7 +21,7 @@ class DashboardScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).dialogBackgroundColor,
+      backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
       builder: (context) => TaskEditorSheet(taskToEdit: task),
     );
   }
@@ -30,7 +30,7 @@ class DashboardScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).dialogBackgroundColor,
+      backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
       builder: (context) => HabitEditorSheet(habitToEdit: habit),
     );
   }
@@ -39,22 +39,58 @@ class DashboardScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).dialogBackgroundColor,
+      backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
       builder: (context) => TransactionEditorSheet(transactionToEdit: tx),
     );
   }
 
-  void _showQuickAddDialog(BuildContext context) {
+  Future<void> _showSetBudgetDialog(BuildContext context, WidgetRef ref, double currentBudget) async {
+    final controller = TextEditingController(
+        text: currentBudget > 0 ? currentBudget.toString() : '');
+    return showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Set Monthly Budget'),
+        content: TextField(
+          controller: controller,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            hintText: 'Enter monthly budget amount...',
+            prefixText: '\$ ',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final double? amount = double.tryParse(controller.text.trim());
+              if (amount != null && amount >= 0) {
+                HapticFeedback.mediumImpact();
+                ref.read(monthlyBudgetProvider.notifier).setBudget(amount);
+                Navigator.of(context).pop();
+              }
+            },
+            child: const Text('Set'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showQuickAddDialog(BuildContext context, WidgetRef ref, double currentBudget) {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Quick Add'),
+        title: const Text('Quick Actions'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Icon(LucideIcons.checkSquare, color: AppColors.info),
-              title: const Text('Add Task'),
+              title: const Text('Create Task'),
               onTap: () {
                 Navigator.of(context).pop();
                 _showTaskEditor(context);
@@ -62,7 +98,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(LucideIcons.zap, color: AppColors.accent),
-              title: const Text('Add Habit'),
+              title: const Text('Create Habit'),
               onTap: () {
                 Navigator.of(context).pop();
                 _showHabitEditor(context);
@@ -74,6 +110,14 @@ class DashboardScreen extends ConsumerWidget {
               onTap: () {
                 Navigator.of(context).pop();
                 _showTransactionEditor(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(LucideIcons.dollarSign, color: AppColors.warning),
+              title: const Text('Update Monthly Budget'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _showSetBudgetDialog(context, ref, currentBudget);
               },
             ),
           ],
@@ -89,27 +133,31 @@ class DashboardScreen extends ConsumerWidget {
 
     // Subscriptions
     final dashboardData = ref.watch(dashboardProvider);
-    final completedTasks = dashboardData['completedTasks'] as int;
-    final totalTasks = dashboardData['totalTasks'] as int;
-    final completedHabits = dashboardData['completedHabits'] as int;
-    final totalHabits = dashboardData['totalHabits'] as int;
-    final remainingBudget = dashboardData['remainingBudget'] as double;
-    final totalBudget = dashboardData['totalBudget'] as double;
-    final streakDays = dashboardData['streakDays'] as int;
+    final completedTasks = (dashboardData['completedTasks'] as int?) ?? 0;
+    final totalTasks = (dashboardData['totalTasks'] as int?) ?? 0;
+    final completedHabits = (dashboardData['completedHabits'] as int?) ?? 0;
+    final totalHabits = (dashboardData['totalHabits'] as int?) ?? 0;
+    final remainingBudget = (dashboardData['remainingBudget'] as double?) ?? 0.0;
+    final totalBudget = (dashboardData['totalBudget'] as double?) ?? 0.0;
+    final streakDays = (dashboardData['streakDays'] as int?) ?? 0;
+
+    final todayIncome = (dashboardData['todayIncome'] as double?) ?? 0.0;
+    final todayExpenses = (dashboardData['todayExpenses'] as double?) ?? 0.0;
+    final monthlySavings = (dashboardData['monthlySavings'] as double?) ?? 0.0;
+    final todayScore = (dashboardData['todayProductivityScore'] as int?) ?? 0;
+
+    final List recentActivities =
+        (dashboardData['recentActivities'] as List?) ?? [];
 
     final tasksList = ref.watch(tasksProvider);
     final habitsList = ref.watch(habitsProvider);
     final entriesList = ref.watch(habitEntriesProvider);
-    final transactionsList = ref.watch(moneyProvider);
-    final currentMonthStr = ref.watch(currentMonthProvider);
 
-    // Calculate dates
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
     final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
     final todayStr = DateFormat('yyyy-MM-dd').format(now);
 
-    // Filter Tasks
     final todayTasks = tasksList.where((t) {
       if (t.completed) return false;
       if (t.dueDate == null) return true;
@@ -122,28 +170,18 @@ class DashboardScreen extends ConsumerWidget {
       return t.dueDate!.isAfter(todayEnd);
     }).toList();
 
-    // Filter Habits (Daily habits only for today)
     final dailyHabits = habitsList.where((h) => h.goalType == 'Daily').toList();
 
-    // Filter & Sort Transactions
-    final currentMonthTxs = transactionsList.where((tx) {
-      return DateFormat('yyyy-MM').format(tx.date) == currentMonthStr;
-    }).toList();
-    currentMonthTxs.sort((a, b) => b.date.compareTo(a.date));
-    final recentTransactions = currentMonthTxs.take(3).toList();
-
-    // Calculate Dynamic overall progress
     final int overallTotal = totalTasks + totalHabits;
     final int overallCompleted = completedTasks + completedHabits;
-    final double progressPercentage = overallTotal > 0 ? (overallCompleted / overallTotal) : 0.0;
+    final double progressPercentage =
+        overallTotal > 0 ? (overallCompleted / overallTotal) : 0.0;
 
     return Scaffold(
       appBar: const CustomTopBar(title: 'Dashboard'),
       body: RefreshIndicator(
         onRefresh: () async {
-          await ref.read(tasksProvider.notifier).syncTasks();
-          await ref.read(habitsProvider.notifier).syncHabits();
-          await ref.read(moneyProvider.notifier).syncTransactions();
+          await ref.read(syncServiceProvider).syncAllPending();
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -151,339 +189,466 @@ class DashboardScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            // 1. Today's Progress Card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              // 1. Today's Progress Card
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Today's Progress",
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "You've completed $completedTasks of $totalTasks tasks and $completedHabits of $totalHabits habits today. Keep going!",
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Stack(
+                        alignment: Alignment.center,
                         children: [
-                          Text(
-                            "Today's Progress",
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
+                          SizedBox(
+                            height: 64,
+                            width: 64,
+                            child: CircularProgressIndicator(
+                              value: progressPercentage,
+                              strokeWidth: 6,
+                              backgroundColor: isDark
+                                  ? AppColors.darkBgSecondary
+                                  : AppColors.lightBgSecondary,
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                  AppColors.accent),
                             ),
                           ),
-                          const SizedBox(height: 8),
                           Text(
-                            "You've completed $completedTasks of $totalTasks tasks and $completedHabits of $totalHabits habits today. Keep going!",
+                            "${(progressPercentage * 100).toInt()}%",
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimaryLight,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    // Circular Progress Ring
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        SizedBox(
-                          height: 64,
-                          width: 64,
-                          child: CircularProgressIndicator(
-                            value: progressPercentage,
-                            strokeWidth: 6,
-                            backgroundColor: isDark ? AppColors.darkBgSecondary : AppColors.lightBgSecondary,
-                            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
+                    ],
+                  ),
+                ),
+              ).animate().fade(duration: 300.ms).slideY(begin: 0.1),
+
+              const SizedBox(height: 20),
+
+              // 2. Productivity Score Banner
+              Card(
+                color: AppColors.accent.withValues(alpha: 0.1),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20.0, vertical: 16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(LucideIcons.sparkles,
+                              color: AppColors.accent, size: 24),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Productivity Score",
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                "Based on tasks & habit completion",
+                                style: theme.textTheme.labelLarge?.copyWith(
+                                  color: isDark
+                                      ? AppColors.textMutedDark
+                                      : AppColors.textMutedLight,
+                                ),
+                              ),
+                            ],
                           ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.accent,
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                        Text(
-                          "${(progressPercentage * 100).toInt()}%",
-                          style: theme.textTheme.bodyMedium?.copyWith(
+                        child: Text(
+                          "$todayScore / 100",
+                          style: const TextStyle(
+                            color: AppColors.textPrimaryLight,
                             fontWeight: FontWeight.bold,
-                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                           ),
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ).animate().fade(duration: 300.ms).slideY(begin: 0.1),
+              ).animate().fade(delay: 50.ms, duration: 300.ms),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-            // 2. Quick Statistics Grid Row
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.25,
-              children: [
-                _buildMetricCard(
-                  context,
-                  title: 'Remaining Budget',
-                  value: '\$${remainingBudget.toStringAsFixed(2)}',
-                  subtitle: 'Limit: \$${totalBudget.toStringAsFixed(0)}',
-                  icon: LucideIcons.wallet,
-                  color: remainingBudget >= 0 ? AppColors.success : AppColors.danger,
+              // 3. Quick Statistics Grid Row
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 1.25,
+                children: [
+                  _buildMetricCard(
+                    context,
+                    title: 'Remaining Budget',
+                    value: '\$${remainingBudget.toStringAsFixed(2)}',
+                    subtitle: 'Limit: \$${totalBudget.toStringAsFixed(0)}',
+                    icon: LucideIcons.wallet,
+                    color: remainingBudget >= 0
+                        ? AppColors.success
+                        : AppColors.danger,
+                  ),
+                  _buildMetricCard(
+                    context,
+                    title: 'Daily Streak',
+                    value: '$streakDays Days',
+                    subtitle: 'Keep it going!',
+                    icon: LucideIcons.zap,
+                    color: AppColors.accent,
+                  ),
+                  _buildMetricCard(
+                    context,
+                    title: 'Today Expenses',
+                    value: '\$${todayExpenses.toStringAsFixed(2)}',
+                    subtitle: 'Income: \$${todayIncome.toStringAsFixed(2)}',
+                    icon: LucideIcons.trendingDown,
+                    color: AppColors.danger,
+                  ),
+                  _buildMetricCard(
+                    context,
+                    title: 'Monthly Savings',
+                    value: '\$${monthlySavings.toStringAsFixed(2)}',
+                    subtitle: 'Savings Net',
+                    icon: LucideIcons.piggyBank,
+                    color: monthlySavings >= 0
+                        ? AppColors.success
+                        : AppColors.danger,
+                  ),
+                ],
+              ).animate().fade(delay: 100.ms, duration: 300.ms).slideY(begin: 0.1),
+
+              const SizedBox(height: 24),
+
+              // 4. Today's Habits
+              if (dailyHabits.isNotEmpty) ...[
+                Text(
+                  "Today's Habits",
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
-                _buildMetricCard(
-                  context,
-                  title: 'Daily Streak',
-                  value: '$streakDays Days',
-                  subtitle: 'Keep it going!',
-                  icon: LucideIcons.zap,
-                  color: AppColors.accent,
-                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 76,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: dailyHabits.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(width: 12),
+                    itemBuilder: (context, index) {
+                      final habit = dailyHabits[index];
+                      final isCompleted = entriesList.any(
+                        (e) =>
+                            e.habitId == habit.id &&
+                            e.dateStr == todayStr &&
+                            e.completed,
+                      );
+
+                      return Card(
+                        margin: EdgeInsets.zero,
+                        child: InkWell(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            ref
+                                .read(habitEntriesProvider.notifier)
+                                .toggleEntry(
+                                  habit.id,
+                                  todayStr,
+                                  !isCompleted,
+                                );
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16.0, vertical: 12.0),
+                            child: Row(
+                              children: [
+                                Container(
+                                  height: 26,
+                                  width: 26,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isCompleted
+                                        ? Color(habit.colorValue)
+                                        : Colors.transparent,
+                                    border: Border.all(
+                                      color: isCompleted
+                                          ? Colors.transparent
+                                          : (isDark
+                                              ? AppColors.borderSubtle
+                                              : AppColors.borderSubtleLight),
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: isCompleted
+                                      ? Icon(
+                                          LucideIcons.check,
+                                          size: 14,
+                                          color: habit.colorValue == 0xffccff00
+                                              ? Colors.black
+                                              : Colors.white,
+                                        )
+                                      : null,
+                                ),
+                                const SizedBox(width: 12),
+                                Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      habit.name,
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.bold),
+                                    ),
+                                    Text(
+                                      habit.category,
+                                      style: theme.textTheme.labelLarge?.copyWith(
+                                        color: isDark
+                                            ? AppColors.textMutedDark
+                                            : AppColors.textMutedLight,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ).animate().fade(delay: 150.ms, duration: 300.ms),
+                const SizedBox(height: 24),
               ],
-            ).animate().fade(delay: 100.ms, duration: 300.ms).slideY(begin: 0.1),
 
-            const SizedBox(height: 24),
-
-            // 3. Today's Habits (Check-in Bubbles)
-            if (dailyHabits.isNotEmpty) ...[
+              // 5. Today's Tasks Checklist
               Text(
-                "Today's Habits",
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                "Today's Tasks",
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              SizedBox(
-                height: 76,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: dailyHabits.length,
-                  separatorBuilder: (context, index) => const SizedBox(width: 12),
+              if (todayTasks.isEmpty)
+                _buildCleanCard(context, 'All tasks completed for today!')
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: todayTasks.length > 3 ? 3 : todayTasks.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 10),
                   itemBuilder: (context, index) {
-                    final habit = dailyHabits[index];
-                    final isCompleted = entriesList.any(
-                      (e) => e.habitId == habit.id && e.dateStr == todayStr && e.completed,
-                    );
+                    final task = todayTasks[index];
+                    Color pColor = AppColors.priorityLow;
+                    if (task.priority == 'High') pColor = AppColors.priorityHigh;
+                    if (task.priority == 'Much') pColor = AppColors.priorityMuch;
 
                     return Card(
                       margin: EdgeInsets.zero,
-                      child: InkWell(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          ref.read(habitEntriesProvider.notifier).toggleEntry(
-                                habit.id,
-                                todayStr,
-                                !isCompleted,
-                              );
-                        },
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                          child: Row(
-                            children: [
-                              Container(
-                                height: 26,
-                                width: 26,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: isCompleted ? Color(habit.colorValue) : Colors.transparent,
-                                  border: Border.all(
-                                    color: isCompleted
-                                        ? Colors.transparent
-                                        : (isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight),
-                                    width: 1.5,
-                                  ),
-                                ),
-                                alignment: Alignment.center,
-                                child: isCompleted
-                                    ? Icon(
-                                        LucideIcons.check,
-                                        size: 14,
-                                        color: habit.colorValue == 0xffccff00 ? Colors.black : Colors.white,
-                                      )
-                                    : null,
-                              ),
-                              const SizedBox(width: 12),
-                              Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    habit.name,
-                                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-                                  ),
-                                  Text(
-                                    habit.category,
-                                    style: theme.textTheme.labelLarge?.copyWith(
-                                      color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                      child: ListTile(
+                        onTap: () => _showTaskEditor(context, task),
+                        leading: InkWell(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            ref.read(tasksProvider.notifier).toggleTask(task.id);
+                          },
+                          borderRadius: BorderRadius.circular(100),
+                          child: Container(
+                            height: 20,
+                            width: 20,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: pColor, width: 2),
+                            ),
+                          ),
+                        ),
+                        title: Text(
+                          task.title,
+                          style: theme.textTheme.bodyLarge
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          '${task.category} • Priority: ${task.priority}',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: isDark
+                                ? AppColors.textMutedDark
+                                : AppColors.textMutedLight,
                           ),
                         ),
                       ),
                     );
                   },
-                ),
-              ).animate().fade(delay: 150.ms, duration: 300.ms),
+                ).animate().fade(delay: 200.ms, duration: 300.ms),
+
               const SizedBox(height: 24),
-            ],
 
-            // 4. Today's Tasks Checklist
-            Text(
-              "Today's Tasks",
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            if (todayTasks.isEmpty)
-              _buildCleanCard(context, 'All tasks completed for today!')
-            else
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: todayTasks.length > 3 ? 3 : todayTasks.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  final task = todayTasks[index];
-                  Color pColor = AppColors.priorityLow;
-                  if (task.priority == 'High') pColor = AppColors.priorityHigh;
-                  if (task.priority == 'Much') pColor = AppColors.priorityMuch;
+              // 6. Upcoming Deadlines
+              if (upcomingDeadlines.isNotEmpty) ...[
+                Text(
+                  "Upcoming Deadlines",
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: upcomingDeadlines.length > 2
+                      ? 2
+                      : upcomingDeadlines.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final task = upcomingDeadlines[index];
+                    final daysLeft =
+                        task.dueDate!.difference(todayStart).inDays;
 
-                  return Card(
-                    margin: EdgeInsets.zero,
-                    child: ListTile(
-                      onTap: () => _showTaskEditor(context, task),
-                      leading: InkWell(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          ref.read(tasksProvider.notifier).toggleTask(task.id);
-                        },
-                        borderRadius: BorderRadius.circular(100),
-                        child: Container(
-                          height: 20,
-                          width: 20,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: pColor, width: 2),
+                    return Card(
+                      margin: EdgeInsets.zero,
+                      child: ListTile(
+                        onTap: () => _showTaskEditor(context, task),
+                        leading: const Icon(LucideIcons.calendar,
+                            color: AppColors.accent, size: 20),
+                        title: Text(
+                          task.title,
+                          style: theme.textTheme.bodyLarge
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          'Due in $daysLeft day${daysLeft > 1 ? 's' : ''} (${DateFormat('MMM d').format(task.dueDate!)})',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: isDark
+                                ? AppColors.textMutedDark
+                                : AppColors.textMutedLight,
                           ),
                         ),
                       ),
-                      title: Text(
-                        task.title,
-                        style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(
-                        '${task.category} • Priority: ${task.priority}',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ).animate().fade(delay: 200.ms, duration: 300.ms),
+                    );
+                  },
+                ).animate().fade(delay: 250.ms, duration: 300.ms),
+                const SizedBox(height: 24),
+              ],
 
-            const SizedBox(height: 24),
-
-            // 5. Upcoming Deadlines
-            if (upcomingDeadlines.isNotEmpty) ...[
+              // 7. Recent Activity (Top 10 Feed)
               Text(
-                "Upcoming Deadlines",
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                "Recent Activity",
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: upcomingDeadlines.length > 2 ? 2 : upcomingDeadlines.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  final task = upcomingDeadlines[index];
-                  final daysLeft = task.dueDate!.difference(todayStart).inDays;
+              if (recentActivities.isEmpty)
+                _buildCleanCard(context, 'No recent activity recorded yet.')
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: recentActivities.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final act = recentActivities[index];
+                    final type = act['type'] as String;
+                    final title = act['title'] as String;
+                    final subtitle = act['subtitle'] as String;
+                    final timestamp = act['timestamp'] as DateTime;
 
-                  return Card(
-                    margin: EdgeInsets.zero,
-                    child: ListTile(
-                      onTap: () => _showTaskEditor(context, task),
-                      leading: const Icon(LucideIcons.calendar, color: AppColors.accent, size: 20),
-                      title: Text(
-                        task.title,
-                        style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(
-                        'Due in $daysLeft day${daysLeft > 1 ? 's' : ''} (${DateFormat('MMM d').format(task.dueDate!)})',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                    IconData icon = LucideIcons.activity;
+                    Color color = AppColors.accent;
+
+                    if (type == 'task') {
+                      icon = LucideIcons.checkSquare;
+                      color = AppColors.info;
+                    } else if (type == 'habit') {
+                      icon = LucideIcons.zap;
+                      color = AppColors.accent;
+                    } else if (type == 'money') {
+                      icon = LucideIcons.wallet;
+                      color = (act['isIncome'] ?? false)
+                          ? AppColors.success
+                          : AppColors.danger;
+                    }
+
+                    return Card(
+                      margin: EdgeInsets.zero,
+                      child: ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(icon, color: color, size: 18),
+                        ),
+                        title: Text(
+                          title,
+                          style: theme.textTheme.bodyLarge
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          '$subtitle • ${DateFormat('MMM d, h:mm a').format(timestamp)}',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: isDark
+                                ? AppColors.textMutedDark
+                                : AppColors.textMutedLight,
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
-              ).animate().fade(delay: 250.ms, duration: 300.ms),
-              const SizedBox(height: 24),
+                    );
+                  },
+                ).animate().fade(delay: 300.ms, duration: 300.ms),
+
+              const SizedBox(height: 80),
             ],
-
-            // 6. Recent Transactions
-            Text(
-              "Recent Transactions",
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            if (recentTransactions.isEmpty)
-              _buildCleanCard(context, 'No transactions logged this month.')
-            else
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: recentTransactions.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  final tx = recentTransactions[index];
-                  final isIncome = tx.type == 'Income';
-
-                  return Card(
-                    margin: EdgeInsets.zero,
-                    child: ListTile(
-                      onTap: () => _showTransactionEditor(context, tx),
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: (isIncome ? AppColors.success : AppColors.danger).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          isIncome ? LucideIcons.trendingUp : LucideIcons.trendingDown,
-                          color: isIncome ? AppColors.success : AppColors.danger,
-                          size: 18,
-                        ),
-                      ),
-                      title: Text(
-                        tx.category,
-                        style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(
-                        tx.notes.isNotEmpty ? tx.notes : DateFormat('MMM d').format(tx.date),
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-                        ),
-                      ),
-                      trailing: Text(
-                        '${isIncome ? '+' : '-'}\$${tx.amount.toStringAsFixed(2)}',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: isIncome ? AppColors.success : AppColors.danger,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ).animate().fade(delay: 300.ms, duration: 300.ms),
-            
-            const SizedBox(height: 80),
-          ],
+          ),
         ),
       ),
-    ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.accent,
         foregroundColor: AppColors.textPrimaryLight,
         shape: const CircleBorder(),
         elevation: 6,
-        onPressed: () => _showQuickAddDialog(context),
+        onPressed: () => _showQuickAddDialog(context, ref, totalBudget),
         child: const Icon(LucideIcons.plus, size: 24),
       ).animate().scale(delay: 200.ms, duration: 250.ms, curve: Curves.easeOut),
     );
@@ -500,7 +665,9 @@ class DashboardScreen extends ConsumerWidget {
         child: Text(
           message,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
               ),
         ),
       ),
@@ -555,7 +722,9 @@ class DashboardScreen extends ConsumerWidget {
                   title,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -563,7 +732,9 @@ class DashboardScreen extends ConsumerWidget {
                 Text(
                   subtitle,
                   style: theme.textTheme.labelLarge?.copyWith(
-                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                    color: isDark
+                        ? AppColors.textMutedDark
+                        : AppColors.textMutedLight,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

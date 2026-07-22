@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -20,10 +21,10 @@ class HabitEditorSheet extends ConsumerStatefulWidget {
 
 class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
   final _formKey = GlobalKey<FormState>();
-  
+
   late TextEditingController _nameController;
   late TextEditingController _categoryController;
-  
+
   String _selectedGoalType = 'Daily';
   int _selectedColorValue = 0xffccff00; // Default to accent color
   TimeOfDay? _selectedReminderTime;
@@ -42,12 +43,12 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
   void initState() {
     super.initState();
     final editHabit = widget.habitToEdit;
-    
+
     _nameController = TextEditingController(text: editHabit?.name ?? '');
     _categoryController = TextEditingController(text: editHabit?.category ?? 'Health');
     _selectedGoalType = editHabit?.goalType ?? 'Daily';
     _selectedColorValue = editHabit?.colorValue ?? 0xffccff00;
-    
+
     if (editHabit?.reminderTime != null) {
       final parts = editHabit!.reminderTime!.split(':');
       if (parts.length == 2) {
@@ -67,18 +68,26 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
   }
 
   Future<void> _selectReminderTime(BuildContext context) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: _selectedReminderTime ?? TimeOfDay.now(),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.dark(
-              primary: AppColors.accent,
-              onPrimary: AppColors.textPrimaryLight,
-              surface: AppColors.darkModal,
-              onSurface: AppColors.textPrimaryDark,
-            ),
+            colorScheme: isDark
+                ? const ColorScheme.dark(
+                    primary: AppColors.accent,
+                    onPrimary: AppColors.textPrimaryLight,
+                    surface: AppColors.darkModal,
+                    onSurface: AppColors.textPrimaryDark,
+                  )
+                : const ColorScheme.light(
+                    primary: AppColors.accentPressed,
+                    onPrimary: Colors.white,
+                    surface: AppColors.lightModal,
+                    onSurface: AppColors.textPrimaryLight,
+                  ),
           ),
           child: child!,
         );
@@ -124,10 +133,38 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
     Navigator.of(context).pop();
   }
 
-  void _deleteHabit() {
+  Future<void> _deleteHabit() async {
     if (widget.habitToEdit != null) {
-      ref.read(habitsProvider.notifier).deleteHabit(widget.habitToEdit!.id);
-      Navigator.of(context).pop();
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Delete Habit'),
+          content: Text('Are you sure you want to delete "${widget.habitToEdit!.name}"? This will also remove all check-in history for this habit.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.danger,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(80, 40),
+              ),
+              onPressed: () {
+                HapticFeedback.mediumImpact();
+                Navigator.of(context).pop(true);
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true && mounted) {
+        ref.read(habitsProvider.notifier).deleteHabit(widget.habitToEdit!.id);
+        Navigator.of(context).pop();
+      }
     }
   }
 
@@ -135,7 +172,7 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -166,7 +203,7 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               // Name Field
               TextFormField(
                 controller: _nameController,
@@ -188,7 +225,7 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _selectedGoalType,
+                      initialValue: _selectedGoalType,
                       decoration: const InputDecoration(
                         labelText: 'Goal Type',
                         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -253,7 +290,7 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                    color: Color(colorVal).withOpacity(0.4),
+                                    color: Color(colorVal).withValues(alpha: 0.4),
                                     blurRadius: 8,
                                     spreadRadius: 2,
                                   )
@@ -295,7 +332,7 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                               ? 'Set Daily Reminder Time (Optional)'
                               : 'Reminder scheduled for ${_selectedReminderTime!.format(context)}',
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: _selectedReminderTime == null 
+                            color: _selectedReminderTime == null
                                 ? (isDark ? AppColors.textPlaceholderDark : AppColors.textDisabledLight)
                                 : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
                           ),

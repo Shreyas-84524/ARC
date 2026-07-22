@@ -31,10 +31,10 @@ class HiveService {
       await Hive.initFlutter();
 
       // Register Adapters
-      Hive.registerAdapter(TaskAdapter());
-      Hive.registerAdapter(HabitAdapter());
-      Hive.registerAdapter(HabitEntryAdapter());
-      Hive.registerAdapter(TransactionAdapter());
+      if (!Hive.isAdapterRegistered(0)) Hive.registerAdapter(TaskAdapter());
+      if (!Hive.isAdapterRegistered(1)) Hive.registerAdapter(HabitAdapter());
+      if (!Hive.isAdapterRegistered(2)) Hive.registerAdapter(HabitEntryAdapter());
+      if (!Hive.isAdapterRegistered(3)) Hive.registerAdapter(TransactionAdapter());
 
       // Open caching boxes
       await Hive.openBox<Task>(tasksBoxName);
@@ -54,11 +54,11 @@ class HiveService {
   }
 
   // Generic getter to read a box
-  Box getBox(String boxName) {
-    if (!_initialized) {
-      throw StateError('HiveService has not been initialized. Call init() first.');
+  Box<T> getBox<T>(String boxName) {
+    if (!_initialized || !Hive.isBoxOpen(boxName)) {
+      throw StateError('HiveService has not been initialized or box $boxName is not open.');
     }
-    return Hive.box(boxName);
+    return Hive.box<T>(boxName);
   }
 
   // Helper methods to read/write settings cache

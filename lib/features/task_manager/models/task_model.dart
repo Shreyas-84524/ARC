@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 
 part 'task_model.g.dart';
@@ -116,6 +117,42 @@ class Task extends HiveObject {
       completed: map['completed'] ?? false,
       createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : DateTime.now(),
       updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : DateTime.now(),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Task &&
+        other.id == id &&
+        other.title == title &&
+        other.description == description &&
+        other.priority == priority &&
+        other.category == category &&
+        listEquals(other.labels, labels) &&
+        other.dueDate == dueDate &&
+        other.dueTime == dueTime &&
+        other.reminder == reminder &&
+        other.completed == completed &&
+        other.createdAt == createdAt &&
+        other.updatedAt == updatedAt;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      id,
+      title,
+      description,
+      priority,
+      category,
+      Object.hashAll(labels),
+      dueDate,
+      dueTime,
+      reminder,
+      completed,
+      createdAt,
+      updatedAt,
     );
   }
 }

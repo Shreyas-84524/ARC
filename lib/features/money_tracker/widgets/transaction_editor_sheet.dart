@@ -22,29 +22,29 @@ class TransactionEditorSheet extends ConsumerStatefulWidget {
 
 class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet> {
   final _formKey = GlobalKey<FormState>();
-  
+
   late TextEditingController _amountController;
   late TextEditingController _notesController;
-  
+
   String _selectedType = 'Expense';
   String _selectedCategory = 'Food';
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = TimeOfDay.now();
 
-  final List<String> _incomeCategories = ['Salary', 'Investments', 'Freelance', 'Gift', 'Other'];
-  final List<String> _expenseCategories = ['Food', 'Transport', 'Rent', 'Bills', 'Entertainment', 'Health', 'Shopping', 'Other'];
+  final List<String> _incomeCategories = ['Salary', 'Freelancing', 'Investment', 'Gift', 'Other'];
+  final List<String> _expenseCategories = ['Food', 'Travel', 'Shopping', 'Fuel', 'Bills', 'Entertainment', 'Health', 'Education', 'Other'];
 
   @override
   void initState() {
     super.initState();
     final editTx = widget.transactionToEdit;
-    
+
     _amountController = TextEditingController(text: editTx != null ? editTx.amount.toString() : '');
     _notesController = TextEditingController(text: editTx?.notes ?? '');
     _selectedType = editTx?.type ?? 'Expense';
     _selectedCategory = editTx?.category ?? (_selectedType == 'Income' ? 'Salary' : 'Food');
     _selectedDate = editTx?.date ?? DateTime.now();
-    
+
     if (editTx?.time != null) {
       final parts = editTx!.time.split(':');
       if (parts.length == 2) {
@@ -64,6 +64,7 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
   }
 
   Future<void> _selectDate(BuildContext context) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
@@ -72,12 +73,19 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.dark(
-              primary: AppColors.accent,
-              onPrimary: AppColors.textPrimaryLight,
-              surface: AppColors.darkModal,
-              onSurface: AppColors.textPrimaryDark,
-            ),
+            colorScheme: isDark
+                ? const ColorScheme.dark(
+                    primary: AppColors.accent,
+                    onPrimary: AppColors.textPrimaryLight,
+                    surface: AppColors.darkModal,
+                    onSurface: AppColors.textPrimaryDark,
+                  )
+                : const ColorScheme.light(
+                    primary: AppColors.accentPressed,
+                    onPrimary: Colors.white,
+                    surface: AppColors.lightModal,
+                    onSurface: AppColors.textPrimaryLight,
+                  ),
           ),
           child: child!,
         );
@@ -91,18 +99,26 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
   }
 
   Future<void> _selectTime(BuildContext context) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: _selectedTime,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.dark(
-              primary: AppColors.accent,
-              onPrimary: AppColors.textPrimaryLight,
-              surface: AppColors.darkModal,
-              onSurface: AppColors.textPrimaryDark,
-            ),
+            colorScheme: isDark
+                ? const ColorScheme.dark(
+                    primary: AppColors.accent,
+                    onPrimary: AppColors.textPrimaryLight,
+                    surface: AppColors.darkModal,
+                    onSurface: AppColors.textPrimaryDark,
+                  )
+                : const ColorScheme.light(
+                    primary: AppColors.accentPressed,
+                    onPrimary: Colors.white,
+                    surface: AppColors.lightModal,
+                    onSurface: AppColors.textPrimaryLight,
+                  ),
           ),
           child: child!,
         );
@@ -119,7 +135,7 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
     if (!_formKey.currentState!.validate()) return;
 
     final amount = double.parse(_amountController.text.trim());
-    
+
     final hour = _selectedTime.hour.toString().padLeft(2, '0');
     final minute = _selectedTime.minute.toString().padLeft(2, '0');
     final timeStr = '$hour:$minute';
@@ -148,11 +164,38 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
     Navigator.of(context).pop();
   }
 
-  void _deleteTransaction() {
+  Future<void> _deleteTransaction() async {
     if (widget.transactionToEdit != null) {
-      HapticFeedback.mediumImpact();
-      ref.read(moneyProvider.notifier).deleteTransaction(widget.transactionToEdit!.id);
-      Navigator.of(context).pop();
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Delete Transaction'),
+          content: Text('Are you sure you want to delete this ${widget.transactionToEdit!.type.toLowerCase()} of \$${widget.transactionToEdit!.amount.toStringAsFixed(2)}?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.danger,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(80, 40),
+              ),
+              onPressed: () {
+                HapticFeedback.mediumImpact();
+                Navigator.of(context).pop(true);
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true && mounted) {
+        ref.read(moneyProvider.notifier).deleteTransaction(widget.transactionToEdit!.id);
+        Navigator.of(context).pop();
+      }
     }
   }
 
@@ -161,7 +204,7 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final categories = _selectedType == 'Income' ? _incomeCategories : _expenseCategories;
-    
+
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -240,7 +283,7 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               // Amount Field
               TextFormField(
                 controller: _amountController,
@@ -268,7 +311,7 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
 
               // Category selector dropdown
               DropdownButtonFormField<String>(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 decoration: const InputDecoration(
                   labelText: 'Category',
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),

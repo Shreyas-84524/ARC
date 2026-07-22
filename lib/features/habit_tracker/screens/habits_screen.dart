@@ -10,6 +10,7 @@ import 'package:arc/core/widgets/top_bar.dart';
 import 'package:arc/features/habit_tracker/models/habit_model.dart';
 import 'package:arc/features/habit_tracker/models/habit_entry_model.dart';
 import 'package:arc/features/habit_tracker/widgets/habit_editor_sheet.dart';
+import 'package:arc/core/widgets/empty_state.dart';
 import 'package:arc/providers/global_providers.dart';
 
 class HabitsScreen extends ConsumerStatefulWidget {
@@ -39,7 +40,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).dialogBackgroundColor,
+      backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
       builder: (context) => HabitEditorSheet(habitToEdit: habit),
     );
   }
@@ -637,49 +638,13 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(height: 48),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkCard : AppColors.lightCard,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight,
-              ),
-            ),
-            child: Icon(
-              LucideIcons.zap,
-              size: 48,
-              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            "No habits tracking yet. Add your first habit.",
-            style: theme.textTheme.bodyLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-            ),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(200, 46),
-            ),
-            onPressed: () => _showHabitEditor(context),
-            icon: const Icon(LucideIcons.plus, size: 18),
-            label: const Text('Add Habit'),
-          ),
-        ],
-      ),
-    ).animate().fade(duration: 200.ms);
+    return EmptyStateWidget(
+      icon: LucideIcons.zap,
+      title: 'No habits tracking yet',
+      description: 'Create habits to build consistent routines and track progress over time.',
+      actionLabel: 'Create Habit',
+      onAction: () => _showHabitEditor(context),
+    );
   }
 
   Widget _buildStatColumn(

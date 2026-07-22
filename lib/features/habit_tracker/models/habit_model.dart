@@ -86,4 +86,32 @@ class Habit extends HiveObject {
       updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : DateTime.now(),
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Habit &&
+        other.id == id &&
+        other.name == name &&
+        other.goalType == goalType &&
+        other.category == category &&
+        other.colorValue == colorValue &&
+        other.reminderTime == reminderTime &&
+        other.createdAt == createdAt &&
+        other.updatedAt == updatedAt;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      id,
+      name,
+      goalType,
+      category,
+      colorValue,
+      reminderTime,
+      createdAt,
+      updatedAt,
+    );
+  }
 }

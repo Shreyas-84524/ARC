@@ -4,52 +4,55 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:arc/core/theme/app_theme.dart';
 
+/// ShellScreen wraps all tab-navigated screens and provides the floating
+/// bottom navigation pill. It uses GoRouter.of(context) to read the current
+/// route location so that the correct tab is highlighted on every rebuild.
 class ShellScreen extends StatelessWidget {
   final Widget child;
+  final String? location;
 
   const ShellScreen({
     super.key,
     required this.child,
+    this.location,
   });
+
+  int _indexFromLocation(String location) {
+    if (location.startsWith('/tasks')) return 1;
+    if (location.startsWith('/habits')) return 2;
+    if (location.startsWith('/money')) return 3;
+    return 0;
+  }
+
+  void _onTabTapped(BuildContext context, int index, int currentIndex) {
+    if (index == currentIndex) return;
+    switch (index) {
+      case 0:
+        context.go('/');
+        break;
+      case 1:
+        context.go('/tasks');
+        break;
+      case 2:
+        context.go('/habits');
+        break;
+      case 3:
+        context.go('/money');
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // Determine current index based on route path
-    final GoRouterState state = GoRouterState.of(context);
-    final String location = state.uri.path;
-    
-    int currentIndex = 0;
-    if (location.startsWith('/tasks')) {
-      currentIndex = 1;
-    } else if (location.startsWith('/habits')) {
-      currentIndex = 2;
-    } else if (location.startsWith('/money')) {
-      currentIndex = 3;
-    }
-
-    void onTabTapped(int index) {
-      if (index == currentIndex) return;
-      switch (index) {
-        case 0:
-          context.go('/');
-          break;
-        case 1:
-          context.go('/tasks');
-          break;
-        case 2:
-          context.go('/habits');
-          break;
-        case 3:
-          context.go('/money');
-          break;
-      }
-    }
+    final String currentPath = location ??
+        GoRouterState.of(context).uri.path;
+    final int currentIndex = _indexFromLocation(currentPath);
 
     return Scaffold(
-      extendBody: true, // Allows child content to draw under bottom nav bar
+      extendBody: true,
       body: child,
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.only(bottom: 20),
@@ -64,13 +67,13 @@ class ShellScreen extends StatelessWidget {
                 child: Container(
                   height: 72,
                   decoration: BoxDecoration(
-                    color: isDark 
-                        ? AppColors.darkSurface.withOpacity(0.85) 
-                        : Colors.white.withOpacity(0.85),
+                    color: isDark
+                        ? AppColors.darkSurface.withValues(alpha: 0.85)
+                        : Colors.white.withValues(alpha: 0.85),
                     borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     border: Border.all(
-                      color: isDark 
-                          ? AppColors.borderStrong 
+                      color: isDark
+                          ? AppColors.borderStrong
                           : AppColors.borderStrongLight,
                       width: 1.0,
                     ),
@@ -90,28 +93,28 @@ class ShellScreen extends StatelessWidget {
                         index: 0,
                         icon: LucideIcons.layoutDashboard,
                         active: currentIndex == 0,
-                        onTap: () => onTabTapped(0),
+                        onTap: () => _onTabTapped(context, 0, currentIndex),
                       ),
                       _buildNavItem(
                         context,
                         index: 1,
                         icon: LucideIcons.checkSquare,
                         active: currentIndex == 1,
-                        onTap: () => onTabTapped(1),
+                        onTap: () => _onTabTapped(context, 1, currentIndex),
                       ),
                       _buildNavItem(
                         context,
                         index: 2,
                         icon: LucideIcons.zap,
                         active: currentIndex == 2,
-                        onTap: () => onTabTapped(2),
+                        onTap: () => _onTabTapped(context, 2, currentIndex),
                       ),
                       _buildNavItem(
                         context,
                         index: 3,
                         icon: LucideIcons.wallet,
                         active: currentIndex == 3,
-                        onTap: () => onTabTapped(3),
+                        onTap: () => _onTabTapped(context, 3, currentIndex),
                       ),
                     ],
                   ),
@@ -145,19 +148,21 @@ class ShellScreen extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: active 
-                  ? (isDark 
-                      ? AppColors.accent.withOpacity(0.15) 
-                      : AppColors.accentPressed.withOpacity(0.15)) 
+              color: active
+                  ? (isDark
+                      ? AppColors.accent.withValues(alpha: 0.15)
+                      : AppColors.accentPressed.withValues(alpha: 0.15))
                   : Colors.transparent,
               shape: BoxShape.circle,
             ),
             child: Icon(
               icon,
               size: 24,
-              color: active 
-                  ? (isDark ? AppColors.accent : AppColors.accentPressed) 
-                  : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+              color: active
+                  ? (isDark ? AppColors.accent : AppColors.accentPressed)
+                  : (isDark
+                      ? AppColors.textMutedDark
+                      : AppColors.textMutedLight),
             ),
           ),
         ),

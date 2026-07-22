@@ -22,34 +22,34 @@ class TaskEditorSheet extends ConsumerStatefulWidget {
 
 class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
   final _formKey = GlobalKey<FormState>();
-  
+
   late TextEditingController _titleController;
   late TextEditingController _descController;
   late TextEditingController _labelsController;
-  
+
   String _selectedPriority = 'Low';
   String _selectedCategory = 'Work';
   DateTime? _selectedDueDate;
   TimeOfDay? _selectedDueTime;
-  
+
   @override
   void initState() {
     super.initState();
     final editTask = widget.taskToEdit;
-    
+
     _titleController = TextEditingController(text: editTask?.title ?? '');
     _descController = TextEditingController(text: editTask?.description ?? '');
-    
+
     String labelString = '';
     if (editTask != null && editTask.labels.isNotEmpty) {
       labelString = editTask.labels.join(', ');
     }
     _labelsController = TextEditingController(text: labelString);
-    
+
     _selectedPriority = editTask?.priority ?? 'Low';
     _selectedCategory = editTask?.category ?? 'Work';
     _selectedDueDate = editTask?.dueDate;
-    
+
     if (editTask?.dueTime != null) {
       final parts = editTask!.dueTime!.split(':');
       if (parts.length == 2) {
@@ -70,6 +70,7 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
   }
 
   Future<void> _selectDueDate(BuildContext context) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDueDate ?? DateTime.now(),
@@ -78,12 +79,19 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.dark(
-              primary: AppColors.accent,
-              onPrimary: AppColors.textPrimaryLight,
-              surface: AppColors.darkModal,
-              onSurface: AppColors.textPrimaryDark,
-            ),
+            colorScheme: isDark
+                ? const ColorScheme.dark(
+                    primary: AppColors.accent,
+                    onPrimary: AppColors.textPrimaryLight,
+                    surface: AppColors.darkModal,
+                    onSurface: AppColors.textPrimaryDark,
+                  )
+                : const ColorScheme.light(
+                    primary: AppColors.accentPressed,
+                    onPrimary: Colors.white,
+                    surface: AppColors.lightModal,
+                    onSurface: AppColors.textPrimaryLight,
+                  ),
           ),
           child: child!,
         );
@@ -97,18 +105,26 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
   }
 
   Future<void> _selectDueTime(BuildContext context) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: _selectedDueTime ?? TimeOfDay.now(),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.dark(
-              primary: AppColors.accent,
-              onPrimary: AppColors.textPrimaryLight,
-              surface: AppColors.darkModal,
-              onSurface: AppColors.textPrimaryDark,
-            ),
+            colorScheme: isDark
+                ? const ColorScheme.dark(
+                    primary: AppColors.accent,
+                    onPrimary: AppColors.textPrimaryLight,
+                    surface: AppColors.darkModal,
+                    onSurface: AppColors.textPrimaryDark,
+                  )
+                : const ColorScheme.light(
+                    primary: AppColors.accentPressed,
+                    onPrimary: Colors.white,
+                    surface: AppColors.lightModal,
+                    onSurface: AppColors.textPrimaryLight,
+                  ),
           ),
           child: child!,
         );
@@ -123,18 +139,38 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
 
   void _saveForm() {
     if (!_formKey.currentState!.validate()) return;
-    
+
     final labels = _labelsController.text
         .split(',')
         .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
+        .where((e) => e.isNotEmpty && e.length <= 30)
+        .take(10)
         .toList();
-        
+
     String? timeString;
-    if (_selectedDueTime != null) {
-      final hour = _selectedDueTime!.hour.toString().padLeft(2, '0');
-      final minute = _selectedDueTime!.minute.toString().padLeft(2, '0');
-      timeString = '$hour:$minute';
+    DateTime? reminderDateTime;
+
+    if (_selectedDueDate != null) {
+      if (_selectedDueTime != null) {
+        final hour = _selectedDueTime!.hour.toString().padLeft(2, '0');
+        final minute = _selectedDueTime!.minute.toString().padLeft(2, '0');
+        timeString = '$hour:$minute';
+        reminderDateTime = DateTime(
+          _selectedDueDate!.year,
+          _selectedDueDate!.month,
+          _selectedDueDate!.day,
+          _selectedDueTime!.hour,
+          _selectedDueTime!.minute,
+        );
+      } else {
+        reminderDateTime = DateTime(
+          _selectedDueDate!.year,
+          _selectedDueDate!.month,
+          _selectedDueDate!.day,
+          9,
+          0,
+        );
+      }
     }
 
     final id = widget.taskToEdit?.id ?? const Uuid().v4();
@@ -149,7 +185,7 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
       labels: labels,
       dueDate: _selectedDueDate,
       dueTime: timeString,
-      reminder: _selectedDueDate,
+      reminder: reminderDateTime,
       completed: widget.taskToEdit?.completed ?? false,
       createdAt: widget.taskToEdit?.createdAt ?? now,
       updatedAt: now,
@@ -168,7 +204,7 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -199,7 +235,7 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               // Title Field
               TextFormField(
                 controller: _titleController,
@@ -215,7 +251,7 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
                 },
               ),
               const SizedBox(height: 12),
-              
+
               // Description Field
               TextFormField(
                 controller: _descController,
@@ -233,7 +269,7 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _selectedCategory,
+                      initialValue: _selectedCategory,
                       decoration: const InputDecoration(
                         labelText: 'Category',
                         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -252,7 +288,7 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _selectedPriority,
+                      initialValue: _selectedPriority,
                       decoration: const InputDecoration(
                         labelText: 'Priority',
                         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -312,7 +348,7 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
                                     ? 'Set Date'
                                     : DateFormat('MMM d, yyyy').format(_selectedDueDate!),
                                 style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: _selectedDueDate == null 
+                                  color: _selectedDueDate == null
                                       ? (isDark ? AppColors.textPlaceholderDark : AppColors.textDisabledLight)
                                       : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
                                   fontWeight: _selectedDueDate == null ? FontWeight.normal : FontWeight.bold,
@@ -346,7 +382,7 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
                                     ? 'Set Time'
                                     : _selectedDueTime!.format(context),
                                 style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: _selectedDueTime == null 
+                                  color: _selectedDueTime == null
                                       ? (isDark ? AppColors.textPlaceholderDark : AppColors.textDisabledLight)
                                       : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
                                   fontWeight: _selectedDueTime == null ? FontWeight.normal : FontWeight.bold,

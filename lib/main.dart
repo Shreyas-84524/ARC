@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -10,36 +11,52 @@ import 'package:arc/core/notifications/notification_service.dart';
 import 'package:arc/providers/global_providers.dart';
 
 void main() async {
-  // Ensure widget bindings are initialized
-  WidgetsFlutterBinding.ensureInitialized();
+  runZonedGuarded<Future<void>>(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Timezones
-  tz.initializeTimeZones();
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      debugPrint('FlutterError caught: ${details.exception}');
+    };
 
-  // Initialize Firebase Cloud services
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
+    // Initialize Timezones
+    tz.initializeTimeZones();
+
+    // Initialize Firebase Cloud services
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      debugPrint('Firebase Core: successfully initialized.');
+    } catch (e) {
+      debugPrint('Firebase Core initialization warning: $e');
+    }
+
+    // Initialize Local Databases (Hive)
+    try {
+      await HiveService().init();
+    } catch (e) {
+      debugPrint('HiveService initialization warning: $e');
+    }
+
+    // Initialize Local Notifications
+    try {
+      final notificationService = NotificationService();
+      await notificationService.init();
+      await notificationService.requestPermissions();
+    } catch (e) {
+      debugPrint('NotificationService initialization warning: $e');
+    }
+
+    // Run the application
+    runApp(
+      const ProviderScope(
+        child: ProjectArcApp(),
+      ),
     );
-    debugPrint('Firebase Core: successfully initialized.');
-  } catch (e) {
-    debugPrint('Firebase Core initialization failed: $e');
-  }
-
-  // Initialize Local Databases (Hive)
-  await HiveService().init();
-
-  // Initialize Local Notifications
-  final notificationService = NotificationService();
-  await notificationService.init();
-  await notificationService.requestPermissions();
-
-  // Run the application
-  runApp(
-    const ProviderScope(
-      child: ProjectArcApp(),
-    ),
-  );
+  }, (error, stackTrace) {
+    debugPrint('Uncaught async error in main: $error\n$stackTrace');
+  });
 }
 
 class ProjectArcApp extends ConsumerWidget {

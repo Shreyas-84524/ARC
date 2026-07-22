@@ -86,4 +86,32 @@ class Transaction extends HiveObject {
       createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : DateTime.now(),
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Transaction &&
+        other.id == id &&
+        other.amount == amount &&
+        other.type == type &&
+        other.category == category &&
+        other.date == date &&
+        other.time == time &&
+        other.notes == notes &&
+        other.createdAt == createdAt;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      id,
+      amount,
+      type,
+      category,
+      date,
+      time,
+      notes,
+      createdAt,
+    );
+  }
 }

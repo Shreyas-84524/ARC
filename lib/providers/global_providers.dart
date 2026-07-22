@@ -7,12 +7,47 @@ import 'package:arc/features/habit_tracker/models/habit_model.dart';
 import 'package:arc/features/habit_tracker/models/habit_entry_model.dart';
 import 'package:arc/features/habit_tracker/repository/habit_repository.dart';
 import 'package:arc/features/money_tracker/models/transaction_model.dart';
+import 'package:arc/features/money_tracker/models/monthly_summary_model.dart';
 import 'package:arc/features/money_tracker/repository/money_repository.dart';
+import 'package:arc/features/settings/models/settings_model.dart';
+import 'package:arc/features/settings/repository/settings_repository.dart';
+import 'package:arc/features/dashboard/repository/dashboard_repository.dart';
+import 'package:arc/core/services/sync_service.dart';
 import 'package:arc/core/notifications/notification_service.dart';
 
-// Theme Mode Provider (Light vs Dark)
+// Settings Repository Provider
+final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
+  return SettingsRepository();
+});
+
+// App Settings State Notifier Provider
+final appSettingsProvider =
+    StateNotifierProvider<SettingsNotifier, SettingsModel>((ref) {
+  final repo = ref.watch(settingsRepositoryProvider);
+  return SettingsNotifier(repo);
+});
+
+class SettingsNotifier extends StateNotifier<SettingsModel> {
+  final SettingsRepository _repository;
+
+  SettingsNotifier(this._repository) : super(_repository.getSettings());
+
+  Future<void> updateSettings(SettingsModel settings) async {
+    state = settings;
+    await _repository.saveSettings(settings);
+  }
+
+  Future<void> updateThemeMode(bool isDarkMode) async {
+    final updated = state.copyWith(isDarkMode: isDarkMode);
+    state = updated;
+    await _repository.saveSettings(updated);
+  }
+}
+
+// Theme Mode Provider (Reads from AppSettings)
 final themeModeProvider = StateProvider<ThemeMode>((ref) {
-  return ThemeMode.dark; // Default to dark mode as per design.md
+  final settings = ref.watch(appSettingsProvider);
+  return settings.isDarkMode ? ThemeMode.dark : ThemeMode.light;
 });
 
 // Task Repository Provider
@@ -40,7 +75,7 @@ class TasksNotifier extends StateNotifier<List<Task>> {
 
   Future<void> syncTasks() async {
     await _repository.syncPending();
-    state = _repository.getTasks(); // Refresh state if any tasks synced
+    state = _repository.getTasks();
   }
 
   Future<void> addTask(Task task) async {
@@ -57,19 +92,22 @@ class TasksNotifier extends StateNotifier<List<Task>> {
   }
 
   Future<void> toggleTask(String id) async {
-    final task = state.firstWhere((t) => t.id == id);
+    final taskIndex = state.indexWhere((t) => t.id == id);
+    if (taskIndex == -1) return;
+    final task = state[taskIndex];
+
     final updatedTask = task.copyWith(
       completed: !task.completed,
       updatedAt: DateTime.now(),
     );
     await _repository.saveTask(updatedTask);
-    
+
     if (updatedTask.completed) {
       await NotificationService().cancelTaskReminders(task.id);
     } else {
       await NotificationService().scheduleTaskReminders(updatedTask);
     }
-    
+
     state = _repository.getTasks();
   }
 
@@ -110,7 +148,6 @@ final filteredTasksProvider = Provider<List<Task>>((ref) {
 
   List<Task> filtered = List.from(tasks);
 
-  // 1. Text Search Filter
   if (query.isNotEmpty) {
     filtered = filtered.where((task) {
       final titleMatch = task.title.toLowerCase().contains(query);
@@ -120,24 +157,20 @@ final filteredTasksProvider = Provider<List<Task>>((ref) {
     }).toList();
   }
 
-  // 2. Category Filter
   if (category != null) {
     filtered = filtered.where((task) => task.category == category).toList();
   }
 
-  // 3. Priority Filter
   if (priority != null) {
     filtered = filtered.where((task) => task.priority == priority).toList();
   }
 
-  // 4. Status Filter
   if (status == 'Pending') {
     filtered = filtered.where((task) => !task.completed).toList();
   } else if (status == 'Completed') {
     filtered = filtered.where((task) => task.completed).toList();
   }
 
-  // 5. Date Filter
   final now = DateTime.now();
   final todayStart = DateTime(now.year, now.month, now.day);
   final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
@@ -155,7 +188,6 @@ final filteredTasksProvider = Provider<List<Task>>((ref) {
     }).toList();
   }
 
-  // 6. Sorting
   if (sortBy == 'DueDate') {
     filtered.sort((a, b) {
       if (a.dueDate == null && b.dueDate == null) return 0;
@@ -172,13 +204,54 @@ final filteredTasksProvider = Provider<List<Task>>((ref) {
     filtered.sort((a, b) {
       final pA = _priorityValue(a.priority);
       final pB = _priorityValue(b.priority);
-      return pB.compareTo(pA); // High priority first
+      return pB.compareTo(pA);
     });
   } else if (sortBy == 'CreationDate') {
-    filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt)); // Newest first
+    filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  } else if (sortBy == 'Alphabetical') {
+    filtered.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
   }
 
   return filtered;
+});
+
+// Task Statistics Selector Provider
+final taskStatisticsProvider = Provider<Map<String, dynamic>>((ref) {
+  final tasks = ref.watch(tasksProvider);
+  final totalTasks = tasks.length;
+  final completedTasks = tasks.where((t) => t.completed).length;
+  final pendingTasks = totalTasks - completedTasks;
+  final completionRate = totalTasks == 0 ? 0.0 : (completedTasks / totalTasks);
+
+  final now = DateTime.now();
+  final todayStart = DateTime(now.year, now.month, now.day);
+  final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+  final todayTasks = tasks.where((t) {
+    if (t.dueDate == null) return false;
+    return t.dueDate!.isAfter(todayStart.subtract(const Duration(seconds: 1))) &&
+        t.dueDate!.isBefore(todayEnd.add(const Duration(seconds: 1)));
+  }).length;
+
+  final overdueTasks = tasks.where((t) {
+    if (t.completed || t.dueDate == null) return false;
+    return t.dueDate!.isBefore(todayStart);
+  }).length;
+
+  final upcomingTasks = tasks.where((t) {
+    if (t.completed || t.dueDate == null) return false;
+    return t.dueDate!.isAfter(todayEnd);
+  }).length;
+
+  return {
+    'totalTasks': totalTasks,
+    'completedTasks': completedTasks,
+    'pendingTasks': pendingTasks,
+    'completionPercentage': (completionRate * 100).round(),
+    'todayTasks': todayTasks,
+    'overdueTasks': overdueTasks,
+    'upcomingTasks': upcomingTasks,
+  };
 });
 
 int _priorityValue(String priority) {
@@ -244,7 +317,7 @@ class HabitsNotifier extends StateNotifier<List<Habit>> {
   void _updateReminder() {
     final habits = _repository.getHabits();
     final entries = _repository.getEntries();
-    
+
     final dailyHabits = habits.where((h) => h.goalType == 'Daily').toList();
     if (dailyHabits.isEmpty) {
       NotificationService().cancelEveningReminder();
@@ -267,7 +340,8 @@ class HabitsNotifier extends StateNotifier<List<Habit>> {
 }
 
 // Habit Entries State Provider
-final habitEntriesProvider = StateNotifierProvider<HabitEntriesNotifier, List<HabitEntry>>((ref) {
+final habitEntriesProvider =
+    StateNotifierProvider<HabitEntriesNotifier, List<HabitEntry>>((ref) {
   final repo = ref.watch(habitRepositoryProvider);
   return HabitEntriesNotifier(repo);
 });
@@ -293,7 +367,7 @@ class HabitEntriesNotifier extends StateNotifier<List<HabitEntry>> {
   void _updateReminder() {
     final habits = _repository.getHabits();
     final entries = _repository.getEntries();
-    
+
     final dailyHabits = habits.where((h) => h.goalType == 'Daily').toList();
     if (dailyHabits.isEmpty) {
       NotificationService().cancelEveningReminder();
@@ -316,11 +390,11 @@ class HabitEntriesNotifier extends StateNotifier<List<HabitEntry>> {
 }
 
 // Helper to calculate habit metrics
-Map<String, dynamic> getHabitMetrics(String habitId, List<HabitEntry> entries, DateTime createdAt) {
-  final habitEntries = entries
-      .where((e) => e.habitId == habitId && e.completed)
-      .toList();
-      
+Map<String, dynamic> getHabitMetrics(
+    String habitId, List<HabitEntry> entries, DateTime createdAt) {
+  final habitEntries =
+      entries.where((e) => e.habitId == habitId && e.completed).toList();
+
   final completedDates = habitEntries
       .map((e) {
         try {
@@ -387,7 +461,8 @@ Map<String, dynamic> getHabitMetrics(String habitId, List<HabitEntry> entries, D
 
   final createdDate = DateTime(createdAt.year, createdAt.month, createdAt.day);
   final totalDays = today.difference(createdDate).inDays + 1;
-  final double rate = (completedDates.length / totalDays).clamp(0.0, 1.0);
+  final double rate = (completedDates.length / (totalDays <= 0 ? 1 : totalDays))
+      .clamp(0.0, 1.0);
 
   return {
     'currentStreak': currentStreak,
@@ -407,7 +482,8 @@ final currentMonthProvider = Provider<String>((ref) {
 });
 
 // Monthly Budget State Notifier Provider
-final monthlyBudgetProvider = StateNotifierProvider<MonthlyBudgetNotifier, double>((ref) {
+final monthlyBudgetProvider =
+    StateNotifierProvider<MonthlyBudgetNotifier, double>((ref) {
   final repo = ref.watch(moneyRepositoryProvider);
   final month = ref.watch(currentMonthProvider);
   return MonthlyBudgetNotifier(repo, month);
@@ -428,116 +504,135 @@ class MonthlyBudgetNotifier extends StateNotifier<double> {
   Future<void> setBudget(double amount) async {
     await _repository.saveMonthlyBudget(_currentMonth, amount);
     state = _repository.getMonthlyBudget(_currentMonth);
+    _syncSummary();
+  }
+
+  void _syncSummary() {
+    final transactions = _repository.getTransactions();
+    _saveSummaryHelper(_repository, _currentMonth, state, transactions);
   }
 }
 
 // Money Transactions State Notifier Provider
-final moneyProvider = StateNotifierProvider<MoneyNotifier, List<Transaction>>((ref) {
+final moneyProvider =
+    StateNotifierProvider<MoneyNotifier, List<Transaction>>((ref) {
   final repo = ref.watch(moneyRepositoryProvider);
-  return MoneyNotifier(repo);
+  final month = ref.watch(currentMonthProvider);
+  final budget = ref.watch(monthlyBudgetProvider);
+  return MoneyNotifier(repo, month, budget);
 });
 
 class MoneyNotifier extends StateNotifier<List<Transaction>> {
   final MoneyRepository _repository;
+  final String _currentMonth;
+  final double _currentBudget;
 
-  MoneyNotifier(this._repository) : super([]) {
+  MoneyNotifier(this._repository, this._currentMonth, this._currentBudget)
+      : super([]) {
     _loadTransactions();
   }
 
   void _loadTransactions() {
     state = _repository.getTransactions();
+    _updateReminders();
+    _syncSummary();
     syncTransactions();
   }
 
   Future<void> syncTransactions() async {
     await _repository.syncPending();
     state = _repository.getTransactions();
+    _updateReminders();
+    _syncSummary();
   }
 
   Future<void> addTransaction(Transaction tx) async {
     await _repository.saveTransaction(tx);
     state = _repository.getTransactions();
+    _updateReminders();
+    _syncSummary();
   }
 
   Future<void> updateTransaction(Transaction tx) async {
     await _repository.saveTransaction(tx);
     state = _repository.getTransactions();
+    _updateReminders();
+    _syncSummary();
   }
 
   Future<void> deleteTransaction(String id) async {
     await _repository.deleteTransaction(id);
     state = _repository.getTransactions();
+    _updateReminders();
+    _syncSummary();
+  }
+
+  void _updateReminders() {
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final hasTodayTx =
+        state.any((tx) => DateFormat('yyyy-MM-dd').format(tx.date) == todayStr);
+    NotificationService().scheduleDailyMoneyReminders(hasTodayTx: hasTodayTx);
+  }
+
+  void _syncSummary() {
+    _saveSummaryHelper(_repository, _currentMonth, _currentBudget, state);
   }
 }
 
-// Dashboard State Provider
-final dashboardProvider = Provider<Map<String, dynamic>>((ref) {
-  final tasks = ref.watch(tasksProvider);
-  final completedTasks = tasks.where((t) => t.completed).length;
-  final totalTasks = tasks.length;
-
-  final habits = ref.watch(habitsProvider);
-  final entries = ref.watch(habitEntriesProvider);
-
-  final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-  final completedHabits = entries.where((e) => e.dateStr == todayStr && e.completed).length;
-  final totalHabits = habits.length;
-
-  int maxStreak = 0;
-  for (final h in habits) {
-    final metrics = getHabitMetrics(h.id, entries, h.createdAt);
-    final streak = metrics['currentStreak'] as int;
-    if (streak > maxStreak) {
-      maxStreak = streak;
-    }
-  }
-
-  // Dynamic Money calculations
-  final transactions = ref.watch(moneyProvider);
-  final currentMonth = ref.watch(currentMonthProvider);
-  final monthlyBudget = ref.watch(monthlyBudgetProvider);
-
-  double totalIncome = 0.0;
-  double totalExpenses = 0.0;
+void _saveSummaryHelper(MoneyRepository repository, String month, double budget, List<Transaction> transactions) {
+  double income = 0.0;
+  double expenses = 0.0;
 
   for (final tx in transactions) {
-    final txMonthStr = DateFormat('yyyy-MM').format(tx.date);
-    if (txMonthStr == currentMonth) {
+    final txMonth = DateFormat('yyyy-MM').format(tx.date);
+    if (txMonth == month) {
       if (tx.type == 'Income') {
-        totalIncome += tx.amount;
+        income += tx.amount;
       } else {
-        totalExpenses += tx.amount;
+        expenses += tx.amount;
       }
     }
   }
 
-  final remainingBudget = monthlyBudget + totalIncome - totalExpenses;
+  final summary = MonthlySummary(
+    month: month,
+    monthlyBudget: budget,
+    totalIncome: income,
+    totalExpenses: expenses,
+    savings: income - expenses,
+    updatedAt: DateTime.now(),
+  );
 
-  return {
-    'completedTasks': completedTasks,
-    'totalTasks': totalTasks,
-    'completedHabits': completedHabits,
-    'totalHabits': totalHabits,
-    'remainingBudget': remainingBudget,
-    'totalBudget': monthlyBudget,
-    'streakDays': maxStreak,
-  };
+  repository.saveMonthlySummary(summary);
+}
+
+// Sync Service Provider
+final syncServiceProvider = Provider<SyncService>((ref) {
+  final taskRepo = ref.watch(taskRepositoryProvider);
+  final habitRepo = ref.watch(habitRepositoryProvider);
+  final moneyRepo = ref.watch(moneyRepositoryProvider);
+  final settingsRepo = ref.watch(settingsRepositoryProvider);
+
+  return SyncService(
+    taskRepository: taskRepo,
+    habitRepository: habitRepo,
+    moneyRepository: moneyRepo,
+    settingsRepository: settingsRepo,
+  );
 });
 
-// Notifications Configuration State Provider (Placeholder)
-final notificationsSettingsProvider = StateProvider<Map<String, bool>>((ref) {
-  return {
-    'taskReminders': true,
-    'habitReminders': true,
-    'moneyReminders': true,
-  };
+// Dashboard Repository Provider
+final dashboardRepositoryProvider = Provider<DashboardRepository>((ref) {
+  return DashboardRepository(
+    taskRepository: ref.watch(taskRepositoryProvider),
+    habitRepository: ref.watch(habitRepositoryProvider),
+    moneyRepository: ref.watch(moneyRepositoryProvider),
+  );
 });
 
-// Global Settings State Provider (Placeholder)
-final settingsProvider = StateProvider<Map<String, dynamic>>((ref) {
-  return {
-    'userDisplayName': 'User',
-    'syncOfflineCache': true,
-    'backupEnabled': true,
-  };
+// Dashboard State Provider
+final dashboardProvider = Provider<Map<String, dynamic>>((ref) {
+  final repo = ref.watch(dashboardRepositoryProvider);
+  final currentMonth = ref.watch(currentMonthProvider);
+  return repo.getDashboardData(currentMonth);
 });

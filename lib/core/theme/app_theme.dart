@@ -63,15 +63,12 @@ class AppTheme {
   static const double radiusButton = 16.0;
   static const double radiusPill = 999.0;
 
-  static const String fontFamily = 'SF Pro Display';
-
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: AppColors.darkBg,
       primaryColor: AppColors.accent,
-      fontFamily: fontFamily,
       cardColor: AppColors.darkCard,
       textTheme: const TextTheme(
         headlineLarge: TextStyle(
@@ -137,7 +134,6 @@ class AppTheme {
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            fontFamily: fontFamily,
           ),
           elevation: 0,
         ),
@@ -153,7 +149,6 @@ class AppTheme {
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            fontFamily: fontFamily,
           ),
         ),
       ),
@@ -205,7 +200,6 @@ class AppTheme {
       brightness: Brightness.light,
       scaffoldBackgroundColor: AppColors.lightBg,
       primaryColor: AppColors.accent,
-      fontFamily: fontFamily,
       cardColor: AppColors.lightCard,
       textTheme: const TextTheme(
         headlineLarge: TextStyle(
@@ -267,7 +261,6 @@ class AppTheme {
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            fontFamily: fontFamily,
           ),
           elevation: 0,
         ),
@@ -283,7 +276,6 @@ class AppTheme {
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            fontFamily: fontFamily,
           ),
         ),
       ),

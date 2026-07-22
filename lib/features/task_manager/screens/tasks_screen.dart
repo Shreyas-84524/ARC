@@ -10,6 +10,7 @@ import 'package:arc/core/constants/app_constants.dart';
 import 'package:arc/core/widgets/top_bar.dart';
 import 'package:arc/features/task_manager/models/task_model.dart';
 import 'package:arc/features/task_manager/widgets/task_editor_sheet.dart';
+import 'package:arc/core/widgets/empty_state.dart';
 import 'package:arc/providers/global_providers.dart';
 
 class TasksScreen extends ConsumerStatefulWidget {
@@ -32,7 +33,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).dialogBackgroundColor,
+      backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
       builder: (context) => TaskEditorSheet(taskToEdit: task),
     );
   }
@@ -73,12 +74,33 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
     final activeDate = ref.watch(taskDateFilterProvider);
     final activeSort = ref.watch(taskSortProvider);
     final activeCategory = ref.watch(taskCategoryFilterProvider);
+    final taskStats = ref.watch(taskStatisticsProvider);
 
     return Scaffold(
       appBar: const CustomTopBar(title: 'Task Manager'),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Task Statistics Strip
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildStatBadge(context, 'Total', '${taskStats['totalTasks']}'),
+                _buildStatBadge(context, 'Pending', '${taskStats['pendingTasks']}'),
+                _buildStatBadge(context, 'Done', '${taskStats['completedTasks']}'),
+                _buildStatBadge(context, 'Today', '${taskStats['todayTasks']}'),
+                _buildStatBadge(
+                  context,
+                  'Overdue',
+                  '${taskStats['overdueTasks']}',
+                  isError: (taskStats['overdueTasks'] as int) > 0,
+                ),
+              ],
+            ),
+          ),
+
           // Search & Filter header
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -112,7 +134,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                     // Sorting Dropdown
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        value: activeSort,
+                        initialValue: activeSort,
                         decoration: const InputDecoration(
                           labelText: 'Sort By',
                           contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -121,6 +143,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                           DropdownMenuItem(value: 'DueDate', child: Text('Due Date')),
                           DropdownMenuItem(value: 'Priority', child: Text('Priority')),
                           DropdownMenuItem(value: 'CreationDate', child: Text('Creation Date')),
+                          DropdownMenuItem(value: 'Alphabetical', child: Text('Alphabetical')),
                         ],
                         onChanged: (val) {
                           if (val != null) ref.read(taskSortProvider.notifier).state = val;
@@ -131,7 +154,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                     // Category Dropdown
                     Expanded(
                       child: DropdownButtonFormField<String?>(
-                        value: activeCategory,
+                        initialValue: activeCategory,
                         decoration: const InputDecoration(
                           labelText: 'Category',
                           contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -247,48 +270,13 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: (isDark ? AppColors.darkCard : AppColors.lightCard),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight,
-              ),
-            ),
-            child: Icon(
-              LucideIcons.clipboardList,
-              size: 48,
-              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            "No tasks yet. Add your first task.",
-            style: theme.textTheme.bodyLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-            ),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(200, 46),
-            ),
-            onPressed: () => _showTaskEditor(context),
-            icon: const Icon(LucideIcons.plus, size: 18),
-            label: const Text('Add Task'),
-          ),
-        ],
-      ),
-    ).animate().fade(duration: 200.ms);
+    return EmptyStateWidget(
+      icon: LucideIcons.clipboardList,
+      title: 'No tasks found',
+      description: 'Add your first task to stay organized and boost productivity.',
+      actionLabel: 'Create Task',
+      onAction: () => _showTaskEditor(context),
+    );
   }
 
   Widget _buildTaskSlidable(BuildContext context, Task task) {
@@ -508,6 +496,51 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
             color: selected ? AppColors.accent : (isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildStatBadge(
+    BuildContext context,
+    String label,
+    String value, {
+    bool isError = false,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isError
+            ? AppColors.danger.withValues(alpha: 0.1)
+            : (isDark ? AppColors.darkCard : AppColors.lightCard),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isError
+              ? AppColors.danger
+              : (isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight),
+        ),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: isError
+                  ? AppColors.danger
+                  : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+            ),
+          ),
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+              fontSize: 10,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -7,7 +7,10 @@ import 'package:arc/features/habit_tracker/models/habit_model.dart';
 import 'package:arc/features/habit_tracker/models/habit_entry_model.dart';
 import 'package:arc/features/habit_tracker/repository/habit_repository.dart';
 import 'package:arc/features/money_tracker/models/transaction_model.dart';
+import 'package:arc/features/money_tracker/models/monthly_summary_model.dart';
 import 'package:arc/features/money_tracker/repository/money_repository.dart';
+import 'package:arc/features/settings/models/settings_model.dart';
+import 'package:arc/features/settings/repository/settings_repository.dart';
 import 'package:arc/providers/global_providers.dart';
 
 class FakeTaskRepository implements TaskRepository {
@@ -111,6 +114,24 @@ class FakeMoneyRepository implements MoneyRepository {
   }
 
   @override
+  Future<void> saveMonthlySummary(MonthlySummary summary) async {}
+
+  @override
+  Future<void> syncPending() async {}
+}
+
+class FakeSettingsRepository implements SettingsRepository {
+  SettingsModel _settings = SettingsModel.defaultSettings();
+
+  @override
+  SettingsModel getSettings() => _settings;
+
+  @override
+  Future<void> saveSettings(SettingsModel settings) async {
+    _settings = settings;
+  }
+
+  @override
   Future<void> syncPending() async {}
 }
 
@@ -123,6 +144,7 @@ void main() {
           taskRepositoryProvider.overrideWithValue(FakeTaskRepository()),
           habitRepositoryProvider.overrideWithValue(FakeHabitRepository()),
           moneyRepositoryProvider.overrideWithValue(FakeMoneyRepository()),
+          settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
         ],
         child: const ProjectArcApp(),
       ),

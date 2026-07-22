@@ -66,10 +66,7 @@ class CustomTopBar extends StatelessWidget implements PreferredSizeWidget {
                   color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                 ),
                 onPressed: () {
-                  // Search functionality (placeholder)
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Search clicked (placeholder)')),
-                  );
+                  context.push('/search');
                 },
               ),
               IconButton(
@@ -79,10 +76,7 @@ class CustomTopBar extends StatelessWidget implements PreferredSizeWidget {
                   color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                 ),
                 onPressed: () {
-                  // Notifications screen (placeholder)
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Notifications clicked (placeholder)')),
-                  );
+                  context.push('/notifications');
                 },
               ),
               IconButton(

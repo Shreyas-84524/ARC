@@ -10,6 +10,7 @@ import 'package:arc/core/theme/app_theme.dart';
 import 'package:arc/core/widgets/top_bar.dart';
 import 'package:arc/features/money_tracker/models/transaction_model.dart';
 import 'package:arc/features/money_tracker/widgets/transaction_editor_sheet.dart';
+import 'package:arc/core/widgets/empty_state.dart';
 import 'package:arc/providers/global_providers.dart';
 
 class MoneyScreen extends ConsumerStatefulWidget {
@@ -24,12 +25,17 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
 
   final Map<String, Color> _categoryColors = {
     'Food': AppColors.warning,
-    'Transport': AppColors.info,
-    'Rent': AppColors.accentPressed,
+    'Travel': AppColors.info,
+    'Shopping': AppColors.priorityMuch,
+    'Fuel': Colors.amber,
     'Bills': AppColors.danger,
     'Entertainment': AppColors.accent,
-    'Shopping': AppColors.priorityMuch,
     'Health': Colors.teal,
+    'Education': Colors.purpleAccent,
+    'Salary': AppColors.success,
+    'Freelancing': AppColors.accent,
+    'Investment': Colors.indigo,
+    'Gift': Colors.pinkAccent,
     'Other': Colors.blueGrey,
   };
 
@@ -49,7 +55,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).dialogBackgroundColor,
+      backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
       builder: (context) => TransactionEditorSheet(transactionToEdit: tx),
     );
   }
@@ -819,40 +825,13 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(height: 36),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkCard : AppColors.lightCard,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight,
-              ),
-            ),
-            child: Icon(
-              LucideIcons.receipt,
-              size: 44,
-              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            "No transactions log this month.",
-            style: theme.textTheme.bodyLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-            ),
-          ),
-        ],
-      ),
-    ).animate().fade(duration: 200.ms);
+    return EmptyStateWidget(
+      icon: LucideIcons.receipt,
+      title: 'No transactions logged this month',
+      description: 'Record your daily income and expenses to track your financial health.',
+      actionLabel: 'Add Transaction',
+      onAction: () => _showTransactionEditor(context),
+    );
   }
 
   Widget _buildBudgetStat(
