@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -52,74 +51,59 @@ class ShellScreen extends StatelessWidget {
     final int currentIndex = _indexFromLocation(currentPath);
 
     return Scaffold(
-      extendBody: true,
+      extendBody: false,
       body: child,
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.only(bottom: 20),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Hero(
-            tag: 'bottom_nav_pill',
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
-                child: Container(
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? AppColors.darkSurface.withValues(alpha: 0.85)
-                        : Colors.white.withValues(alpha: 0.85),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                    border: Border.all(
-                      color: isDark
-                          ? AppColors.borderStrong
-                          : AppColors.borderStrongLight,
-                      width: 1.0,
-                    ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black38,
-                        blurRadius: 20,
-                        offset: Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildNavItem(
-                        context,
-                        index: 0,
-                        icon: LucideIcons.layoutDashboard,
-                        active: currentIndex == 0,
-                        onTap: () => _onTabTapped(context, 0, currentIndex),
-                      ),
-                      _buildNavItem(
-                        context,
-                        index: 1,
-                        icon: LucideIcons.checkSquare,
-                        active: currentIndex == 1,
-                        onTap: () => _onTabTapped(context, 1, currentIndex),
-                      ),
-                      _buildNavItem(
-                        context,
-                        index: 2,
-                        icon: LucideIcons.zap,
-                        active: currentIndex == 2,
-                        onTap: () => _onTabTapped(context, 2, currentIndex),
-                      ),
-                      _buildNavItem(
-                        context,
-                        index: 3,
-                        icon: LucideIcons.wallet,
-                        active: currentIndex == 3,
-                        onTap: () => _onTabTapped(context, 3, currentIndex),
-                      ),
-                    ],
-                  ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppColors.darkSurface
+              : Colors.white,
+          border: Border(
+            top: BorderSide(
+              color: isDark
+                  ? AppColors.borderSubtle
+                  : AppColors.borderSubtleLight,
+              width: 1.0,
+            ),
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          bottom: true,
+          child: SizedBox(
+            height: 64,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildNavItem(
+                  context,
+                  index: 0,
+                  icon: LucideIcons.layoutDashboard,
+                  active: currentIndex == 0,
+                  onTap: () => _onTabTapped(context, 0, currentIndex),
                 ),
-              ),
+                _buildNavItem(
+                  context,
+                  index: 1,
+                  icon: LucideIcons.checkSquare,
+                  active: currentIndex == 1,
+                  onTap: () => _onTabTapped(context, 1, currentIndex),
+                ),
+                _buildNavItem(
+                  context,
+                  index: 2,
+                  icon: LucideIcons.zap,
+                  active: currentIndex == 2,
+                  onTap: () => _onTabTapped(context, 2, currentIndex),
+                ),
+                _buildNavItem(
+                  context,
+                  index: 3,
+                  icon: LucideIcons.wallet,
+                  active: currentIndex == 3,
+                  onTap: () => _onTabTapped(context, 3, currentIndex),
+                ),
+              ],
             ),
           ),
         ),

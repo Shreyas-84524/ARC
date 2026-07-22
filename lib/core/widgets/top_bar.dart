@@ -61,16 +61,6 @@ class CustomTopBar extends StatelessWidget implements PreferredSizeWidget {
           ? [
               IconButton(
                 icon: Icon(
-                  LucideIcons.search,
-                  size: 20,
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                ),
-                onPressed: () {
-                  context.push('/search');
-                },
-              ),
-              IconButton(
-                icon: Icon(
                   LucideIcons.bell,
                   size: 20,
                   color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,

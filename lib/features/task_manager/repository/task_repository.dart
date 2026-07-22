@@ -89,4 +89,26 @@ class TaskRepository {
       }
     }
   }
+
+  Future<int> performEndOfDayCleanup({String? overrideDateStr}) async {
+    final Box settingsBox = HiveService().getBox(HiveService.settingsBoxName);
+    final todayStr = overrideDateStr ?? DateTime.now().toIso8601String().substring(0, 10);
+
+    final lastCleanupDate = settingsBox.get('last_completed_tasks_cleanup_date');
+    if (lastCleanupDate == todayStr) {
+      debugPrint('End of day task cleanup already executed today ($todayStr). Skipping.');
+      return 0;
+    }
+
+    final completedTasks = _taskBox.values.where((t) => t.completed).toList();
+    int count = 0;
+    for (final task in completedTasks) {
+      await deleteTask(task.id);
+      count++;
+    }
+
+    await settingsBox.put('last_completed_tasks_cleanup_date', todayStr);
+    debugPrint('End of day task cleanup executed: $count completed tasks deleted.');
+    return count;
+  }
 }

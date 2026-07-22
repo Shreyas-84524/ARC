@@ -7,6 +7,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:arc/core/theme/app_theme.dart';
+import 'package:arc/core/utilities/currency_formatter.dart';
 import 'package:arc/core/widgets/top_bar.dart';
 import 'package:arc/features/money_tracker/models/transaction_model.dart';
 import 'package:arc/features/money_tracker/widgets/transaction_editor_sheet.dart';
@@ -71,7 +72,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: const InputDecoration(
             hintText: 'Enter monthly budget amount...',
-            prefixText: '\$ ',
+            prefixText: '${CurrencyFormatter.symbol} ',
           ),
         ),
         actions: [
@@ -100,7 +101,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Transaction'),
-        content: Text('Are you sure you want to delete this ${tx.type.toLowerCase()} of \$${tx.amount.toStringAsFixed(2)}?'),
+        content: Text('Are you sure you want to delete this ${tx.type.toLowerCase()} of ${CurrencyFormatter.format(tx.amount)}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -279,8 +280,8 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
                                   ),
                                 ),
                                 const SizedBox(height: 8),
-                                Text(
-                                  "\$${remainingBudget.toStringAsFixed(2)}",
+                                 Text(
+                                  CurrencyFormatter.format(remainingBudget),
                                   style: theme.textTheme.headlineMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: remainingBudget >= 0 ? AppColors.success : AppColors.danger,
@@ -294,18 +295,18 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
                                     _buildBudgetStat(
                                       context,
                                       label: 'Budget Limit',
-                                      value: '\$${monthlyBudget.toStringAsFixed(2)}',
+                                      value: CurrencyFormatter.format(monthlyBudget),
                                     ),
                                     _buildBudgetStat(
                                       context,
                                       label: 'Total Income',
-                                      value: '\$${totalIncome.toStringAsFixed(2)}',
+                                      value: CurrencyFormatter.format(totalIncome),
                                       isIncome: true,
                                     ),
                                     _buildBudgetStat(
                                       context,
                                       label: 'Total Expense',
-                                      value: '\$${totalExpenses.toStringAsFixed(2)}',
+                                      value: CurrencyFormatter.format(totalExpenses),
                                       isNegative: true,
                                     ),
                                   ],
@@ -548,7 +549,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
                                         return PieChartSectionData(
                                           color: color,
                                           value: e.value,
-                                          title: '\$${e.value.toInt()}',
+                                          title: CurrencyFormatter.format(e.value, decimalDigits: 0),
                                           radius: 44,
                                           titleStyle: const TextStyle(
                                             fontWeight: FontWeight.bold,
@@ -579,7 +580,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
                                         ),
                                         const SizedBox(width: 6),
                                         Text(
-                                          '$catName: \$${categoryExpenses[catName]!.toStringAsFixed(0)}',
+                                          '$catName: ${CurrencyFormatter.format(categoryExpenses[catName]!, decimalDigits: 0)}',
                                           style: const TextStyle(fontSize: 11),
                                         ),
                                       ],
@@ -702,7 +703,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: style),
-        Text('\$${amount.toStringAsFixed(2)}', style: style),
+        Text(CurrencyFormatter.format(amount), style: style),
       ],
     );
   }
@@ -810,7 +811,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
                 ),
                 const SizedBox(width: 16),
                 Text(
-                  '${isIncome ? '+' : '-'}\$${tx.amount.toStringAsFixed(2)}',
+                  '${isIncome ? '+' : '-'}${CurrencyFormatter.format(tx.amount)}',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: isIncome ? AppColors.success : AppColors.danger,

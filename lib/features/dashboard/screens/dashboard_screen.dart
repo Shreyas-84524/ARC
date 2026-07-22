@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:arc/core/theme/app_theme.dart';
+import 'package:arc/core/utilities/currency_formatter.dart';
 import 'package:arc/core/widgets/top_bar.dart';
 import 'package:arc/features/task_manager/models/task_model.dart';
 import 'package:arc/features/task_manager/widgets/task_editor_sheet.dart';
@@ -56,7 +57,7 @@ class DashboardScreen extends ConsumerWidget {
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: const InputDecoration(
             hintText: 'Enter monthly budget amount...',
-            prefixText: '\$ ',
+            prefixText: '${CurrencyFormatter.symbol} ',
           ),
         ),
         actions: [
@@ -159,7 +160,6 @@ class DashboardScreen extends ConsumerWidget {
     final todayStr = DateFormat('yyyy-MM-dd').format(now);
 
     final todayTasks = tasksList.where((t) {
-      if (t.completed) return false;
       if (t.dueDate == null) return true;
       return t.dueDate!.isAfter(todayStart.subtract(const Duration(seconds: 1))) &&
           t.dueDate!.isBefore(todayEnd.add(const Duration(seconds: 1)));
@@ -321,8 +321,8 @@ class DashboardScreen extends ConsumerWidget {
                   _buildMetricCard(
                     context,
                     title: 'Remaining Budget',
-                    value: '\$${remainingBudget.toStringAsFixed(2)}',
-                    subtitle: 'Limit: \$${totalBudget.toStringAsFixed(0)}',
+                    value: CurrencyFormatter.format(remainingBudget),
+                    subtitle: 'Limit: ${CurrencyFormatter.format(totalBudget, decimalDigits: 0)}',
                     icon: LucideIcons.wallet,
                     color: remainingBudget >= 0
                         ? AppColors.success
@@ -339,15 +339,15 @@ class DashboardScreen extends ConsumerWidget {
                   _buildMetricCard(
                     context,
                     title: 'Today Expenses',
-                    value: '\$${todayExpenses.toStringAsFixed(2)}',
-                    subtitle: 'Income: \$${todayIncome.toStringAsFixed(2)}',
+                    value: CurrencyFormatter.format(todayExpenses),
+                    subtitle: 'Income: ${CurrencyFormatter.format(todayIncome)}',
                     icon: LucideIcons.trendingDown,
                     color: AppColors.danger,
                   ),
                   _buildMetricCard(
                     context,
                     title: 'Monthly Savings',
-                    value: '\$${monthlySavings.toStringAsFixed(2)}',
+                    value: CurrencyFormatter.format(monthlySavings),
                     subtitle: 'Savings Net',
                     icon: LucideIcons.piggyBank,
                     color: monthlySavings >= 0
@@ -484,36 +484,62 @@ class DashboardScreen extends ConsumerWidget {
                     if (task.priority == 'High') pColor = AppColors.priorityHigh;
                     if (task.priority == 'Much') pColor = AppColors.priorityMuch;
 
-                    return Card(
-                      margin: EdgeInsets.zero,
-                      child: ListTile(
-                        onTap: () => _showTaskEditor(context, task),
-                        leading: InkWell(
-                          onTap: () {
-                            HapticFeedback.lightImpact();
-                            ref.read(tasksProvider.notifier).toggleTask(task.id);
-                          },
-                          borderRadius: BorderRadius.circular(100),
-                          child: Container(
-                            height: 20,
-                            width: 20,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: pColor, width: 2),
+                    return AnimatedOpacity(
+                      opacity: task.completed ? 0.6 : 1.0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Card(
+                        margin: EdgeInsets.zero,
+                        child: ListTile(
+                          onTap: () => _showTaskEditor(context, task),
+                          leading: InkWell(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              ref.read(tasksProvider.notifier).toggleTask(task.id);
+                            },
+                            borderRadius: BorderRadius.circular(100),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              height: 20,
+                              width: 20,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: task.completed ? pColor : Colors.transparent,
+                                border: Border.all(color: pColor, width: 2),
+                              ),
+                              alignment: Alignment.center,
+                              child: task.completed
+                                  ? const Icon(
+                                      LucideIcons.check,
+                                      size: 12,
+                                      color: Colors.white,
+                                    )
+                                  : null,
                             ),
                           ),
-                        ),
-                        title: Text(
-                          task.title,
-                          style: theme.textTheme.bodyLarge
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text(
-                          '${task.category} • Priority: ${task.priority}',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: isDark
-                                ? AppColors.textMutedDark
-                                : AppColors.textMutedLight,
+                          title: Text(
+                            task.title,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              decoration: task.completed
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              color: task.completed
+                                  ? (isDark
+                                      ? AppColors.textDisabledDark
+                                      : AppColors.textDisabledLight)
+                                  : null,
+                            ),
+                          ),
+                          subtitle: Text(
+                            '${task.category} • Priority: ${task.priority}',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: isDark
+                                  ? AppColors.textMutedDark
+                                  : AppColors.textMutedLight,
+                              decoration: task.completed
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                            ),
                           ),
                         ),
                       ),

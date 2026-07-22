@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'package:arc/core/utilities/currency_formatter.dart';
 import 'package:arc/features/task_manager/repository/task_repository.dart';
 import 'package:arc/features/habit_tracker/repository/habit_repository.dart';
 import 'package:arc/features/money_tracker/repository/money_repository.dart';
@@ -112,7 +113,7 @@ class DashboardRepository {
     for (final tx in transactions) {
       activities.add({
         'type': 'money',
-        'title': '${tx.type}: \$${tx.amount.toStringAsFixed(2)}',
+        'title': '${tx.type}: ${CurrencyFormatter.format(tx.amount)}',
         'subtitle': '${tx.category} • ${tx.notes.isNotEmpty ? tx.notes : "Transaction"}',
         'timestamp': tx.date,
         'isIncome': tx.type == 'Income',

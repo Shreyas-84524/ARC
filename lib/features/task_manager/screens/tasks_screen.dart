@@ -43,11 +43,16 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Task'),
-        content: Text('Are you sure you want to delete "${task.title}"? This cannot be undone.'),
+        content: Text(
+          'Are you sure you want to delete "${task.title}"? This cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white70),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -88,9 +93,11 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildStatBadge(context, 'Total', '${taskStats['totalTasks']}'),
-                _buildStatBadge(context, 'Pending', '${taskStats['pendingTasks']}'),
-                _buildStatBadge(context, 'Done', '${taskStats['completedTasks']}'),
-                _buildStatBadge(context, 'Today', '${taskStats['todayTasks']}'),
+                _buildStatBadge(
+                  context,
+                  'Pending',
+                  '${taskStats['pendingTasks']}',
+                ),
                 _buildStatBadge(
                   context,
                   'Overdue',
@@ -119,7 +126,8 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                             icon: const Icon(LucideIcons.x, size: 16),
                             onPressed: () {
                               _searchController.clear();
-                              ref.read(taskSearchQueryProvider.notifier).state = '';
+                              ref.read(taskSearchQueryProvider.notifier).state =
+                                  '';
                             },
                           )
                         : null,
@@ -137,16 +145,33 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                         initialValue: activeSort,
                         decoration: const InputDecoration(
                           labelText: 'Sort By',
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 6,
+                          ),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'DueDate', child: Text('Due Date')),
-                          DropdownMenuItem(value: 'Priority', child: Text('Priority')),
-                          DropdownMenuItem(value: 'CreationDate', child: Text('Creation Date')),
-                          DropdownMenuItem(value: 'Alphabetical', child: Text('Alphabetical')),
+                          DropdownMenuItem(
+                            value: 'DueDate',
+                            child: Text('Due Date'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Priority',
+                            child: Text('Priority'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'CreationDate',
+                            child: Text('Creation Date'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Alphabetical',
+                            child: Text('Alphabetical'),
+                          ),
                         ],
                         onChanged: (val) {
-                          if (val != null) ref.read(taskSortProvider.notifier).state = val;
+                          if (val != null) {
+                            ref.read(taskSortProvider.notifier).state = val;
+                          }
                         },
                       ),
                     ),
@@ -157,16 +182,23 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                         initialValue: activeCategory,
                         decoration: const InputDecoration(
                           labelText: 'Category',
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 6,
+                          ),
                         ),
                         items: [
-                          const DropdownMenuItem(value: null, child: Text('All')),
+                          const DropdownMenuItem(
+                            value: null,
+                            child: Text('All'),
+                          ),
                           ...AppConstants.taskCategories.map((c) {
                             return DropdownMenuItem(value: c, child: Text(c));
                           }),
                         ],
                         onChanged: (val) {
-                          ref.read(taskCategoryFilterProvider.notifier).state = val;
+                          ref.read(taskCategoryFilterProvider.notifier).state =
+                              val;
                         },
                       ),
                     ),
@@ -190,19 +222,25 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                     context,
                     label: 'All Tasks',
                     selected: activeStatus == 'All',
-                    onTap: () => ref.read(taskStatusFilterProvider.notifier).state = 'All',
+                    onTap: () =>
+                        ref.read(taskStatusFilterProvider.notifier).state =
+                            'All',
                   ),
                   _buildFilterChip(
                     context,
                     label: 'Pending',
                     selected: activeStatus == 'Pending',
-                    onTap: () => ref.read(taskStatusFilterProvider.notifier).state = 'Pending',
+                    onTap: () =>
+                        ref.read(taskStatusFilterProvider.notifier).state =
+                            'Pending',
                   ),
                   _buildFilterChip(
                     context,
                     label: 'Completed',
                     selected: activeStatus == 'Completed',
-                    onTap: () => ref.read(taskStatusFilterProvider.notifier).state = 'Completed',
+                    onTap: () =>
+                        ref.read(taskStatusFilterProvider.notifier).state =
+                            'Completed',
                   ),
                   // Date filters
                   _buildFilterChip(
@@ -219,7 +257,9 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                     label: 'Upcoming',
                     selected: activeDate == 'Upcoming',
                     onTap: () {
-                      final target = activeDate == 'Upcoming' ? 'All' : 'Upcoming';
+                      final target = activeDate == 'Upcoming'
+                          ? 'All'
+                          : 'Upcoming';
                       ref.read(taskDateFilterProvider.notifier).state = target;
                     },
                   ),
@@ -246,9 +286,14 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                     )
                   : ListView.separated(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.only(left: 20, right: 20, bottom: 96),
+                      padding: const EdgeInsets.only(
+                        left: 20,
+                        right: 20,
+                        bottom: 96,
+                      ),
                       itemCount: filteredTasks.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 12),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final task = filteredTasks[index];
                         return _buildTaskSlidable(context, task);
@@ -273,7 +318,8 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
     return EmptyStateWidget(
       icon: LucideIcons.clipboardList,
       title: 'No tasks found',
-      description: 'Add your first task to stay organized and boost productivity.',
+      description:
+          'Add your first task to stay organized and boost productivity.',
       actionLabel: 'Create Task',
       onAction: () => _showTaskEditor(context),
     );
@@ -281,7 +327,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
 
   Widget _buildTaskSlidable(BuildContext context, Task task) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     // Choose priority color
     Color priorityColor = AppColors.priorityLow;
     if (task.priority == 'High') {
@@ -328,48 +374,51 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
           ),
         ],
       ),
-      child: Card(
-        child: InkWell(
-          onTap: () => _showTaskEditor(context, task),
-          borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Priority circle dot / Checkbox indicator
-                Padding(
-                  padding: const EdgeInsets.only(top: 2.0),
-                  child: InkWell(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      ref.read(tasksProvider.notifier).toggleTask(task.id);
-                    },
-                    borderRadius: BorderRadius.circular(100),
-                    child: Container(
-                      height: 22,
-                      width: 22,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: task.completed ? priorityColor : Colors.transparent,
-                        border: Border.all(
-                          color: priorityColor,
-                          width: 2.0,
+      child: AnimatedOpacity(
+        opacity: task.completed ? 0.6 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        child: Card(
+          child: InkWell(
+            onTap: () => _showTaskEditor(context, task),
+            borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Priority circle dot / Checkbox indicator
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2.0),
+                    child: InkWell(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        ref.read(tasksProvider.notifier).toggleTask(task.id);
+                      },
+                      borderRadius: BorderRadius.circular(100),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: 22,
+                        width: 22,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: task.completed
+                              ? priorityColor
+                              : Colors.transparent,
+                          border: Border.all(color: priorityColor, width: 2.0),
                         ),
+                        alignment: Alignment.center,
+                        child: task.completed
+                            ? const Icon(
+                                LucideIcons.check,
+                                size: 14,
+                                color: Colors.white,
+                              )
+                            : null,
                       ),
-                      alignment: Alignment.center,
-                      child: task.completed
-                          ? const Icon(
-                              LucideIcons.check,
-                              size: 14,
-                              color: Colors.white,
-                            )
-                          : null,
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                
+                  const SizedBox(width: 16),
+
                 // Task Content details
                 Expanded(
                   child: Column(
@@ -379,10 +428,16 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                         task.title,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.bold,
-                          decoration: task.completed ? TextDecoration.lineThrough : null,
+                          decoration: task.completed
+                              ? TextDecoration.lineThrough
+                              : null,
                           color: task.completed
-                              ? (isDark ? AppColors.textDisabledDark : AppColors.textDisabledLight)
-                              : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                              ? (isDark
+                                    ? AppColors.textDisabledDark
+                                    : AppColors.textDisabledLight)
+                              : (isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimaryLight),
                         ),
                       ),
                       if (task.description.isNotEmpty) ...[
@@ -391,14 +446,19 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                           task.description,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-                            decoration: task.completed ? TextDecoration.lineThrough : null,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: isDark
+                                    ? AppColors.textMutedDark
+                                    : AppColors.textMutedLight,
+                                decoration: task.completed
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                              ),
                         ),
                       ],
                       const SizedBox(height: 8),
-                      
+
                       // Details row (Date, Category tags)
                       Wrap(
                         spacing: 8,
@@ -409,48 +469,71 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                             Icon(
                               LucideIcons.calendar,
                               size: 14,
-                              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                              color: isDark
+                                  ? AppColors.textMutedDark
+                                  : AppColors.textMutedLight,
                             ),
                             const SizedBox(width: 2),
                             Text(
                               DateFormat('MMM d').format(task.dueDate!) +
-                                  (task.dueTime != null ? ', ${task.dueTime}' : ''),
-                              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-                              ),
+                                  (task.dueTime != null
+                                      ? ', ${task.dueTime}'
+                                      : ''),
+                              style: Theme.of(context).textTheme.labelLarge
+                                  ?.copyWith(
+                                    color: isDark
+                                        ? AppColors.textMutedDark
+                                        : AppColors.textMutedLight,
+                                  ),
                             ),
                             const SizedBox(width: 4),
                           ],
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
-                              color: (isDark ? AppColors.darkBgSecondary : AppColors.lightBgSecondary),
+                              color: (isDark
+                                  ? AppColors.darkBgSecondary
+                                  : AppColors.lightBgSecondary),
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
-                                color: isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight,
+                                color: isDark
+                                    ? AppColors.borderSubtle
+                                    : AppColors.borderSubtleLight,
                               ),
                             ),
                             child: Text(
                               task.category,
-                              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: Theme.of(context).textTheme.labelLarge
+                                  ?.copyWith(
+                                    color: isDark
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondaryLight,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
                           ),
                           for (final label in task.labels)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.accentGlow,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
                                 '#$label',
-                                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                  color: isDark ? AppColors.accent : AppColors.accentPressed,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: Theme.of(context).textTheme.labelLarge
+                                    ?.copyWith(
+                                      color: isDark
+                                          ? AppColors.accent
+                                          : AppColors.accentPressed,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                               ),
                             ),
                         ],
@@ -463,7 +546,8 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
           ),
         ),
       ),
-    ).animate().fade(duration: 200.ms);
+    ),
+  ).animate().fade(duration: 200.ms);
   }
 
   Widget _buildFilterChip(
@@ -487,13 +571,19 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
         labelStyle: TextStyle(
           color: selected
               ? AppColors.textPrimaryLight
-              : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+              : (isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight),
           fontWeight: selected ? FontWeight.bold : FontWeight.normal,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: selected ? AppColors.accent : (isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight),
+            color: selected
+                ? AppColors.accent
+                : (isDark
+                      ? AppColors.borderSubtle
+                      : AppColors.borderSubtleLight),
           ),
         ),
       ),
@@ -530,13 +620,17 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
               fontWeight: FontWeight.bold,
               color: isError
                   ? AppColors.danger
-                  : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                  : (isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight),
             ),
           ),
           Text(
             label,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+              color: isDark
+                  ? AppColors.textMutedDark
+                  : AppColors.textMutedLight,
               fontSize: 10,
             ),
           ),

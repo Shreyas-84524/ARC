@@ -13,6 +13,7 @@ import 'package:arc/features/settings/models/settings_model.dart';
 import 'package:arc/features/settings/repository/settings_repository.dart';
 import 'package:arc/features/dashboard/repository/dashboard_repository.dart';
 import 'package:arc/core/services/sync_service.dart';
+import 'package:arc/core/services/task_cleanup_service.dart';
 import 'package:arc/core/notifications/notification_service.dart';
 
 // Settings Repository Provider
@@ -66,6 +67,9 @@ class TasksNotifier extends StateNotifier<List<Task>> {
 
   TasksNotifier(this._repository) : super([]) {
     _loadTasks();
+    TaskCleanupService().init(_repository, onCleanup: () {
+      state = _repository.getTasks();
+    });
   }
 
   void _loadTasks() {
@@ -96,9 +100,14 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     if (taskIndex == -1) return;
     final task = state[taskIndex];
 
+    final isNowCompleted = !task.completed;
+    final now = DateTime.now();
+
     final updatedTask = task.copyWith(
-      completed: !task.completed,
-      updatedAt: DateTime.now(),
+      completed: isNowCompleted,
+      completedAt: isNowCompleted ? now : null,
+      setCompletedAtNull: !isNowCompleted,
+      updatedAt: now,
     );
     await _repository.saveTask(updatedTask);
 
@@ -114,6 +123,11 @@ class TasksNotifier extends StateNotifier<List<Task>> {
   Future<void> deleteTask(String id) async {
     await _repository.deleteTask(id);
     await NotificationService().cancelTaskReminders(id);
+    state = _repository.getTasks();
+  }
+
+  Future<void> performCleanup() async {
+    await _repository.performEndOfDayCleanup();
     state = _repository.getTasks();
   }
 }
@@ -632,6 +646,10 @@ final dashboardRepositoryProvider = Provider<DashboardRepository>((ref) {
 
 // Dashboard State Provider
 final dashboardProvider = Provider<Map<String, dynamic>>((ref) {
+  ref.watch(tasksProvider);
+  ref.watch(habitsProvider);
+  ref.watch(habitEntriesProvider);
+  ref.watch(moneyProvider);
   final repo = ref.watch(dashboardRepositoryProvider);
   final currentMonth = ref.watch(currentMonthProvider);
   return repo.getDashboardData(currentMonth);

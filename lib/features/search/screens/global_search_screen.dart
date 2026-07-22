@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:arc/core/theme/app_theme.dart';
+import 'package:arc/core/utilities/currency_formatter.dart';
 import 'package:arc/providers/global_providers.dart';
 import 'package:arc/features/task_manager/widgets/task_editor_sheet.dart';
 import 'package:arc/features/habit_tracker/widgets/habit_editor_sheet.dart';
@@ -275,7 +276,7 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
                                   : DateFormat('MMM d, yyyy').format(tx.date),
                             ),
                             trailing: Text(
-                              '${isIncome ? '+' : '-'}\$${tx.amount.toStringAsFixed(2)}',
+                              '${isIncome ? '+' : '-'}${CurrencyFormatter.format(tx.amount)}',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: isIncome

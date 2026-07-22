@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:arc/core/theme/app_theme.dart';
+import 'package:arc/core/utilities/currency_formatter.dart';
 import 'package:arc/features/money_tracker/models/transaction_model.dart';
 import 'package:arc/providers/global_providers.dart';
 
@@ -170,7 +171,7 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Delete Transaction'),
-          content: Text('Are you sure you want to delete this ${widget.transactionToEdit!.type.toLowerCase()} of \$${widget.transactionToEdit!.amount.toStringAsFixed(2)}?'),
+          content: Text('Are you sure you want to delete this ${widget.transactionToEdit!.type.toLowerCase()} of ${CurrencyFormatter.format(widget.transactionToEdit!.amount)}?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -291,7 +292,7 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
                 style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
                 decoration: const InputDecoration(
                   hintText: '0.00',
-                  prefixText: '\$ ',
+                  prefixText: '${CurrencyFormatter.symbol} ',
                   labelText: 'Amount',
                 ),
                 validator: (val) {

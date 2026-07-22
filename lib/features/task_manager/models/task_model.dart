@@ -41,6 +41,9 @@ class Task extends HiveObject {
   @HiveField(11)
   final DateTime updatedAt;
 
+  @HiveField(12)
+  final DateTime? completedAt;
+
   Task({
     required this.id,
     required this.title,
@@ -52,6 +55,7 @@ class Task extends HiveObject {
     this.dueTime,
     this.reminder,
     required this.completed,
+    this.completedAt,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -67,6 +71,8 @@ class Task extends HiveObject {
     String? dueTime,
     DateTime? reminder,
     bool? completed,
+    DateTime? completedAt,
+    bool setCompletedAtNull = false,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -81,6 +87,7 @@ class Task extends HiveObject {
       dueTime: dueTime ?? this.dueTime,
       reminder: reminder ?? this.reminder,
       completed: completed ?? this.completed,
+      completedAt: setCompletedAtNull ? null : (completedAt ?? this.completedAt),
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -98,6 +105,7 @@ class Task extends HiveObject {
       'dueTime': dueTime,
       'reminder': reminder?.toIso8601String(),
       'completed': completed,
+      'completedAt': completedAt?.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -115,6 +123,7 @@ class Task extends HiveObject {
       dueTime: map['dueTime'],
       reminder: map['reminder'] != null ? DateTime.parse(map['reminder']) : null,
       completed: map['completed'] ?? false,
+      completedAt: map['completedAt'] != null ? DateTime.parse(map['completedAt']) : null,
       createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : DateTime.now(),
       updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : DateTime.now(),
     );
@@ -134,6 +143,7 @@ class Task extends HiveObject {
         other.dueTime == dueTime &&
         other.reminder == reminder &&
         other.completed == completed &&
+        other.completedAt == completedAt &&
         other.createdAt == createdAt &&
         other.updatedAt == updatedAt;
   }
@@ -151,6 +161,7 @@ class Task extends HiveObject {
       dueTime,
       reminder,
       completed,
+      completedAt,
       createdAt,
       updatedAt,
     );

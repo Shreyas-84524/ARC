@@ -48,6 +48,11 @@ class FakeTaskRepository implements TaskRepository {
 
   @override
   Future<void> syncPending() async {}
+
+  @override
+  Future<int> performEndOfDayCleanup({String? overrideDateStr}) async {
+    return 0;
+  }
 }
 
 class FakeHabitRepository implements HabitRepository {
