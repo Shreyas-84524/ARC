@@ -48,8 +48,7 @@ class _NotificationCenterScreenState
     }
 
     // Habit Reminders
-    final dailyHabits = habits.where((h) => h.goalType == 'Daily').toList();
-    if (dailyHabits.isNotEmpty) {
+    if (habits.isNotEmpty) {
       notifications.add({
         'id': 'habit_evening_reminder',
         'module': 'Habit Tracker',

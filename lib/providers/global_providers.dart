@@ -74,12 +74,22 @@ class TasksNotifier extends StateNotifier<List<Task>> {
 
   void _loadTasks() {
     state = _repository.getTasks();
+    _rescheduleActiveTaskReminders();
     syncTasks();
+  }
+
+  Future<void> _rescheduleActiveTaskReminders() async {
+    for (final task in state) {
+      if (!task.completed && task.dueDate != null && task.dueTime != null) {
+        await NotificationService().scheduleTaskReminders(task);
+      }
+    }
   }
 
   Future<void> syncTasks() async {
     await _repository.syncPending();
     state = _repository.getTasks();
+    _rescheduleActiveTaskReminders();
   }
 
   Future<void> addTask(Task task) async {
@@ -332,15 +342,14 @@ class HabitsNotifier extends StateNotifier<List<Habit>> {
     final habits = _repository.getHabits();
     final entries = _repository.getEntries();
 
-    final dailyHabits = habits.where((h) => h.goalType == 'Daily').toList();
-    if (dailyHabits.isEmpty) {
+    if (habits.isEmpty) {
       NotificationService().cancelEveningReminder();
       return;
     }
 
     final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
     int incompleteCount = 0;
-    for (final habit in dailyHabits) {
+    for (final habit in habits) {
       final completed = entries.any(
         (e) => e.habitId == habit.id && e.dateStr == todayStr && e.completed,
       );
@@ -382,15 +391,14 @@ class HabitEntriesNotifier extends StateNotifier<List<HabitEntry>> {
     final habits = _repository.getHabits();
     final entries = _repository.getEntries();
 
-    final dailyHabits = habits.where((h) => h.goalType == 'Daily').toList();
-    if (dailyHabits.isEmpty) {
+    if (habits.isEmpty) {
       NotificationService().cancelEveningReminder();
       return;
     }
 
     final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
     int incompleteCount = 0;
-    for (final habit in dailyHabits) {
+    for (final habit in habits) {
       final completed = entries.any(
         (e) => e.habitId == habit.id && e.dateStr == todayStr && e.completed,
       );

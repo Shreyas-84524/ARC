@@ -134,10 +134,6 @@ class DashboardScreen extends ConsumerWidget {
 
     // Subscriptions
     final dashboardData = ref.watch(dashboardProvider);
-    final completedTasks = (dashboardData['completedTasks'] as int?) ?? 0;
-    final totalTasks = (dashboardData['totalTasks'] as int?) ?? 0;
-    final completedHabits = (dashboardData['completedHabits'] as int?) ?? 0;
-    final totalHabits = (dashboardData['totalHabits'] as int?) ?? 0;
     final remainingBudget = (dashboardData['remainingBudget'] as double?) ?? 0.0;
     final totalBudget = (dashboardData['totalBudget'] as double?) ?? 0.0;
     final streakDays = (dashboardData['streakDays'] as int?) ?? 0;
@@ -170,12 +166,26 @@ class DashboardScreen extends ConsumerWidget {
       return t.dueDate!.isAfter(todayEnd);
     }).toList();
 
-    final dailyHabits = habitsList.where((h) => h.goalType == 'Daily').toList();
+    final totalTodayTasksCount = todayTasks.length;
+    final completedTodayTasksCount =
+        todayTasks.where((t) => t.completed).length.clamp(0, totalTodayTasksCount);
 
-    final int overallTotal = totalTasks + totalHabits;
-    final int overallCompleted = completedTasks + completedHabits;
-    final double progressPercentage =
-        overallTotal > 0 ? (overallCompleted / overallTotal) : 0.0;
+    final totalHabitsCount = habitsList.length;
+    final completedTodayHabitsCount = entriesList
+        .where((e) => e.dateStr == todayStr && e.completed)
+        .length
+        .clamp(0, totalHabitsCount);
+
+    final double taskScore = totalTodayTasksCount > 0
+        ? (completedTodayTasksCount / totalTodayTasksCount) * 50.0
+        : 0.0;
+
+    final double habitScore = totalHabitsCount > 0
+        ? (completedTodayHabitsCount / totalHabitsCount) * 50.0
+        : 0.0;
+
+    final double finalProgressScore = (taskScore + habitScore).clamp(0.0, 100.0);
+    final double progressPercentage = (finalProgressScore / 100.0).clamp(0.0, 1.0);
 
     return Scaffold(
       appBar: const CustomTopBar(title: 'Dashboard'),
@@ -207,7 +217,7 @@ class DashboardScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              "You've completed $completedTasks of $totalTasks tasks and $completedHabits of $totalHabits habits today. Keep going!",
+                              "Completed: $completedTodayTasksCount / $totalTodayTasksCount Tasks • $completedTodayHabitsCount / $totalHabitsCount Habits",
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: isDark
                                     ? AppColors.textSecondaryDark
@@ -235,7 +245,7 @@ class DashboardScreen extends ConsumerWidget {
                             ),
                           ),
                           Text(
-                            "${(progressPercentage * 100).toInt()}%",
+                            "${finalProgressScore.round()}%",
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: isDark
@@ -360,7 +370,7 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: 24),
 
               // 4. Today's Habits
-              if (dailyHabits.isNotEmpty) ...[
+              if (habitsList.isNotEmpty) ...[
                 Text(
                   "Today's Habits",
                   style: theme.textTheme.titleMedium
@@ -371,11 +381,11 @@ class DashboardScreen extends ConsumerWidget {
                   height: 76,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    itemCount: dailyHabits.length,
+                    itemCount: habitsList.length,
                     separatorBuilder: (context, index) =>
                         const SizedBox(width: 12),
                     itemBuilder: (context, index) {
-                      final habit = dailyHabits[index];
+                      final habit = habitsList[index];
                       final isCompleted = entriesList.any(
                         (e) =>
                             e.habitId == habit.id &&

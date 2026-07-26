@@ -8,9 +8,9 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:arc/core/theme/app_theme.dart';
 import 'package:arc/core/widgets/top_bar.dart';
 import 'package:arc/features/habit_tracker/models/habit_model.dart';
-import 'package:arc/features/habit_tracker/models/habit_entry_model.dart';
 import 'package:arc/features/habit_tracker/widgets/habit_editor_sheet.dart';
 import 'package:arc/core/widgets/empty_state.dart';
+import 'package:arc/core/widgets/premium_segmented_control.dart';
 import 'package:arc/providers/global_providers.dart';
 
 class HabitsScreen extends ConsumerStatefulWidget {
@@ -51,39 +51,6 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
     return List.generate(7, (i) => today.subtract(Duration(days: 6 - i)));
   }
 
-  bool _isHabitCompletedInPeriod(Habit habit, List<HabitEntry> entries, String goalType) {
-    if (goalType == 'Daily') {
-      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      return entries.any((e) => e.habitId == habit.id && e.dateStr == todayStr && e.completed);
-    } else if (goalType == 'Weekly') {
-      final now = DateTime.now();
-      final monday = now.subtract(Duration(days: now.weekday - 1));
-      final startOfWeek = DateTime(monday.year, monday.month, monday.day);
-      return entries.any((e) {
-        if (e.habitId != habit.id || !e.completed) return false;
-        try {
-          final date = DateTime.parse(e.dateStr);
-          return date.isAfter(startOfWeek.subtract(const Duration(seconds: 1)));
-        } catch (_) {
-          return false;
-        }
-      });
-    } else {
-      // Monthly
-      final now = DateTime.now();
-      final startOfMonth = DateTime(now.year, now.month, 1);
-      return entries.any((e) {
-        if (e.habitId != habit.id || !e.completed) return false;
-        try {
-          final date = DateTime.parse(e.dateStr);
-          return date.isAfter(startOfMonth.subtract(const Duration(seconds: 1)));
-        } catch (_) {
-          return false;
-        }
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -110,67 +77,49 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
     final double avgCompletionRate = habits.isNotEmpty ? totalRateSum / habits.length : 0.0;
     final String completionRateStr = '${(avgCompletionRate * 100).toInt()}%';
 
-    // Analytics Calculations (Filtered by Selected Dropdown Type)
-    final filteredHabits = habits.where((h) => h.goalType == _selectedAnalyticsGoalType).toList();
+    // Analytics Calculations (Based on Daily Completion History for All Habits)
     int completedCount = 0;
-    for (final h in filteredHabits) {
-      if (_isHabitCompletedInPeriod(h, entries, _selectedAnalyticsGoalType)) {
-        completedCount++;
-      }
-    }
-    final int remainingCount = filteredHabits.length - completedCount;
-    final double completionPercent = filteredHabits.isNotEmpty 
-        ? (completedCount / filteredHabits.length) 
-        : 0.0;
+    int remainingCount = 0;
+    double completionPercent = 0.0;
 
-    // Streaks for Filtered Analytics habits specifically
-    int analyticsCurrentStreak = 0;
-    int analyticsLongestStreak = 0;
-    double analyticsRateSum = 0.0;
-    for (final h in filteredHabits) {
-      final m = getHabitMetrics(h.id, entries, h.createdAt);
-      final c = m['currentStreak'] as int;
-      final l = m['longestStreak'] as int;
-      final r = m['completionRate'] as double;
-      if (c > analyticsCurrentStreak) analyticsCurrentStreak = c;
-      if (l > analyticsLongestStreak) analyticsLongestStreak = l;
-      analyticsRateSum += r;
+    final now = DateTime.now();
+    final todayStr = DateFormat('yyyy-MM-dd').format(now);
+
+    if (_selectedAnalyticsGoalType == 'Daily') {
+      completedCount = entries.where((e) => e.dateStr == todayStr && e.completed).length;
+      remainingCount = (habits.length - completedCount).clamp(0, habits.length);
+      completionPercent = habits.isNotEmpty ? completedCount / habits.length : 0.0;
+    } else if (_selectedAnalyticsGoalType == 'Weekly') {
+      final last7Days = _getLast7Days().map((d) => DateFormat('yyyy-MM-dd').format(d)).toSet();
+      completedCount = entries.where((e) => last7Days.contains(e.dateStr) && e.completed).length;
+      final totalPossible = habits.length * 7;
+      remainingCount = (totalPossible - completedCount).clamp(0, totalPossible);
+      completionPercent = totalPossible > 0 ? (completedCount / totalPossible).clamp(0.0, 1.0) : 0.0;
+    } else {
+      // Monthly
+      final currentMonthStr = DateFormat('yyyy-MM').format(now);
+      completedCount = entries.where((e) => e.dateStr.startsWith(currentMonthStr) && e.completed).length;
+      final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+      final totalPossible = habits.length * daysInMonth;
+      remainingCount = (totalPossible - completedCount).clamp(0, totalPossible);
+      completionPercent = totalPossible > 0 ? (completedCount / totalPossible).clamp(0.0, 1.0) : 0.0;
     }
-    final double avgAnalyticsRate = filteredHabits.isNotEmpty 
-        ? analyticsRateSum / filteredHabits.length 
-        : 0.0;
+
+    int analyticsCurrentStreak = maxCurrentStreak;
+    int analyticsLongestStreak = maxLongestStreak;
+    double avgAnalyticsRate = avgCompletionRate;
 
     return Scaffold(
       appBar: const CustomTopBar(title: 'Habit Tracker'),
       body: Column(
         children: [
-          // Custom TabBar inside main body
+          // Premium Segmented Control
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
-              height: 48,
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkCard : AppColors.lightCard,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight,
-                ),
-              ),
-              child: TabBar(
-                controller: _tabController,
-                indicatorSize: TabBarIndicatorSize.tab,
-                indicator: BoxDecoration(
-                  color: AppColors.accent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                labelColor: AppColors.textPrimaryLight,
-                unselectedLabelColor: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-                tabs: const [
-                  Tab(text: 'Check-in'),
-                  Tab(text: 'Analytics'),
-                ],
-              ),
+            child: PremiumSegmentedControl(
+              controller: _tabController,
+              tabs: const ['Check-in', 'Analytics'],
+              icons: const [LucideIcons.checkSquare, LucideIcons.barChart2],
             ),
           ),
           const SizedBox(height: 12),
@@ -333,14 +282,14 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
                                                     ),
                                                   ],
                                                 ),
-                                                Text(
-                                                  '${habit.category} • ${habit.goalType}',
-                                                  style: theme.textTheme.labelLarge?.copyWith(
-                                                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-                                                  ),
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
+                                                 Text(
+                                                   habit.category,
+                                                   style: theme.textTheme.labelLarge?.copyWith(
+                                                     color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                                                   ),
+                                                   maxLines: 1,
+                                                   overflow: TextOverflow.ellipsis,
+                                                 ),
                                               ],
                                             ),
                                           ),
@@ -472,10 +421,10 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
                               // Animated Pie Chart
                               SizedBox(
                                 height: 160,
-                                child: filteredHabits.isEmpty
+                                child: habits.isEmpty
                                     ? Center(
                                         child: Text(
-                                          "No $_selectedAnalyticsGoalType Habits",
+                                          "No Habits Created Yet",
                                           style: theme.textTheme.bodyMedium?.copyWith(
                                             color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
                                           ),
@@ -563,7 +512,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
                           _buildSmallMetricCard(context, 'Current Streak', '$analyticsCurrentStreak Days', AppColors.accent),
                           _buildSmallMetricCard(context, 'Longest Streak', '$analyticsLongestStreak Days', AppColors.warning),
                           _buildSmallMetricCard(context, 'Completion Rate', '${(avgAnalyticsRate * 100).toInt()}%', AppColors.success),
-                          _buildSmallMetricCard(context, 'Total Habits', '${filteredHabits.length}', AppColors.info),
+                          _buildSmallMetricCard(context, 'Total Habits', '${habits.length}', AppColors.info),
                         ],
                       ).animate().fade(delay: 100.ms, duration: 250.ms),
                       const SizedBox(height: 80),

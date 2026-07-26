@@ -25,7 +25,6 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
   late TextEditingController _nameController;
   late TextEditingController _categoryController;
 
-  String _selectedGoalType = 'Daily';
   int _selectedColorValue = 0xffccff00; // Default to accent color
   TimeOfDay? _selectedReminderTime;
 
@@ -46,7 +45,6 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
 
     _nameController = TextEditingController(text: editHabit?.name ?? '');
     _categoryController = TextEditingController(text: editHabit?.category ?? 'Health');
-    _selectedGoalType = editHabit?.goalType ?? 'Daily';
     _selectedColorValue = editHabit?.colorValue ?? 0xffccff00;
 
     if (editHabit?.reminderTime != null) {
@@ -116,7 +114,6 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
     final habit = Habit(
       id: id,
       name: _nameController.text.trim(),
-      goalType: _selectedGoalType,
       category: _categoryController.text.trim().isEmpty ? 'Other' : _categoryController.text.trim(),
       colorValue: _selectedColorValue,
       reminderTime: timeString,
@@ -220,39 +217,13 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
               ),
               const SizedBox(height: 16),
 
-              // Goal Type & Category
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _selectedGoalType,
-                      decoration: const InputDecoration(
-                        labelText: 'Goal Type',
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      ),
-                      items: ['Daily', 'Weekly', 'Monthly'].map((g) {
-                        return DropdownMenuItem<String>(
-                          value: g,
-                          child: Text(g, style: theme.textTheme.bodyMedium),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => _selectedGoalType = val);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _categoryController,
-                      decoration: const InputDecoration(
-                        labelText: 'Category',
-                        hintText: 'e.g., Mind, Fitness',
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      ),
-                    ),
-                  ),
-                ],
+              // Category Field
+              TextFormField(
+                controller: _categoryController,
+                decoration: const InputDecoration(
+                  labelText: 'Category',
+                  hintText: 'e.g., Mind, Fitness',
+                ),
               ),
               const SizedBox(height: 16),
 

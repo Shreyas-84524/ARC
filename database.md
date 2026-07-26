@@ -1,4 +1,4 @@
-﻿# Project Arc — Database & Data Layer Specification
+# Project Arc — Database & Data Layer Specification
 
 > **Version:** 1.0.0 (Production Release)  
 > **Document Purpose:** Complete specification of Hive local encrypted database boxes, Hive Type Adapters, Cloud Firestore collections, JSON document structures, and offline synchronization queues.
@@ -50,9 +50,9 @@ Firestore operates as a secondary, asynchronous mirror collection set for single
   "name": "String",
   "category": "String",
   "colorValue": "Integer (ARGB)",
-  "goalType": "Daily | Weekly | Monthly",
-  "targetDays": "Integer",
-  "createdAt": "ISO8601 Timestamp String"
+  "reminderTime": "HH:mm String (Optional)",
+  "createdAt": "ISO8601 Timestamp String",
+  "updatedAt": "ISO8601 Timestamp String"
 }
 ```
 

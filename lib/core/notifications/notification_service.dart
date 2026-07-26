@@ -1,6 +1,7 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:arc/features/task_manager/models/task_model.dart';
 
@@ -35,10 +36,57 @@ class NotificationService {
     );
 
     try {
+      // Set local timezone location if possible
+      try {
+        final String timeZoneName = DateTime.now().timeZoneName;
+        tz.setLocalLocation(tz.getLocation(timeZoneName));
+      } catch (_) {
+        // Fallback to default local timezone from tz.initializeTimeZones()
+      }
+
       await _localNotificationsPlugin.initialize(
         initSettings,
         onDidReceiveNotificationResponse: _onNotificationTapped,
       );
+
+      // Create Android Notification Channels
+      if (Platform.isAndroid) {
+        final androidImplementation =
+            _localNotificationsPlugin.resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+
+        const AndroidNotificationChannel taskChannel = AndroidNotificationChannel(
+          'arc_tasks_channel',
+          'Task Reminders',
+          description: 'Alerts and notifications for scheduled task due times',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+        );
+
+        const AndroidNotificationChannel habitChannel = AndroidNotificationChannel(
+          'arc_habits_reminder_channel',
+          'Habit Reminders',
+          description: 'Evening alerts for incomplete habits',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+        );
+
+        const AndroidNotificationChannel moneyChannel = AndroidNotificationChannel(
+          'arc_money_reminder_channel',
+          'Money Reminders',
+          description: 'Daily alerts to log transaction entries',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+        );
+
+        await androidImplementation?.createNotificationChannel(taskChannel);
+        await androidImplementation?.createNotificationChannel(habitChannel);
+        await androidImplementation?.createNotificationChannel(moneyChannel);
+      }
+
       _initialized = true;
       debugPrint('NotificationService: successfully initialized.');
       await scheduleDailyMoneyReminders();
@@ -47,26 +95,60 @@ class NotificationService {
     }
   }
 
-  Future<void> requestPermissions() async {
+  Future<bool> requestPermissions() async {
     if (Platform.isAndroid) {
       final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
           _localNotificationsPlugin.resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
-      await androidImplementation?.requestNotificationsPermission();
+      final notificationGranted =
+          await androidImplementation?.requestNotificationsPermission() ?? false;
+      final exactAlarmGranted =
+          await androidImplementation?.requestExactAlarmsPermission() ?? false;
+      debugPrint(
+          'NotificationService permissions: Notifications=$notificationGranted, ExactAlarms=$exactAlarmGranted');
+      return notificationGranted;
     } else if (Platform.isIOS) {
       final iosImplementation =
           _localNotificationsPlugin.resolvePlatformSpecificImplementation<
               IOSFlutterLocalNotificationsPlugin>();
-      await iosImplementation?.requestPermissions(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+      final granted = await iosImplementation?.requestPermissions(
+            alert: true,
+            badge: true,
+            sound: true,
+          ) ??
+          false;
+      return granted;
     }
+    return true;
+  }
+
+  Future<void> showPermissionDeniedDialog(BuildContext context) async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Notification Permission Required'),
+        content: const Text(
+          'Project Arc needs notification permission to deliver timely task reminders and deadline alerts. Please enable notifications in settings.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await requestPermissions();
+            },
+            child: const Text('Enable Notifications'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _onNotificationTapped(NotificationResponse response) {
-    debugPrint('Notification tapped with payload: ${response.payload}');
+    debugPrint('NotificationService: Notification tapped with payload: ${response.payload}');
   }
 
   // Generate a stable positive 32-bit integer hash from task UUID
@@ -76,21 +158,36 @@ class NotificationService {
       hash = ((hash << 5) + hash) + input.codeUnitAt(i);
       hash = hash & 0xFFFFFFFF; // Restrict to 32-bit
     }
-    // Mask to 29 bits positive to prevent overflow when multiplied by 3
+    // Mask to 29 bits positive to prevent overflow
     return (hash.abs() & 0x1FFFFFFF);
   }
 
+  String _getPriorityBadge(String priority) {
+    switch (priority) {
+      case 'High':
+        return '🔴 High Priority';
+      case 'Much':
+        return '🟠 Must Priority';
+      case 'Low':
+      default:
+        return '🟡 Low Priority';
+    }
+  }
+
   Future<void> scheduleTaskReminders(Task task) async {
-    if (task.dueDate == null || task.dueTime == null) return;
-    
+    if (task.completed || task.dueDate == null || task.dueTime == null) {
+      await cancelTaskReminders(task.id);
+      return;
+    }
+
     final date = task.dueDate!;
     final parts = task.dueTime!.split(':');
     if (parts.length != 2) return;
-    
+
     final hour = int.parse(parts[0]);
     final minute = int.parse(parts[1]);
     final dueDateTime = DateTime(date.year, date.month, date.day, hour, minute);
-    
+
     final baseId = getStableHash(task.id);
     final now = DateTime.now();
 
@@ -100,67 +197,76 @@ class NotificationService {
       channelDescription: 'Alerts and notifications for scheduled task due times',
       importance: Importance.max,
       priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
     );
-    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails();
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
     const NotificationDetails details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
 
-    // 1. One Hour Before
-    final time1h = dueDateTime.subtract(const Duration(hours: 1));
-    if (time1h.isAfter(now)) {
+    final formattedTime = DateFormat('h:mm a').format(dueDateTime);
+    final priorityBadge = _getPriorityBadge(task.priority);
+
+    // Cancel existing scheduled notifications to prevent duplicates
+    await cancelTaskReminders(task.id);
+
+    // 1. Notification 1: 5 Minutes Before Deadline
+    final time5m = dueDateTime.subtract(const Duration(minutes: 5));
+    final id5m = (baseId * 2) + 0;
+    if (time5m.isAfter(now)) {
+      final String body5m =
+          "Only 5 minutes left!\nComplete your task before the deadline.\n\nTask: ${task.title}\nPriority: $priorityBadge\nDue: $formattedTime";
       await _localNotificationsPlugin.zonedSchedule(
-        (baseId * 3) + 0,
-        'Task Due in 1 hour',
-        task.title,
-        tz.TZDateTime.from(time1h, tz.local),
+        id5m,
+        '⏰ Task Reminder',
+        body5m,
+        tz.TZDateTime.from(time5m, tz.local),
         details,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );
-      debugPrint('Scheduled task notification (1h before): ID=${(baseId * 3) + 0} at $time1h');
-    }
-
-    // 2. 30 Minutes Before
-    final time30m = dueDateTime.subtract(const Duration(minutes: 30));
-    if (time30m.isAfter(now)) {
-      await _localNotificationsPlugin.zonedSchedule(
-        (baseId * 3) + 1,
-        'Task Due in 30 minutes',
-        task.title,
-        tz.TZDateTime.from(time30m, tz.local),
-        details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
+      debugPrint(
+        'NotificationService: Scheduled 5m reminder (ID: $id5m, TaskID: ${task.id}, Title: "${task.title}") for $time5m',
       );
-      debugPrint('Scheduled task notification (30m before): ID=${(baseId * 3) + 1} at $time30m');
     }
 
-    // 3. At Due Time
+    // 2. Notification 2: Deadline Reached
+    final idDeadline = (baseId * 2) + 1;
     if (dueDateTime.isAfter(now)) {
+      final String bodyDeadline =
+          "The deadline for this task has been reached.\nPlease complete it as soon as possible.\n\nTask: ${task.title}\nPriority: $priorityBadge\nDeadline: $formattedTime";
       await _localNotificationsPlugin.zonedSchedule(
-        (baseId * 3) + 2,
-        'Task Due Now',
-        task.title,
+        idDeadline,
+        '🚨 Task Deadline Reached',
+        bodyDeadline,
         tz.TZDateTime.from(dueDateTime, tz.local),
         details,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );
-      debugPrint('Scheduled task notification (due time): ID=${(baseId * 3) + 2} at $dueDateTime');
+      debugPrint(
+        'NotificationService: Scheduled Deadline reminder (ID: $idDeadline, TaskID: ${task.id}, Title: "${task.title}") for $dueDateTime',
+      );
     }
   }
 
   Future<void> cancelTaskReminders(String taskId) async {
     final baseId = getStableHash(taskId);
+    await _localNotificationsPlugin.cancel((baseId * 2) + 0);
+    await _localNotificationsPlugin.cancel((baseId * 2) + 1);
+    // Also cancel legacy multipliers
     await _localNotificationsPlugin.cancel((baseId * 3) + 0);
     await _localNotificationsPlugin.cancel((baseId * 3) + 1);
     await _localNotificationsPlugin.cancel((baseId * 3) + 2);
-    debugPrint('Canceled all notifications for task ID: $taskId');
+    debugPrint('NotificationService: Canceled reminders for Task ID: $taskId');
   }
 
   Future<void> scheduleEveningReminder(int incompleteCount) async {
@@ -198,12 +304,12 @@ class NotificationService {
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
     );
-    debugPrint('Scheduled evening reminder for $scheduledTime, incomplete count: $incompleteCount');
+    debugPrint('NotificationService: Scheduled evening habit reminder for $scheduledTime');
   }
 
   Future<void> cancelEveningReminder() async {
     await _localNotificationsPlugin.cancel(999999);
-    debugPrint('Canceled evening habit reminder.');
+    debugPrint('NotificationService: Canceled evening habit reminder.');
   }
 
   Future<void> scheduleDailyMoneyReminders({bool hasTodayTx = false}) async {
@@ -244,7 +350,7 @@ class NotificationService {
 
       if (hasTodayTx) {
         await _localNotificationsPlugin.cancel(101010);
-        debugPrint('Transactions recorded for today. Canceled 10 PM money reminder.');
+        debugPrint('NotificationService: Transactions recorded for today. Canceled 10 PM money reminder.');
       } else {
         // 10 PM Daily Reminder
         var time10pm = DateTime(now.year, now.month, now.day, 22, 0);
@@ -263,10 +369,10 @@ class NotificationService {
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
         );
-        debugPrint('Scheduled 10 PM final money reminder.');
+        debugPrint('NotificationService: Scheduled 10 PM final money reminder.');
       }
     } catch (e) {
-      debugPrint('scheduleDailyMoneyReminders exception: $e');
+      debugPrint('NotificationService: scheduleDailyMoneyReminders exception: $e');
     }
   }
 

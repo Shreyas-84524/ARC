@@ -40,23 +40,6 @@ enum TaskPriority {
   }
 }
 
-enum HabitGoalType {
-  daily,
-  weekly,
-  monthly;
-
-  String get displayName {
-    switch (this) {
-      case HabitGoalType.daily:
-        return 'Daily';
-      case HabitGoalType.weekly:
-        return 'Weekly';
-      case HabitGoalType.monthly:
-        return 'Monthly';
-    }
-  }
-}
-
 enum TransactionType {
   income,
   expense;

@@ -90,19 +90,26 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildStatBadge(context, 'Total', '${taskStats['totalTasks']}'),
-                _buildStatBadge(
-                  context,
-                  'Pending',
-                  '${taskStats['pendingTasks']}',
+                Expanded(
+                  child: _buildStatBadge(context, 'Total', '${taskStats['totalTasks']}'),
                 ),
-                _buildStatBadge(
-                  context,
-                  'Overdue',
-                  '${taskStats['overdueTasks']}',
-                  isError: (taskStats['overdueTasks'] as int) > 0,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatBadge(
+                    context,
+                    'Pending',
+                    '${taskStats['pendingTasks']}',
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatBadge(
+                    context,
+                    'Overdue',
+                    '${taskStats['overdueTasks']}',
+                    isError: (taskStats['overdueTasks'] as int) > 0,
+                  ),
                 ),
               ],
             ),
@@ -217,50 +224,50 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.only(left: 20),
                 children: [
-                  // Status filters
+                  // Single-Selection Filter Control
                   _buildFilterChip(
                     context,
                     label: 'All Tasks',
-                    selected: activeStatus == 'All',
-                    onTap: () =>
-                        ref.read(taskStatusFilterProvider.notifier).state =
-                            'All',
+                    selected: activeStatus == 'All' && activeDate == 'All',
+                    onTap: () {
+                      ref.read(taskStatusFilterProvider.notifier).state = 'All';
+                      ref.read(taskDateFilterProvider.notifier).state = 'All';
+                    },
                   ),
                   _buildFilterChip(
                     context,
                     label: 'Pending',
-                    selected: activeStatus == 'Pending',
-                    onTap: () =>
-                        ref.read(taskStatusFilterProvider.notifier).state =
-                            'Pending',
+                    selected: activeStatus == 'Pending' && activeDate == 'All',
+                    onTap: () {
+                      ref.read(taskStatusFilterProvider.notifier).state = 'Pending';
+                      ref.read(taskDateFilterProvider.notifier).state = 'All';
+                    },
                   ),
                   _buildFilterChip(
                     context,
                     label: 'Completed',
-                    selected: activeStatus == 'Completed',
-                    onTap: () =>
-                        ref.read(taskStatusFilterProvider.notifier).state =
-                            'Completed',
+                    selected: activeStatus == 'Completed' && activeDate == 'All',
+                    onTap: () {
+                      ref.read(taskStatusFilterProvider.notifier).state = 'Completed';
+                      ref.read(taskDateFilterProvider.notifier).state = 'All';
+                    },
                   ),
-                  // Date filters
                   _buildFilterChip(
                     context,
                     label: 'Today',
-                    selected: activeDate == 'Today',
+                    selected: activeDate == 'Today' && activeStatus == 'All',
                     onTap: () {
-                      final target = activeDate == 'Today' ? 'All' : 'Today';
-                      ref.read(taskDateFilterProvider.notifier).state = target;
+                      ref.read(taskStatusFilterProvider.notifier).state = 'All';
+                      ref.read(taskDateFilterProvider.notifier).state = 'Today';
                     },
                   ),
                   _buildFilterChip(
                     context,
                     label: 'Upcoming',
-                    selected: activeDate == 'Upcoming',
+                    selected: activeDate == 'Upcoming' && activeStatus == 'All',
                     onTap: () {
-                      final target = activeDate == 'Upcoming'
-                          ? 'All'
-                          : 'Upcoming';
-                      ref.read(taskDateFilterProvider.notifier).state = target;
+                      ref.read(taskStatusFilterProvider.notifier).state = 'All';
+                      ref.read(taskDateFilterProvider.notifier).state = 'Upcoming';
                     },
                   ),
                 ],
@@ -600,12 +607,13 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: isError
             ? AppColors.danger.withValues(alpha: 0.1)
             : (isDark ? AppColors.darkCard : AppColors.lightCard),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isError
               ? AppColors.danger

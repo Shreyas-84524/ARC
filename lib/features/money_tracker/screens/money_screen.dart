@@ -12,6 +12,7 @@ import 'package:arc/core/widgets/top_bar.dart';
 import 'package:arc/features/money_tracker/models/transaction_model.dart';
 import 'package:arc/features/money_tracker/widgets/transaction_editor_sheet.dart';
 import 'package:arc/core/widgets/empty_state.dart';
+import 'package:arc/core/widgets/premium_segmented_control.dart';
 import 'package:arc/providers/global_providers.dart';
 
 class MoneyScreen extends ConsumerStatefulWidget {
@@ -23,6 +24,19 @@ class MoneyScreen extends ConsumerStatefulWidget {
 
 class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+
+  final List<Color> _redPalette = const [
+    Color(0xFFEF4444), // Bright Red
+    Color(0xFFF87171), // Light Red
+    Color(0xFFDC2626), // Medium Red
+    Color(0xFFB91C1C), // Dark Red
+    Color(0xFF991B1B), // Deep Red
+    Color(0xFFE11D48), // Crimson
+    Color(0xFFF43F5E), // Rose Red
+    Color(0xFFFB923C), // Red-Orange
+    Color(0xFF7F1D1D), // Dark Crimson
+    Color(0xFFBE123C), // Burgundy
+  ];
 
   final Map<String, Color> _categoryColors = {
     'Food': AppColors.warning,
@@ -169,33 +183,13 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
       appBar: const CustomTopBar(title: 'Money Tracker'),
       body: Column(
         children: [
-          // Tab bar selection
+          // Premium Segmented Control
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
-              height: 48,
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkCard : AppColors.lightCard,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight,
-                ),
-              ),
-              child: TabBar(
-                controller: _tabController,
-                indicatorSize: TabBarIndicatorSize.tab,
-                indicator: BoxDecoration(
-                  color: AppColors.accent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                labelColor: AppColors.textPrimaryLight,
-                unselectedLabelColor: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-                tabs: const [
-                  Tab(text: 'Transactions'),
-                  Tab(text: 'Analytics'),
-                ],
-              ),
+            child: PremiumSegmentedControl(
+              controller: _tabController,
+              tabs: const ['Transactions', 'Analytics'],
+              icons: const [LucideIcons.arrowLeftRight, LucideIcons.pieChart],
             ),
           ),
           const SizedBox(height: 12),
@@ -512,85 +506,278 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
 
                       const SizedBox(height: 24),
 
-                      // 4. Category Spending Breakdown (Pie Chart)
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Category Spending breakdown",
-                                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                      // 4. Monthly Budget Based Spending Donut Chart
+                      Builder(
+                        builder: (context) {
+                          final double effectiveBudget = monthlyBudget > 0
+                              ? monthlyBudget
+                              : (totalExpenses > 0 ? totalExpenses : 1.0);
+                          final double remainingUnspentAmount =
+                              (monthlyBudget - totalExpenses)
+                                  .clamp(0.0, effectiveBudget);
+                          final double remainingPct =
+                              (remainingUnspentAmount / effectiveBudget) * 100.0;
+                          final bool isOverBudget =
+                              monthlyBudget > 0 && totalExpenses > monthlyBudget;
+                          final double excessAmount =
+                              isOverBudget ? totalExpenses - monthlyBudget : 0.0;
+                          final int budgetUsedPct = monthlyBudget > 0
+                              ? ((totalExpenses / monthlyBudget) * 100.0).round()
+                              : 100;
+
+                          // Build Pie Chart Sections
+                          final List<PieChartSectionData> donutSections = [];
+                          if (categoryExpenses.isEmpty) {
+                            donutSections.add(
+                              PieChartSectionData(
+                                color: AppColors.success,
+                                value: 100.0,
+                                title: '100%',
+                                radius: 44,
+                                titleStyle: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                ),
                               ),
-                              const SizedBox(height: 24),
-                              
-                              if (categoryExpenses.isEmpty)
-                                SizedBox(
-                                  height: 120,
-                                  child: Center(
-                                    child: Text(
-                                      "No expense logs this month",
-                                      style: theme.textTheme.bodyMedium?.copyWith(
-                                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              else ...[
-                                SizedBox(
-                                  height: 160,
-                                  child: PieChart(
-                                    PieChartData(
-                                      sectionsSpace: 4,
-                                      centerSpaceRadius: 40,
-                                      sections: categoryExpenses.entries.map((e) {
-                                        final color = _categoryColors[e.key] ?? Colors.blueGrey;
-                                        return PieChartSectionData(
-                                          color: color,
-                                          value: e.value,
-                                          title: CurrencyFormatter.format(e.value, decimalDigits: 0),
-                                          radius: 44,
-                                          titleStyle: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                            fontSize: 11,
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                    duration: const Duration(milliseconds: 300),
-                                    curve: Curves.easeInOut,
+                            );
+                          } else {
+                            if (remainingUnspentAmount > 0) {
+                              donutSections.add(
+                                PieChartSectionData(
+                                  color: AppColors.success,
+                                  value: remainingUnspentAmount,
+                                  title: remainingPct >= 5
+                                      ? '${remainingPct.round()}%'
+                                      : '',
+                                  radius: 44,
+                                  titleStyle: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    fontSize: 11,
                                   ),
                                 ),
-                                const SizedBox(height: 20),
-                                // Legend list
-                                Wrap(
-                                  spacing: 12,
-                                  runSpacing: 8,
-                                  children: categoryExpenses.keys.map((catName) {
-                                    final col = _categoryColors[catName] ?? Colors.blueGrey;
-                                    return Row(
-                                      mainAxisSize: MainAxisSize.min,
+                              );
+                            }
+
+                            int colorIdx = 0;
+                            final categoryEntries = categoryExpenses.entries.toList();
+                            for (final entry in categoryEntries) {
+                              final catName = entry.key;
+                              final catAmount = entry.value;
+                              final color =
+                                  _redPalette[colorIdx % _redPalette.length];
+                              colorIdx++;
+
+                              final double sliceValue = isOverBudget
+                                  ? (catAmount / totalExpenses) * effectiveBudget
+                                  : catAmount;
+                              final double catPct =
+                                  (catAmount / effectiveBudget) * 100.0;
+
+                              donutSections.add(
+                                PieChartSectionData(
+                                  color: color,
+                                  value: sliceValue,
+                                  title: catPct >= 4 ? '${catPct.round()}%' : '',
+                                  radius: 44,
+                                  titleStyle: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              );
+                            }
+                          }
+
+                          return Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(20.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Monthly Budget Spending Breakdown",
+                                    style: theme.textTheme.titleSmall
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  // Donut Chart with Center Text Overlay
+                                  SizedBox(
+                                    height: 180,
+                                    child: Stack(
+                                      alignment: Alignment.center,
                                       children: [
-                                        Container(
-                                          height: 10,
-                                          width: 10,
-                                          decoration: BoxDecoration(shape: BoxShape.circle, color: col),
+                                        PieChart(
+                                          PieChartData(
+                                            sectionsSpace: 3,
+                                            centerSpaceRadius: 52,
+                                            sections: donutSections,
+                                          ),
+                                          duration:
+                                              const Duration(milliseconds: 300),
+                                          curve: Curves.easeInOut,
                                         ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          '$catName: ${CurrencyFormatter.format(categoryExpenses[catName]!, decimalDigits: 0)}',
-                                          style: const TextStyle(fontSize: 11),
+                                        Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              isOverBudget
+                                                  ? "${CurrencyFormatter.symbol}0 Left"
+                                                  : "${CurrencyFormatter.format(remainingUnspentAmount, decimalDigits: 0)} Left",
+                                              style: theme.textTheme.titleSmall
+                                                  ?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color: isOverBudget
+                                                    ? AppColors.danger
+                                                    : (isDark
+                                                        ? AppColors
+                                                            .textPrimaryDark
+                                                        : AppColors
+                                                            .textPrimaryLight),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              isOverBudget
+                                                  ? "100% Used"
+                                                  : "${remainingPct.round()}% Remaining",
+                                              style: theme.textTheme.labelSmall
+                                                  ?.copyWith(
+                                                color: isOverBudget
+                                                    ? AppColors.danger
+                                                    : AppColors.success,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
-                                    );
-                                  }).toList(),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+
+                                  // Legend
+                                  Wrap(
+                                    spacing: 12,
+                                    runSpacing: 8,
+                                    children: [
+                                      if (remainingUnspentAmount > 0 ||
+                                          categoryExpenses.isEmpty)
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              height: 10,
+                                              width: 10,
+                                              decoration: const BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: AppColors.success,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              'Remaining: ${CurrencyFormatter.format(remainingUnspentAmount, decimalDigits: 0)} (${remainingPct.round()}%)',
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ...List.generate(
+                                        categoryExpenses.length,
+                                        (index) {
+                                          final key = categoryExpenses.keys
+                                              .elementAt(index);
+                                          final val = categoryExpenses[key]!;
+                                          final col = _redPalette[
+                                              index % _redPalette.length];
+                                          final pct =
+                                              (val / effectiveBudget) * 100.0;
+                                          return Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                height: 10,
+                                                width: 10,
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  color: col,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                '$key: ${CurrencyFormatter.format(val, decimalDigits: 0)} (${pct.round()}%)',
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+
+                                  // Overbudget Warning Card
+                                  if (isOverBudget) ...[
+                                    const SizedBox(height: 16),
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.danger
+                                            .withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border:
+                                            Border.all(color: AppColors.danger),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            LucideIcons.alertTriangle,
+                                            color: AppColors.danger,
+                                            size: 20,
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  '⚠️ You have exceeded your monthly budget by ${CurrencyFormatter.format(excessAmount, decimalDigits: 0)}.',
+                                                  style: const TextStyle(
+                                                    color: AppColors.danger,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  'Budget Used: $budgetUsedPct%',
+                                                  style: TextStyle(
+                                                    color: isDark
+                                                        ? AppColors.textMutedDark
+                                                        : AppColors
+                                                            .textMutedLight,
+                                                    fontSize: 11,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       ).animate().fade(delay: 200.ms, duration: 250.ms),
 
                       const SizedBox(height: 24),

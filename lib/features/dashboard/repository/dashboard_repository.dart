@@ -30,8 +30,7 @@ class DashboardRepository {
     final todayStr = DateFormat('yyyy-MM-dd').format(now);
     final completedHabits =
         entries.where((e) => e.dateStr == todayStr && e.completed).length;
-    final dailyHabitsCount = habits.where((h) => h.goalType == 'Daily').length;
-    final totalHabits = dailyHabitsCount > 0 ? dailyHabitsCount : habits.length;
+    final totalHabits = habits.length;
 
     int maxStreak = 0;
     for (final h in habits) {
@@ -70,11 +69,37 @@ class DashboardRepository {
     final monthlySavingsRate =
         totalIncome > 0 ? (monthlySavings / totalIncome).clamp(0.0, 1.0) : 0.0;
 
-    final taskRate = totalTasks > 0 ? completedTasks / totalTasks : 0.0;
-    final habitRate = totalHabits > 0 ? completedHabits / totalHabits : 0.0;
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
-    final todayProductivityScore =
-        ((taskRate * 0.5 + habitRate * 0.5) * 100).round();
+    final todayTasks = tasks.where((t) {
+      if (t.dueDate == null) return true;
+      return t.dueDate!.isAfter(todayStart.subtract(const Duration(seconds: 1))) &&
+          t.dueDate!.isBefore(todayEnd.add(const Duration(seconds: 1)));
+    }).toList();
+
+    final totalTodayTasks = todayTasks.length;
+    final completedTodayTasks =
+        todayTasks.where((t) => t.completed).length.clamp(0, totalTodayTasks);
+
+    final totalHabitsCount = habits.length;
+    final completedHabitsCount = entries
+        .where((e) => e.dateStr == todayStr && e.completed)
+        .length
+        .clamp(0, totalHabitsCount);
+
+    final double taskRate = totalTodayTasks > 0
+        ? (completedTodayTasks / totalTodayTasks).clamp(0.0, 1.0)
+        : 0.0;
+    final double habitRate = totalHabitsCount > 0
+        ? (completedHabitsCount / totalHabitsCount).clamp(0.0, 1.0)
+        : 0.0;
+
+    final double taskScore = taskRate * 50.0;
+    final double habitScore = habitRate * 50.0;
+
+    final int todayProductivityScore =
+        (taskScore + habitScore).clamp(0.0, 100.0).round();
     final overallProductivityScore = todayProductivityScore;
 
     // Build Recent Activity Feed (top 10 latest events)

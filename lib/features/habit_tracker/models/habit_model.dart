@@ -10,9 +10,6 @@ class Habit extends HiveObject {
   @HiveField(1)
   final String name;
 
-  @HiveField(2)
-  final String goalType; // Daily, Weekly, Monthly
-
   @HiveField(3)
   final String category;
 
@@ -31,7 +28,6 @@ class Habit extends HiveObject {
   Habit({
     required this.id,
     required this.name,
-    required this.goalType,
     required this.category,
     required this.colorValue,
     this.reminderTime,
@@ -42,7 +38,6 @@ class Habit extends HiveObject {
   Habit copyWith({
     String? id,
     String? name,
-    String? goalType,
     String? category,
     int? colorValue,
     String? reminderTime,
@@ -52,7 +47,6 @@ class Habit extends HiveObject {
     return Habit(
       id: id ?? this.id,
       name: name ?? this.name,
-      goalType: goalType ?? this.goalType,
       category: category ?? this.category,
       colorValue: colorValue ?? this.colorValue,
       reminderTime: reminderTime ?? this.reminderTime,
@@ -65,7 +59,6 @@ class Habit extends HiveObject {
     return {
       'id': id,
       'name': name,
-      'goalType': goalType,
       'category': category,
       'colorValue': colorValue,
       'reminderTime': reminderTime,
@@ -78,7 +71,6 @@ class Habit extends HiveObject {
     return Habit(
       id: map['id'] ?? '',
       name: map['name'] ?? '',
-      goalType: map['goalType'] ?? 'Daily',
       category: map['category'] ?? 'Other',
       colorValue: map['colorValue'] ?? 0xffffffff,
       reminderTime: map['reminderTime'],
@@ -93,7 +85,6 @@ class Habit extends HiveObject {
     return other is Habit &&
         other.id == id &&
         other.name == name &&
-        other.goalType == goalType &&
         other.category == category &&
         other.colorValue == colorValue &&
         other.reminderTime == reminderTime &&
@@ -106,7 +97,6 @@ class Habit extends HiveObject {
     return Object.hash(
       id,
       name,
-      goalType,
       category,
       colorValue,
       reminderTime,

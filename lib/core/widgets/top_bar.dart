@@ -42,7 +42,7 @@ class CustomTopBar extends StatelessWidget implements PreferredSizeWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            title == 'Dashboard' ? '$greeting, User' : title,
+            title == 'Dashboard' ? '$greeting, Shreyas' : title,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,

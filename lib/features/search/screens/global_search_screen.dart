@@ -50,8 +50,7 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
         ? []
         : habits.where((h) {
             return h.name.toLowerCase().contains(cleanQuery) ||
-                h.category.toLowerCase().contains(cleanQuery) ||
-                h.goalType.toLowerCase().contains(cleanQuery);
+                h.category.toLowerCase().contains(cleanQuery);
           }).toList();
 
     final matchedTransactions = cleanQuery.isEmpty
@@ -225,8 +224,7 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
                               habit.name,
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
-                            subtitle: Text(
-                                '${habit.category} • Goal: ${habit.goalType}'),
+                            subtitle: Text(habit.category),
                           ),
                         );
                       }),
