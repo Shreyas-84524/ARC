@@ -38,22 +38,6 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
     Color(0xFFBE123C), // Burgundy
   ];
 
-  final Map<String, Color> _categoryColors = {
-    'Food': AppColors.warning,
-    'Travel': AppColors.info,
-    'Shopping': AppColors.priorityMuch,
-    'Fuel': Colors.amber,
-    'Bills': AppColors.danger,
-    'Entertainment': AppColors.accent,
-    'Health': Colors.teal,
-    'Education': Colors.purpleAccent,
-    'Salary': AppColors.success,
-    'Freelancing': AppColors.accent,
-    'Investment': Colors.indigo,
-    'Gift': Colors.pinkAccent,
-    'Other': Colors.blueGrey,
-  };
-
   @override
   void initState() {
     super.initState();
@@ -563,7 +547,6 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
                             int colorIdx = 0;
                             final categoryEntries = categoryExpenses.entries.toList();
                             for (final entry in categoryEntries) {
-                              final catName = entry.key;
                               final catAmount = entry.value;
                               final color =
                                   _redPalette[colorIdx % _redPalette.length];
