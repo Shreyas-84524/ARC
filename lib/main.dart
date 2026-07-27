@@ -44,6 +44,7 @@ void main() async {
       final notificationService = NotificationService();
       await notificationService.init();
       await notificationService.requestPermissions();
+      await notificationService.checkAppLaunchNotification();
     } catch (e) {
       debugPrint('NotificationService initialization warning: $e');
     }
