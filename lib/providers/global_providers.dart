@@ -170,6 +170,62 @@ final filteredTasksProvider = Provider<List<Task>>((ref) {
   final dateFilter = ref.watch(taskDateFilterProvider);
   final sortBy = ref.watch(taskSortProvider);
 
+  final now = DateTime.now();
+  final todayStart = DateTime(now.year, now.month, now.day);
+  final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
+
+  bool isTaskOverdue(Task task) {
+    if (task.completed || task.dueDate == null) return false;
+    DateTime dueDateTime;
+    if (task.dueTime != null) {
+      final parts = task.dueTime!.split(':');
+      if (parts.length == 2) {
+        final hour = int.tryParse(parts[0]);
+        final minute = int.tryParse(parts[1]);
+        if (hour != null && minute != null) {
+          dueDateTime = DateTime(
+            task.dueDate!.year,
+            task.dueDate!.month,
+            task.dueDate!.day,
+            hour,
+            minute,
+          );
+          return now.isAfter(dueDateTime);
+        }
+      }
+    }
+    dueDateTime = DateTime(
+      task.dueDate!.year,
+      task.dueDate!.month,
+      task.dueDate!.day,
+      23,
+      59,
+      59,
+      999,
+    );
+    return now.isAfter(dueDateTime);
+  }
+
+  bool isTaskToday(Task task) {
+    if (task.dueDate == null) return false;
+    final taskDate = DateTime(
+      task.dueDate!.year,
+      task.dueDate!.month,
+      task.dueDate!.day,
+    );
+    return !taskDate.isBefore(todayStart) && !taskDate.isAfter(todayEnd);
+  }
+
+  bool isTaskUpcoming(Task task) {
+    if (task.dueDate == null) return false;
+    final taskDate = DateTime(
+      task.dueDate!.year,
+      task.dueDate!.month,
+      task.dueDate!.day,
+    );
+    return taskDate.isAfter(todayEnd);
+  }
+
   List<Task> filtered = List.from(tasks);
 
   if (query.isNotEmpty) {
@@ -190,26 +246,19 @@ final filteredTasksProvider = Provider<List<Task>>((ref) {
   }
 
   if (status == 'Pending') {
-    filtered = filtered.where((task) => !task.completed).toList();
+    filtered = filtered.where((task) => !task.completed && !isTaskOverdue(task)).toList();
   } else if (status == 'Completed') {
     filtered = filtered.where((task) => task.completed).toList();
+  } else if (status == 'Overdue') {
+    filtered = filtered.where((task) => !task.completed && isTaskOverdue(task)).toList();
   }
 
-  final now = DateTime.now();
-  final todayStart = DateTime(now.year, now.month, now.day);
-  final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
-
   if (dateFilter == 'Today') {
-    filtered = filtered.where((task) {
-      if (task.dueDate == null) return false;
-      return task.dueDate!.isAfter(todayStart.subtract(const Duration(seconds: 1))) &&
-          task.dueDate!.isBefore(todayEnd.add(const Duration(seconds: 1)));
-    }).toList();
+    filtered = filtered.where((task) => !task.completed && isTaskToday(task) && !isTaskOverdue(task)).toList();
   } else if (dateFilter == 'Upcoming') {
-    filtered = filtered.where((task) {
-      if (task.dueDate == null) return false;
-      return task.dueDate!.isAfter(todayEnd);
-    }).toList();
+    filtered = filtered.where((task) => !task.completed && isTaskUpcoming(task) && !isTaskOverdue(task)).toList();
+  } else if (dateFilter == 'Overdue') {
+    filtered = filtered.where((task) => !task.completed && isTaskOverdue(task)).toList();
   }
 
   if (sortBy == 'DueDate') {
@@ -242,30 +291,71 @@ final filteredTasksProvider = Provider<List<Task>>((ref) {
 // Task Statistics Selector Provider
 final taskStatisticsProvider = Provider<Map<String, dynamic>>((ref) {
   final tasks = ref.watch(tasksProvider);
-  final totalTasks = tasks.length;
-  final completedTasks = tasks.where((t) => t.completed).length;
-  final pendingTasks = totalTasks - completedTasks;
-  final completionRate = totalTasks == 0 ? 0.0 : (completedTasks / totalTasks);
 
   final now = DateTime.now();
   final todayStart = DateTime(now.year, now.month, now.day);
-  final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
+  final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
 
-  final todayTasks = tasks.where((t) {
-    if (t.dueDate == null) return false;
-    return t.dueDate!.isAfter(todayStart.subtract(const Duration(seconds: 1))) &&
-        t.dueDate!.isBefore(todayEnd.add(const Duration(seconds: 1)));
-  }).length;
+  bool isTaskOverdue(Task task) {
+    if (task.completed || task.dueDate == null) return false;
+    DateTime dueDateTime;
+    if (task.dueTime != null) {
+      final parts = task.dueTime!.split(':');
+      if (parts.length == 2) {
+        final hour = int.tryParse(parts[0]);
+        final minute = int.tryParse(parts[1]);
+        if (hour != null && minute != null) {
+          dueDateTime = DateTime(
+            task.dueDate!.year,
+            task.dueDate!.month,
+            task.dueDate!.day,
+            hour,
+            minute,
+          );
+          return now.isAfter(dueDateTime);
+        }
+      }
+    }
+    dueDateTime = DateTime(
+      task.dueDate!.year,
+      task.dueDate!.month,
+      task.dueDate!.day,
+      23,
+      59,
+      59,
+      999,
+    );
+    return now.isAfter(dueDateTime);
+  }
 
-  final overdueTasks = tasks.where((t) {
-    if (t.completed || t.dueDate == null) return false;
-    return t.dueDate!.isBefore(todayStart);
-  }).length;
+  bool isTaskToday(Task task) {
+    if (task.dueDate == null) return false;
+    final taskDate = DateTime(
+      task.dueDate!.year,
+      task.dueDate!.month,
+      task.dueDate!.day,
+    );
+    return !taskDate.isBefore(todayStart) && !taskDate.isAfter(todayEnd);
+  }
 
-  final upcomingTasks = tasks.where((t) {
-    if (t.completed || t.dueDate == null) return false;
-    return t.dueDate!.isAfter(todayEnd);
-  }).length;
+  bool isTaskUpcoming(Task task) {
+    if (task.dueDate == null) return false;
+    final taskDate = DateTime(
+      task.dueDate!.year,
+      task.dueDate!.month,
+      task.dueDate!.day,
+    );
+    return taskDate.isAfter(todayEnd);
+  }
+
+  final totalTasks = tasks.length;
+  final completedTasks = tasks.where((t) => t.completed).length;
+  final overdueTasks = tasks.where((t) => isTaskOverdue(t)).length;
+  final pendingTasks = tasks.where((t) => !t.completed && !isTaskOverdue(t)).length;
+  final todayTasks = tasks.where((t) => !t.completed && isTaskToday(t) && !isTaskOverdue(t)).length;
+  final upcomingTasks = tasks.where((t) => !t.completed && isTaskUpcoming(t) && !isTaskOverdue(t)).length;
+
+  final completionRate = totalTasks == 0 ? 0.0 : (completedTasks / totalTasks);
 
   return {
     'totalTasks': totalTasks,

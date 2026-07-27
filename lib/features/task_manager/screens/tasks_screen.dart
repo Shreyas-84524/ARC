@@ -92,7 +92,15 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: _buildStatBadge(context, 'Total', '${taskStats['totalTasks']}'),
+                  child: _buildStatBadge(
+                    context,
+                    'Total',
+                    '${taskStats['totalTasks']}',
+                    onTap: () {
+                      ref.read(taskStatusFilterProvider.notifier).state = 'All';
+                      ref.read(taskDateFilterProvider.notifier).state = 'All';
+                    },
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -100,6 +108,10 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                     context,
                     'Pending',
                     '${taskStats['pendingTasks']}',
+                    onTap: () {
+                      ref.read(taskStatusFilterProvider.notifier).state = 'Pending';
+                      ref.read(taskDateFilterProvider.notifier).state = 'All';
+                    },
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -109,6 +121,10 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                     'Overdue',
                     '${taskStats['overdueTasks']}',
                     isError: (taskStats['overdueTasks'] as int) > 0,
+                    onTap: () {
+                      ref.read(taskStatusFilterProvider.notifier).state = 'Overdue';
+                      ref.read(taskDateFilterProvider.notifier).state = 'All';
+                    },
                   ),
                 ),
               ],
@@ -245,15 +261,6 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                   ),
                   _buildFilterChip(
                     context,
-                    label: 'Completed',
-                    selected: activeStatus == 'Completed' && activeDate == 'All',
-                    onTap: () {
-                      ref.read(taskStatusFilterProvider.notifier).state = 'Completed';
-                      ref.read(taskDateFilterProvider.notifier).state = 'All';
-                    },
-                  ),
-                  _buildFilterChip(
-                    context,
                     label: 'Today',
                     selected: activeDate == 'Today' && activeStatus == 'All',
                     onTap: () {
@@ -268,6 +275,24 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                     onTap: () {
                       ref.read(taskStatusFilterProvider.notifier).state = 'All';
                       ref.read(taskDateFilterProvider.notifier).state = 'Upcoming';
+                    },
+                  ),
+                  _buildFilterChip(
+                    context,
+                    label: 'Overdue',
+                    selected: (activeStatus == 'Overdue' || activeDate == 'Overdue') && activeStatus != 'Completed',
+                    onTap: () {
+                      ref.read(taskStatusFilterProvider.notifier).state = 'Overdue';
+                      ref.read(taskDateFilterProvider.notifier).state = 'All';
+                    },
+                  ),
+                  _buildFilterChip(
+                    context,
+                    label: 'Completed',
+                    selected: activeStatus == 'Completed' && activeDate == 'All',
+                    onTap: () {
+                      ref.read(taskStatusFilterProvider.notifier).state = 'Completed';
+                      ref.read(taskDateFilterProvider.notifier).state = 'All';
                     },
                   ),
                 ],
@@ -602,47 +627,55 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
     String label,
     String value, {
     bool isError = false,
+    VoidCallback? onTap,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: isError
-            ? AppColors.danger.withValues(alpha: 0.1)
-            : (isDark ? AppColors.darkCard : AppColors.lightCard),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isError
-              ? AppColors.danger
-              : (isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight),
-        ),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.bold,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: isError
+                ? AppColors.danger.withValues(alpha: 0.1)
+                : (isDark ? AppColors.darkCard : AppColors.lightCard),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
               color: isError
                   ? AppColors.danger
-                  : (isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight),
+                  : (isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight),
             ),
           ),
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: isDark
-                  ? AppColors.textMutedDark
-                  : AppColors.textMutedLight,
-              fontSize: 10,
-            ),
+          child: Column(
+            children: [
+              Text(
+                value,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: isError
+                      ? AppColors.danger
+                      : (isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight),
+                ),
+              ),
+              Text(
+                label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: isDark
+                      ? AppColors.textMutedDark
+                      : AppColors.textMutedLight,
+                  fontSize: 10,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
