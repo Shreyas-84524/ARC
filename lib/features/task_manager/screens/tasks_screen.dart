@@ -373,12 +373,88 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
       // Left side swipe (complete/undo)
       startActionPane: ActionPane(
         motion: const DrawerMotion(),
+        dismissible: DismissiblePane(
+          onDismissed: () async {
+            HapticFeedback.mediumImpact();
+            final wasCompleted = task.completed;
+            await ref.read(tasksProvider.notifier).toggleTask(task.id);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      Icon(
+                        wasCompleted ? LucideIcons.rotateCcw : LucideIcons.checkCircle2,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        wasCompleted ? 'Task Marked Incomplete' : 'Task Completed',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  backgroundColor: wasCompleted ? AppColors.accentPressed : AppColors.success,
+                  duration: const Duration(seconds: 3),
+                  action: SnackBarAction(
+                    label: 'Undo',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      ref.read(tasksProvider.notifier).toggleTask(task.id);
+                    },
+                  ),
+                ),
+              );
+            }
+          },
+        ),
         extentRatio: 0.25,
         children: [
           SlidableAction(
-            onPressed: (context) {
-              HapticFeedback.lightImpact();
-              ref.read(tasksProvider.notifier).toggleTask(task.id);
+            onPressed: (context) async {
+              HapticFeedback.mediumImpact();
+              final wasCompleted = task.completed;
+              await ref.read(tasksProvider.notifier).toggleTask(task.id);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      children: [
+                        Icon(
+                          wasCompleted ? LucideIcons.rotateCcw : LucideIcons.checkCircle2,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          wasCompleted ? 'Task Marked Incomplete' : 'Task Completed',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    backgroundColor: wasCompleted ? AppColors.accentPressed : AppColors.success,
+                    duration: const Duration(seconds: 3),
+                    action: SnackBarAction(
+                      label: 'Undo',
+                      textColor: Colors.white,
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        ref.read(tasksProvider.notifier).toggleTask(task.id);
+                      },
+                    ),
+                  ),
+                );
+              }
             },
             backgroundColor: AppColors.success,
             foregroundColor: AppColors.textPrimaryLight,
