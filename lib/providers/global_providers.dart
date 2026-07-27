@@ -43,6 +43,10 @@ class SettingsNotifier extends StateNotifier<SettingsModel> {
     state = updated;
     await _repository.saveSettings(updated);
   }
+
+  void refresh() {
+    state = _repository.getSettings();
+  }
 }
 
 // Theme Mode Provider (Reads from AppSettings)
@@ -139,6 +143,11 @@ class TasksNotifier extends StateNotifier<List<Task>> {
   Future<void> performCleanup() async {
     await _repository.performEndOfDayCleanup();
     state = _repository.getTasks();
+  }
+
+  void refresh() {
+    state = _repository.getTasks();
+    _rescheduleActiveTaskReminders();
   }
 }
 
@@ -450,6 +459,11 @@ class HabitsNotifier extends StateNotifier<List<Habit>> {
 
     NotificationService().scheduleEveningReminder(incompleteCount);
   }
+
+  void refresh() {
+    state = _repository.getHabits();
+    _updateReminder();
+  }
 }
 
 // Habit Entries State Provider
@@ -498,6 +512,11 @@ class HabitEntriesNotifier extends StateNotifier<List<HabitEntry>> {
     }
 
     NotificationService().scheduleEveningReminder(incompleteCount);
+  }
+
+  void refresh() {
+    state = _repository.getEntries();
+    _updateReminder();
   }
 }
 
@@ -623,6 +642,10 @@ class MonthlyBudgetNotifier extends StateNotifier<double> {
     final transactions = _repository.getTransactions();
     _saveSummaryHelper(_repository, _currentMonth, state, transactions);
   }
+
+  void refresh() {
+    state = _repository.getMonthlyBudget(_currentMonth);
+  }
 }
 
 // Money Transactions State Notifier Provider
@@ -688,6 +711,12 @@ class MoneyNotifier extends StateNotifier<List<Transaction>> {
 
   void _syncSummary() {
     _saveSummaryHelper(_repository, _currentMonth, _currentBudget, state);
+  }
+
+  void refresh() {
+    state = _repository.getTransactions();
+    _updateReminders();
+    _syncSummary();
   }
 }
 
