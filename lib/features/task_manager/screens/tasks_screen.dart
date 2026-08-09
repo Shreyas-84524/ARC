@@ -50,9 +50,13 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text(
+            child: Text(
               'Cancel',
-              style: TextStyle(color: Colors.white70),
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white70
+                    : AppColors.textSecondaryLight,
+              ),
             ),
           ),
           ElevatedButton(

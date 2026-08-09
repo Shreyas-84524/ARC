@@ -175,7 +175,14 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white70
+                      : AppColors.textSecondaryLight,
+                ),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(

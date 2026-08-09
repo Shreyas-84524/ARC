@@ -77,7 +77,14 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white70
+                    : AppColors.textSecondaryLight,
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -104,7 +111,14 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white70
+                    : AppColors.textSecondaryLight,
+              ),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(

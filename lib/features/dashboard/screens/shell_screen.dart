@@ -130,20 +130,20 @@ class ShellScreen extends StatelessWidget {
           alignment: Alignment.center,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: active
                   ? (isDark
                       ? AppColors.accent.withValues(alpha: 0.15)
-                      : AppColors.accentPressed.withValues(alpha: 0.15))
+                      : AppColors.accent)
                   : Colors.transparent,
-              shape: BoxShape.circle,
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(
               icon,
               size: 24,
               color: active
-                  ? (isDark ? AppColors.accent : AppColors.accentPressed)
+                  ? (isDark ? AppColors.accent : AppColors.textPrimaryLight)
                   : (isDark
                       ? AppColors.textMutedDark
                       : AppColors.textMutedLight),
