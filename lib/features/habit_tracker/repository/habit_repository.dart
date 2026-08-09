@@ -6,12 +6,35 @@ import 'package:arc/features/habit_tracker/models/habit_model.dart';
 import 'package:arc/features/habit_tracker/models/habit_entry_model.dart';
 
 class HabitRepository {
-  final Box<Habit> _habitBox =
-      HiveService().getBox<Habit>(HiveService.habitsBoxName);
-  final Box<HabitEntry> _entryBox =
-      HiveService().getBox<HabitEntry>(HiveService.habitEntriesBoxName);
-  final Box _queueBox = HiveService().getBox(HiveService.habitsSyncQueueBoxName);
+  final String? _userId;
+  final Box<Habit> _habitBox;
+  final Box<HabitEntry> _entryBox;
+  final Box _queueBox;
   final fs.FirebaseFirestore _firestore = fs.FirebaseFirestore.instance;
+
+  HabitRepository({String? userId})
+      : _userId = userId,
+        _habitBox = HiveService().getUserBox<Habit>(HiveService.habitsBoxName, userId),
+        _entryBox = HiveService().getUserBox<HabitEntry>(HiveService.habitEntriesBoxName, userId),
+        _queueBox = HiveService().getUserBox(HiveService.habitsSyncQueueBoxName, userId);
+
+  String? get userId => _userId;
+
+  fs.CollectionReference<Map<String, dynamic>> _habitsRef() {
+    final uid = _userId;
+    if (uid != null && uid.isNotEmpty) {
+      return _firestore.collection('users').doc(uid).collection('habits');
+    }
+    return _firestore.collection('habits');
+  }
+
+  fs.CollectionReference<Map<String, dynamic>> _entriesRef() {
+    final uid = _userId;
+    if (uid != null && uid.isNotEmpty) {
+      return _firestore.collection('users').doc(uid).collection('habitEntries');
+    }
+    return _firestore.collection('habitEntries');
+  }
 
   List<Habit> getHabits() => _habitBox.values.toList();
 
@@ -20,7 +43,7 @@ class HabitRepository {
   Future<void> saveHabit(Habit habit) async {
     await _habitBox.put(habit.id, habit);
     try {
-      await _firestore.collection('habits').doc(habit.id).set(habit.toMap());
+      await _habitsRef().doc(habit.id).set(habit.toMap());
       await _queueBox.delete('habit_${habit.id}');
     } catch (e) {
       await _queueBox.put('habit_${habit.id}', {
@@ -43,7 +66,7 @@ class HabitRepository {
     }
 
     try {
-      await _firestore.collection('habits').doc(id).delete();
+      await _habitsRef().doc(id).delete();
       await _queueBox.delete('habit_$id');
     } catch (e) {
       await _queueBox.put('habit_$id', {
@@ -66,8 +89,7 @@ class HabitRepository {
     if (completed) {
       await _entryBox.put(entryId, entry);
       try {
-        await _firestore
-            .collection('habitEntries')
+        await _entriesRef()
             .doc(entryId)
             .set(entry.toMap());
         await _queueBox.delete('entry_$entryId');
@@ -82,7 +104,7 @@ class HabitRepository {
     } else {
       await _entryBox.delete(entryId);
       try {
-        await _firestore.collection('habitEntries').doc(entryId).delete();
+        await _entriesRef().doc(entryId).delete();
         await _queueBox.delete('entry_$entryId');
       } catch (e) {
         await _queueBox.put('entry_$entryId', {
@@ -118,10 +140,10 @@ class HabitRepository {
             final payload =
                 habit?.toMap() ?? (item['data'] as Map<String, dynamic>?);
             if (payload != null) {
-              await _firestore.collection('habits').doc(id).set(payload);
+              await _habitsRef().doc(id).set(payload);
             }
           } else if (action == 'delete') {
-            await _firestore.collection('habits').doc(id).delete();
+            await _habitsRef().doc(id).delete();
           }
         } else if (type == 'entry') {
           if (action == 'upsert') {
@@ -129,10 +151,10 @@ class HabitRepository {
             final payload =
                 entry?.toMap() ?? (item['data'] as Map<String, dynamic>?);
             if (payload != null) {
-              await _firestore.collection('habitEntries').doc(id).set(payload);
+              await _entriesRef().doc(id).set(payload);
             }
           } else if (action == 'delete') {
-            await _firestore.collection('habitEntries').doc(id).delete();
+            await _entriesRef().doc(id).delete();
           }
         }
         await _queueBox.delete(key);

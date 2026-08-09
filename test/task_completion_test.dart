@@ -3,6 +3,8 @@ import 'package:arc/features/task_manager/models/task_model.dart';
 import 'package:arc/features/task_manager/repository/task_repository.dart';
 
 class TestTaskRepository implements TaskRepository {
+  @override
+  String? get userId => null;
   final List<Task> _tasks = [];
   String? _lastCleanupDate;
 

@@ -14,6 +14,8 @@ import 'package:arc/features/settings/repository/settings_repository.dart';
 import 'package:arc/providers/global_providers.dart';
 
 class FakeTaskRepository implements TaskRepository {
+  @override
+  String? get userId => null;
   final List<Task> _tasks = [
     Task(
       id: '1',
@@ -56,6 +58,8 @@ class FakeTaskRepository implements TaskRepository {
 }
 
 class FakeHabitRepository implements HabitRepository {
+  @override
+  String? get userId => null;
   final List<Habit> _habits = [];
   final List<HabitEntry> _entries = [];
 
@@ -91,6 +95,8 @@ class FakeHabitRepository implements HabitRepository {
 }
 
 class FakeMoneyRepository implements MoneyRepository {
+  @override
+  String? get userId => null;
   final List<Transaction> _txs = [];
   final Map<String, double> _budgets = {};
 
@@ -126,6 +132,8 @@ class FakeMoneyRepository implements MoneyRepository {
 }
 
 class FakeSettingsRepository implements SettingsRepository {
+  @override
+  String? get userId => null;
   SettingsModel _settings = SettingsModel.defaultSettings();
 
   @override

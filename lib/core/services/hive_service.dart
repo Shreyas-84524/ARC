@@ -61,6 +61,39 @@ class HiveService {
     return Hive.box<T>(boxName);
   }
 
+  /// Helper to generate a user-scoped Hive box name.
+  ///
+  /// If [userId] is null or empty, returns the legacy default [baseBoxName].
+  /// Otherwise, returns "{baseBoxName}_{userId}".
+  static String getUserBoxName(String baseBoxName, String? userId) {
+    if (userId == null || userId.isEmpty) {
+      return baseBoxName;
+    }
+    return '${baseBoxName}_$userId';
+  }
+
+  /// Opens a user-scoped Hive box dynamically if not already open.
+  Future<Box<T>> openUserBox<T>(String baseBoxName, String? userId) async {
+    final scopedName = getUserBoxName(baseBoxName, userId);
+    if (!Hive.isBoxOpen(scopedName)) {
+      return await Hive.openBox<T>(scopedName);
+    }
+    return Hive.box<T>(scopedName);
+  }
+
+  /// Retrieves a user-scoped Hive box if open, falling back to legacy default box.
+  Box<T> getUserBox<T>(String baseBoxName, String? userId) {
+    final scopedName = getUserBoxName(baseBoxName, userId);
+    if (!_initialized || !Hive.isBoxOpen(scopedName)) {
+      // Fallback to base box if open, or throw error
+      if (Hive.isBoxOpen(baseBoxName)) {
+        return Hive.box<T>(baseBoxName);
+      }
+      throw StateError('HiveService: box $scopedName is not open.');
+    }
+    return Hive.box<T>(scopedName);
+  }
+
   // Helper methods to read/write settings cache
   Future<void> cacheSetting(String key, dynamic value) async {
     final box = getBox(settingsBoxName);

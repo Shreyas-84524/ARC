@@ -13,27 +13,50 @@ import 'package:arc/features/money_tracker/repository/money_repository.dart';
 import 'package:arc/features/settings/repository/settings_repository.dart';
 
 class SyncService {
+  final String? _userId;
   final TaskRepository _taskRepository;
   final HabitRepository _habitRepository;
   final MoneyRepository _moneyRepository;
   final SettingsRepository _settingsRepository;
 
   final fs.FirebaseFirestore _firestore = fs.FirebaseFirestore.instance;
-  final Box _settingsBox = HiveService().getBox(HiveService.settingsBoxName);
+  late final Box _settingsBox;
   final List<StreamSubscription> _subscriptions = [];
 
   bool _isSyncing = false;
   bool get isSyncing => _isSyncing;
 
   SyncService({
+    String? userId,
     required TaskRepository taskRepository,
     required HabitRepository habitRepository,
     required MoneyRepository moneyRepository,
     required SettingsRepository settingsRepository,
-  })  : _taskRepository = taskRepository,
+  })  : _userId = userId,
+        _taskRepository = taskRepository,
         _habitRepository = habitRepository,
         _moneyRepository = moneyRepository,
-        _settingsRepository = settingsRepository;
+        _settingsRepository = settingsRepository {
+    _settingsBox = HiveService().getUserBox(HiveService.settingsBoxName, _userId);
+  }
+
+  String? get userId => _userId;
+
+  fs.CollectionReference<Map<String, dynamic>> _collectionRef(String colName) {
+    final uid = _userId;
+    if (uid != null && uid.isNotEmpty) {
+      return _firestore.collection('users').doc(uid).collection(colName);
+    }
+    return _firestore.collection(colName);
+  }
+
+  fs.DocumentReference<Map<String, dynamic>> _settingsDocRef() {
+    final uid = _userId;
+    if (uid != null && uid.isNotEmpty) {
+      return _firestore.collection('users').doc(uid).collection('settings').doc('profile');
+    }
+    return _firestore.collection('settings').doc('global');
+  }
 
   bool isInitialSyncCompleted() {
     return _settingsBox.get('initial_sync_completed', defaultValue: false) as bool;
@@ -41,9 +64,9 @@ class SyncService {
 
   bool isFirstInstallAndEmpty() {
     if (isInitialSyncCompleted()) return false;
-    final taskBox = HiveService().getBox<Task>(HiveService.tasksBoxName);
-    final habitBox = HiveService().getBox<Habit>(HiveService.habitsBoxName);
-    final moneyBox = HiveService().getBox<Transaction>(HiveService.moneyBoxName);
+    final taskBox = HiveService().getUserBox<Task>(HiveService.tasksBoxName, _userId);
+    final habitBox = HiveService().getUserBox<Habit>(HiveService.habitsBoxName, _userId);
+    final moneyBox = HiveService().getUserBox<Transaction>(HiveService.moneyBoxName, _userId);
     return taskBox.isEmpty && habitBox.isEmpty && moneyBox.isEmpty;
   }
 
@@ -70,9 +93,9 @@ class SyncService {
       debugPrint('SyncService: Downloading Cloud Firestore data to local database...');
 
       // 1. Sync tasks collection
-      final taskBox = HiveService().getBox<Task>(HiveService.tasksBoxName);
-      final taskQueue = HiveService().getBox(HiveService.tasksSyncQueueBoxName);
-      final taskDocs = await _firestore.collection('tasks').get().timeout(const Duration(seconds: 10));
+      final taskBox = HiveService().getUserBox<Task>(HiveService.tasksBoxName, _userId);
+      final taskQueue = HiveService().getUserBox(HiveService.tasksSyncQueueBoxName, _userId);
+      final taskDocs = await _collectionRef('tasks').get().timeout(const Duration(seconds: 10));
 
       for (final doc in taskDocs.docs) {
         final data = doc.data();
@@ -88,9 +111,9 @@ class SyncService {
       }
 
       // 2. Sync habits collection
-      final habitBox = HiveService().getBox<Habit>(HiveService.habitsBoxName);
-      final habitQueue = HiveService().getBox(HiveService.habitsSyncQueueBoxName);
-      final habitDocs = await _firestore.collection('habits').get().timeout(const Duration(seconds: 10));
+      final habitBox = HiveService().getUserBox<Habit>(HiveService.habitsBoxName, _userId);
+      final habitQueue = HiveService().getUserBox(HiveService.habitsSyncQueueBoxName, _userId);
+      final habitDocs = await _collectionRef('habits').get().timeout(const Duration(seconds: 10));
 
       for (final doc in habitDocs.docs) {
         final data = doc.data();
@@ -105,8 +128,8 @@ class SyncService {
       }
 
       // 3. Sync habit entries collection
-      final entryBox = HiveService().getBox<HabitEntry>(HiveService.habitEntriesBoxName);
-      final entryDocs = await _firestore.collection('habitEntries').get().timeout(const Duration(seconds: 10));
+      final entryBox = HiveService().getUserBox<HabitEntry>(HiveService.habitEntriesBoxName, _userId);
+      final entryDocs = await _collectionRef('habitEntries').get().timeout(const Duration(seconds: 10));
 
       for (final doc in entryDocs.docs) {
         final data = doc.data();
@@ -116,9 +139,9 @@ class SyncService {
       }
 
       // 4. Sync transactions collection
-      final txBox = HiveService().getBox<Transaction>(HiveService.moneyBoxName);
-      final moneyQueue = HiveService().getBox(HiveService.moneySyncQueueBoxName);
-      final txDocs = await _firestore.collection('transactions').get().timeout(const Duration(seconds: 10));
+      final txBox = HiveService().getUserBox<Transaction>(HiveService.moneyBoxName, _userId);
+      final moneyQueue = HiveService().getUserBox(HiveService.moneySyncQueueBoxName, _userId);
+      final txDocs = await _collectionRef('transactions').get().timeout(const Duration(seconds: 10));
 
       for (final doc in txDocs.docs) {
         final data = doc.data();
@@ -128,7 +151,7 @@ class SyncService {
       }
 
       // 5. Sync monthly budgets collection
-      final budgetDocs = await _firestore.collection('budgets').get().timeout(const Duration(seconds: 10));
+      final budgetDocs = await _collectionRef('budgets').get().timeout(const Duration(seconds: 10));
       for (final doc in budgetDocs.docs) {
         final data = doc.data();
         final month = doc.id;
@@ -139,7 +162,7 @@ class SyncService {
       }
 
       // 6. Sync monthly summaries collection
-      final summaryDocs = await _firestore.collection('monthlySummaries').get().timeout(const Duration(seconds: 10));
+      final summaryDocs = await _collectionRef('monthlySummaries').get().timeout(const Duration(seconds: 10));
       for (final doc in summaryDocs.docs) {
         final data = doc.data();
         final month = doc.id;
@@ -148,8 +171,8 @@ class SyncService {
         }
       }
 
-      // 7. Sync global settings document
-      final settingsDoc = await _firestore.collection('settings').doc('global').get().timeout(const Duration(seconds: 10));
+      // 7. Sync settings document
+      final settingsDoc = await _settingsDocRef().get().timeout(const Duration(seconds: 10));
       if (settingsDoc.exists && settingsDoc.data() != null) {
         final data = settingsDoc.data()!;
         final isQueued = _settingsBox.get('settings_sync_queued', defaultValue: false) as bool;
@@ -179,9 +202,9 @@ class SyncService {
     try {
       // 1. Tasks Listener
       _subscriptions.add(
-        _firestore.collection('tasks').snapshots().listen((snapshot) async {
-          final taskBox = HiveService().getBox<Task>(HiveService.tasksBoxName);
-          final taskQueue = HiveService().getBox(HiveService.tasksSyncQueueBoxName);
+        _collectionRef('tasks').snapshots().listen((snapshot) async {
+          final taskBox = HiveService().getUserBox<Task>(HiveService.tasksBoxName, _userId);
+          final taskQueue = HiveService().getUserBox(HiveService.tasksSyncQueueBoxName, _userId);
 
           for (final change in snapshot.docChanges) {
             final id = change.doc.id;
@@ -205,9 +228,9 @@ class SyncService {
 
       // 2. Habits Listener
       _subscriptions.add(
-        _firestore.collection('habits').snapshots().listen((snapshot) async {
-          final habitBox = HiveService().getBox<Habit>(HiveService.habitsBoxName);
-          final habitQueue = HiveService().getBox(HiveService.habitsSyncQueueBoxName);
+        _collectionRef('habits').snapshots().listen((snapshot) async {
+          final habitBox = HiveService().getUserBox<Habit>(HiveService.habitsBoxName, _userId);
+          final habitQueue = HiveService().getUserBox(HiveService.habitsSyncQueueBoxName, _userId);
 
           for (final change in snapshot.docChanges) {
             final id = change.doc.id;
@@ -231,9 +254,9 @@ class SyncService {
 
       // 3. Habit Entries Listener
       _subscriptions.add(
-        _firestore.collection('habitEntries').snapshots().listen((snapshot) async {
-          final entryBox = HiveService().getBox<HabitEntry>(HiveService.habitEntriesBoxName);
-          final habitQueue = HiveService().getBox(HiveService.habitsSyncQueueBoxName);
+        _collectionRef('habitEntries').snapshots().listen((snapshot) async {
+          final entryBox = HiveService().getUserBox<HabitEntry>(HiveService.habitEntriesBoxName, _userId);
+          final habitQueue = HiveService().getUserBox(HiveService.habitsSyncQueueBoxName, _userId);
 
           for (final change in snapshot.docChanges) {
             final id = change.doc.id;
@@ -254,9 +277,9 @@ class SyncService {
 
       // 4. Money Transactions Listener
       _subscriptions.add(
-        _firestore.collection('transactions').snapshots().listen((snapshot) async {
-          final txBox = HiveService().getBox<Transaction>(HiveService.moneyBoxName);
-          final moneyQueue = HiveService().getBox(HiveService.moneySyncQueueBoxName);
+        _collectionRef('transactions').snapshots().listen((snapshot) async {
+          final txBox = HiveService().getUserBox<Transaction>(HiveService.moneyBoxName, _userId);
+          final moneyQueue = HiveService().getUserBox(HiveService.moneySyncQueueBoxName, _userId);
 
           for (final change in snapshot.docChanges) {
             final id = change.doc.id;
@@ -277,8 +300,8 @@ class SyncService {
 
       // 5. Monthly Budgets Listener
       _subscriptions.add(
-        _firestore.collection('budgets').snapshots().listen((snapshot) async {
-          final moneyQueue = HiveService().getBox(HiveService.moneySyncQueueBoxName);
+        _collectionRef('budgets').snapshots().listen((snapshot) async {
+          final moneyQueue = HiveService().getUserBox(HiveService.moneySyncQueueBoxName, _userId);
           for (final change in snapshot.docChanges) {
             final month = change.doc.id;
             if (moneyQueue.containsKey('budget_$month')) continue;
@@ -295,9 +318,9 @@ class SyncService {
         }),
       );
 
-      // 6. Global Settings Listener
+      // 6. Settings Listener
       _subscriptions.add(
-        _firestore.collection('settings').doc('global').snapshots().listen((snapshot) async {
+        _settingsDocRef().snapshots().listen((snapshot) async {
           final isQueued = _settingsBox.get('settings_sync_queued', defaultValue: false) as bool;
           if (!isQueued && snapshot.exists && snapshot.data() != null) {
             await _settingsBox.put(SettingsRepository.settingsHiveKey, snapshot.data()!);

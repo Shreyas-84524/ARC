@@ -19,6 +19,8 @@ import 'package:arc/providers/global_providers.dart';
 
 class TestTaskRepository implements TaskRepository {
   @override
+  String? get userId => null;
+  @override
   List<Task> getTasks() => [];
   @override
   Future<void> saveTask(Task task) async {}
@@ -31,6 +33,8 @@ class TestTaskRepository implements TaskRepository {
 }
 
 class TestHabitRepository implements HabitRepository {
+  @override
+  String? get userId => null;
   @override
   List<Habit> getHabits() => [];
   @override
@@ -46,6 +50,8 @@ class TestHabitRepository implements HabitRepository {
 }
 
 class TestMoneyRepository implements MoneyRepository {
+  @override
+  String? get userId => null;
   @override
   List<Transaction> getTransactions() => [];
   @override
@@ -63,6 +69,8 @@ class TestMoneyRepository implements MoneyRepository {
 }
 
 class TestSettingsRepository implements SettingsRepository {
+  @override
+  String? get userId => null;
   @override
   SettingsModel getSettings() => SettingsModel.defaultSettings();
   @override

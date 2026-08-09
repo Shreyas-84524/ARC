@@ -6,11 +6,43 @@ import 'package:arc/features/money_tracker/models/transaction_model.dart';
 import 'package:arc/features/money_tracker/models/monthly_summary_model.dart';
 
 class MoneyRepository {
-  final Box<Transaction> _txBox =
-      HiveService().getBox<Transaction>(HiveService.moneyBoxName);
-  final Box _settingsBox = HiveService().getBox(HiveService.settingsBoxName);
-  final Box _queueBox = HiveService().getBox(HiveService.moneySyncQueueBoxName);
+  final String? _userId;
+  final Box<Transaction> _txBox;
+  final Box _settingsBox;
+  final Box _queueBox;
   final fs.FirebaseFirestore _firestore = fs.FirebaseFirestore.instance;
+
+  MoneyRepository({String? userId})
+      : _userId = userId,
+        _txBox = HiveService().getUserBox<Transaction>(HiveService.moneyBoxName, userId),
+        _settingsBox = HiveService().getUserBox(HiveService.settingsBoxName, userId),
+        _queueBox = HiveService().getUserBox(HiveService.moneySyncQueueBoxName, userId);
+
+  String? get userId => _userId;
+
+  fs.CollectionReference<Map<String, dynamic>> _txRef() {
+    final uid = _userId;
+    if (uid != null && uid.isNotEmpty) {
+      return _firestore.collection('users').doc(uid).collection('transactions');
+    }
+    return _firestore.collection('transactions');
+  }
+
+  fs.CollectionReference<Map<String, dynamic>> _budgetsRef() {
+    final uid = _userId;
+    if (uid != null && uid.isNotEmpty) {
+      return _firestore.collection('users').doc(uid).collection('budgets');
+    }
+    return _firestore.collection('budgets');
+  }
+
+  fs.CollectionReference<Map<String, dynamic>> _summariesRef() {
+    final uid = _userId;
+    if (uid != null && uid.isNotEmpty) {
+      return _firestore.collection('users').doc(uid).collection('monthlySummaries');
+    }
+    return _firestore.collection('monthlySummaries');
+  }
 
   List<Transaction> getTransactions() => _txBox.values.toList();
 
@@ -26,8 +58,7 @@ class MoneyRepository {
   Future<void> saveMonthlyBudget(String yearMonth, double amount) async {
     await _settingsBox.put('budget_$yearMonth', amount);
     try {
-      await _firestore
-          .collection('budgets')
+      await _budgetsRef()
           .doc(yearMonth)
           .set({'amount': amount, 'month': yearMonth});
       await _queueBox.delete('budget_$yearMonth');
@@ -44,7 +75,7 @@ class MoneyRepository {
   Future<void> saveTransaction(Transaction tx) async {
     await _txBox.put(tx.id, tx);
     try {
-      await _firestore.collection('transactions').doc(tx.id).set(tx.toMap());
+      await _txRef().doc(tx.id).set(tx.toMap());
       await _queueBox.delete('tx_${tx.id}');
     } catch (e) {
       await _queueBox.put('tx_${tx.id}', {
@@ -59,7 +90,7 @@ class MoneyRepository {
   Future<void> deleteTransaction(String id) async {
     await _txBox.delete(id);
     try {
-      await _firestore.collection('transactions').doc(id).delete();
+      await _txRef().doc(id).delete();
       await _queueBox.delete('tx_$id');
     } catch (e) {
       await _queueBox.put('tx_$id', {
@@ -73,8 +104,7 @@ class MoneyRepository {
   Future<void> saveMonthlySummary(MonthlySummary summary) async {
     await _settingsBox.put('summary_${summary.month}', summary.toMap());
     try {
-      await _firestore
-          .collection('monthlySummaries')
+      await _summariesRef()
           .doc(summary.month)
           .set(summary.toMap());
       await _queueBox.delete('summary_${summary.month}');
@@ -108,8 +138,7 @@ class MoneyRepository {
       try {
         if (type == 'budget') {
           final val = (item['value'] as num).toDouble();
-          await _firestore
-              .collection('budgets')
+          await _budgetsRef()
               .doc(id)
               .set({'amount': val, 'month': id});
         } else if (type == 'tx') {
@@ -117,15 +146,15 @@ class MoneyRepository {
             final tx = _txBox.get(id);
             final payload = tx?.toMap() ?? (item['data'] as Map<String, dynamic>?);
             if (payload != null) {
-              await _firestore.collection('transactions').doc(id).set(payload);
+              await _txRef().doc(id).set(payload);
             }
           } else if (action == 'delete') {
-            await _firestore.collection('transactions').doc(id).delete();
+            await _txRef().doc(id).delete();
           }
         } else if (type == 'summary') {
           final payload = item['data'] as Map<String, dynamic>?;
           if (payload != null) {
-            await _firestore.collection('monthlySummaries').doc(id).set(payload);
+            await _summariesRef().doc(id).set(payload);
           }
         }
         await _queueBox.delete(key);

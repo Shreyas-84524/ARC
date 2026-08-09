@@ -15,10 +15,12 @@ import 'package:arc/features/dashboard/repository/dashboard_repository.dart';
 import 'package:arc/core/services/sync_service.dart';
 import 'package:arc/core/services/task_cleanup_service.dart';
 import 'package:arc/core/notifications/notification_service.dart';
+import 'package:arc/features/user_management/providers/user_context_provider.dart';
 
 // Settings Repository Provider
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
-  return SettingsRepository();
+  final userContext = ref.watch(userContextProvider);
+  return SettingsRepository(userId: userContext.userId);
 });
 
 // App Settings State Notifier Provider
@@ -57,7 +59,8 @@ final themeModeProvider = StateProvider<ThemeMode>((ref) {
 
 // Task Repository Provider
 final taskRepositoryProvider = Provider<TaskRepository>((ref) {
-  return TaskRepository();
+  final userContext = ref.watch(userContextProvider);
+  return TaskRepository(userId: userContext.userId);
 });
 
 // Tasks State Notifier Provider
@@ -392,7 +395,8 @@ int _priorityValue(String priority) {
 
 // Habit Repository Provider
 final habitRepositoryProvider = Provider<HabitRepository>((ref) {
-  return HabitRepository();
+  final userContext = ref.watch(userContextProvider);
+  return HabitRepository(userId: userContext.userId);
 });
 
 // Habits State Provider
@@ -605,7 +609,8 @@ Map<String, dynamic> getHabitMetrics(
 
 // Money Repository Provider
 final moneyRepositoryProvider = Provider<MoneyRepository>((ref) {
-  return MoneyRepository();
+  final userContext = ref.watch(userContextProvider);
+  return MoneyRepository(userId: userContext.userId);
 });
 
 // Current Month Helper Provider ("yyyy-MM")
@@ -750,12 +755,14 @@ void _saveSummaryHelper(MoneyRepository repository, String month, double budget,
 
 // Sync Service Provider
 final syncServiceProvider = Provider<SyncService>((ref) {
+  final userContext = ref.watch(userContextProvider);
   final taskRepo = ref.watch(taskRepositoryProvider);
   final habitRepo = ref.watch(habitRepositoryProvider);
   final moneyRepo = ref.watch(moneyRepositoryProvider);
   final settingsRepo = ref.watch(settingsRepositoryProvider);
 
   return SyncService(
+    userId: userContext.userId,
     taskRepository: taskRepo,
     habitRepository: habitRepo,
     moneyRepository: moneyRepo,

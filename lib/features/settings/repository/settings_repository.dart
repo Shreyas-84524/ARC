@@ -5,10 +5,25 @@ import 'package:arc/core/services/hive_service.dart';
 import 'package:arc/features/settings/models/settings_model.dart';
 
 class SettingsRepository {
-  final Box _settingsBox = HiveService().getBox(HiveService.settingsBoxName);
+  final String? _userId;
+  final Box _settingsBox;
   final fs.FirebaseFirestore _firestore = fs.FirebaseFirestore.instance;
 
   static const String settingsHiveKey = 'app_settings';
+
+  SettingsRepository({String? userId})
+      : _userId = userId,
+        _settingsBox = HiveService().getUserBox(HiveService.settingsBoxName, userId);
+
+  String? get userId => _userId;
+
+  fs.DocumentReference<Map<String, dynamic>> _settingsDocRef() {
+    final uid = _userId;
+    if (uid != null && uid.isNotEmpty) {
+      return _firestore.collection('users').doc(uid).collection('settings').doc('profile');
+    }
+    return _firestore.collection('settings').doc('global');
+  }
 
   SettingsModel getSettings() {
     try {
@@ -27,7 +42,7 @@ class SettingsRepository {
     await _settingsBox.put(settingsHiveKey, map);
 
     try {
-      await _firestore.collection('settings').doc('global').set(map);
+      await _settingsDocRef().set(map);
       await _settingsBox.delete('settings_sync_queued');
     } catch (e) {
       debugPrint('SettingsRepository sync queued: $e');
@@ -42,7 +57,7 @@ class SettingsRepository {
 
     try {
       final settings = getSettings();
-      await _firestore.collection('settings').doc('global').set(settings.toMap());
+      await _settingsDocRef().set(settings.toMap());
       await _settingsBox.delete('settings_sync_queued');
     } catch (e) {
       debugPrint('SettingsRepository syncPending failed: $e');

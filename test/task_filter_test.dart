@@ -6,6 +6,8 @@ import 'package:arc/features/task_manager/repository/task_repository.dart';
 import 'package:arc/providers/global_providers.dart';
 
 class MockTaskRepository implements TaskRepository {
+  @override
+  String? get userId => null;
   final List<Task> _tasks = [];
 
   @override

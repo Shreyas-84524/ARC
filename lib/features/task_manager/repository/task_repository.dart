@@ -5,10 +5,25 @@ import 'package:arc/core/services/hive_service.dart';
 import 'package:arc/features/task_manager/models/task_model.dart';
 
 class TaskRepository {
-  final Box<Task> _taskBox =
-      HiveService().getBox<Task>(HiveService.tasksBoxName);
-  final Box _queueBox = HiveService().getBox(HiveService.tasksSyncQueueBoxName);
+  final String? _userId;
+  final Box<Task> _taskBox;
+  final Box _queueBox;
   final fs.FirebaseFirestore _firestore = fs.FirebaseFirestore.instance;
+
+  TaskRepository({String? userId})
+      : _userId = userId,
+        _taskBox = HiveService().getUserBox<Task>(HiveService.tasksBoxName, userId),
+        _queueBox = HiveService().getUserBox(HiveService.tasksSyncQueueBoxName, userId);
+
+  String? get userId => _userId;
+
+  fs.CollectionReference<Map<String, dynamic>> _tasksRef() {
+    final uid = _userId;
+    if (uid != null && uid.isNotEmpty) {
+      return _firestore.collection('users').doc(uid).collection('tasks');
+    }
+    return _firestore.collection('tasks');
+  }
 
   List<Task> getTasks() {
     return _taskBox.values.toList();
@@ -20,7 +35,7 @@ class TaskRepository {
 
     // 2. Try to sync to Firestore
     try {
-      await _firestore.collection('tasks').doc(task.id).set(task.toMap());
+      await _tasksRef().doc(task.id).set(task.toMap());
       await _queueBox.delete(task.id);
       debugPrint('Sync successful: task ${task.id} saved to Firestore.');
     } catch (e) {
@@ -40,7 +55,7 @@ class TaskRepository {
 
     // 2. Try to delete from Firestore
     try {
-      await _firestore.collection('tasks').doc(id).delete();
+      await _tasksRef().doc(id).delete();
       await _queueBox.delete(id);
       debugPrint('Sync successful: task $id deleted from Firestore.');
     } catch (e) {
@@ -76,10 +91,10 @@ class TaskRepository {
           final task = _taskBox.get(id);
           final payload = task?.toMap() ?? (item['data'] as Map<String, dynamic>?);
           if (payload != null) {
-            await _firestore.collection('tasks').doc(id).set(payload);
+            await _tasksRef().doc(id).set(payload);
           }
         } else if (action == 'delete') {
-          await _firestore.collection('tasks').doc(id).delete();
+          await _tasksRef().doc(id).delete();
         }
         await _queueBox.delete(key);
         debugPrint('Successfully synced pending action ($action) for task $id.');
