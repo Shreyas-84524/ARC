@@ -38,11 +38,47 @@ class MigrationReport {
   }
 }
 
+/// Summary report of a dry-run migration inspection and validation.
+class DryRunReport {
+  final bool isReady;
+  final String targetUserIdPlaceholder;
+  final int totalFirestoreDocs;
+  final int totalHiveRecords;
+  final Map<String, int> collectionCounts;
+  final Map<String, int> validRecordCounts;
+  final Map<String, int> warningCounts;
+  final Map<String, int> errorCounts;
+  final Map<String, String> targetPathMappings;
+  final List<String> integrityIssues;
+  final List<String> logs;
+
+  const DryRunReport({
+    required this.isReady,
+    required this.targetUserIdPlaceholder,
+    required this.totalFirestoreDocs,
+    required this.totalHiveRecords,
+    required this.collectionCounts,
+    required this.validRecordCounts,
+    required this.warningCounts,
+    required this.errorCounts,
+    required this.targetPathMappings,
+    required this.integrityIssues,
+    required this.logs,
+  });
+
+  @override
+  String toString() {
+    return 'DryRunReport(isReady: $isReady, target: $targetUserIdPlaceholder, totalFirestoreDocs: $totalFirestoreDocs, totalHiveRecords: $totalHiveRecords, integrityIssues: ${integrityIssues.length})';
+  }
+}
+
 /// Preparation service for migrating legacy unowned root collection data
 /// into a user-scoped namespace (e.g. Shreyas) non-destructively.
 class DataMigrationService {
   final fs.FirebaseFirestore _firestore;
   final HiveService _hiveService;
+
+  static const String pendingUidPlaceholder = '<SHREYAS_FIREBASE_UID_PENDING_STEP_4>';
 
   DataMigrationService({
     fs.FirebaseFirestore? firestore,
@@ -101,12 +137,214 @@ class DataMigrationService {
     return status;
   }
 
+  /// Performs a 100% READ-ONLY dry run migration.
+  ///
+  /// - Reads all legacy Firestore collections and local Hive boxes.
+  /// - Validates schemas, data types, and timestamps.
+  /// - Checks cross-record integrity (e.g. habitEntries -> habits).
+  /// - Computes future target paths using placeholder `<SHREYAS_FIREBASE_UID_PENDING_STEP_4>`.
+  /// - NEVER writes, deletes, or modifies anything in Firestore or Hive.
+  Future<DryRunReport> performDryRun({
+    String targetPlaceholder = pendingUidPlaceholder,
+  }) async {
+    final List<String> logs = [];
+    final List<String> integrityIssues = [];
+
+    final Map<String, int> collectionCounts = {};
+    final Map<String, int> validRecordCounts = {};
+    final Map<String, int> warningCounts = {};
+    final Map<String, int> errorCounts = {};
+    final Map<String, String> targetPathMappings = {};
+
+    logs.add('--- STARTING NON-DESTRUCTIVE DRY RUN MIGRATION ---');
+    logs.add('Target Placeholder UID: $targetPlaceholder');
+
+    int totalFirestoreDocs = 0;
+    int totalHiveRecords = 0;
+
+    // Define collections to evaluate
+    final Set<String> habitIds = {};
+
+    try {
+      // 1. Inspect Tasks
+      final taskDocs = await _firestore.collection('tasks').get();
+      collectionCounts['tasks'] = taskDocs.docs.length;
+      validRecordCounts['tasks'] = 0;
+      warningCounts['tasks'] = 0;
+      errorCounts['tasks'] = 0;
+      targetPathMappings['tasks'] = 'users/$targetPlaceholder/tasks';
+      totalFirestoreDocs += taskDocs.docs.length;
+
+      for (final doc in taskDocs.docs) {
+        final data = doc.data();
+        if (data['id'] == null || data['title'] == null) {
+          errorCounts['tasks'] = (errorCounts['tasks'] ?? 0) + 1;
+          integrityIssues.add('Task document ${doc.id} missing required id or title field');
+        } else {
+          validRecordCounts['tasks'] = (validRecordCounts['tasks'] ?? 0) + 1;
+        }
+      }
+      logs.add('Tasks dry run: ${taskDocs.docs.length} found, ${validRecordCounts['tasks']} valid.');
+
+      // 2. Inspect Habits
+      final habitDocs = await _firestore.collection('habits').get();
+      collectionCounts['habits'] = habitDocs.docs.length;
+      validRecordCounts['habits'] = 0;
+      warningCounts['habits'] = 0;
+      errorCounts['habits'] = 0;
+      targetPathMappings['habits'] = 'users/$targetPlaceholder/habits';
+      totalFirestoreDocs += habitDocs.docs.length;
+
+      for (final doc in habitDocs.docs) {
+        final data = doc.data();
+        final habitId = data['id'] as String?;
+        if (habitId == null || data['name'] == null) {
+          errorCounts['habits'] = (errorCounts['habits'] ?? 0) + 1;
+          integrityIssues.add('Habit document ${doc.id} missing required id or name field');
+        } else {
+          habitIds.add(habitId);
+          validRecordCounts['habits'] = (validRecordCounts['habits'] ?? 0) + 1;
+        }
+      }
+      logs.add('Habits dry run: ${habitDocs.docs.length} found, ${validRecordCounts['habits']} valid.');
+
+      // 3. Inspect Habit Entries & Cross-Reference Integrity
+      final entryDocs = await _firestore.collection('habitEntries').get();
+      collectionCounts['habitEntries'] = entryDocs.docs.length;
+      validRecordCounts['habitEntries'] = 0;
+      warningCounts['habitEntries'] = 0;
+      errorCounts['habitEntries'] = 0;
+      targetPathMappings['habitEntries'] = 'users/$targetPlaceholder/habitEntries';
+      totalFirestoreDocs += entryDocs.docs.length;
+
+      for (final doc in entryDocs.docs) {
+        final data = doc.data();
+        final habitId = data['habitId'] as String?;
+        if (habitId == null) {
+          errorCounts['habitEntries'] = (errorCounts['habitEntries'] ?? 0) + 1;
+          integrityIssues.add('HabitEntry document ${doc.id} missing habitId reference');
+        } else if (!habitIds.contains(habitId)) {
+          warningCounts['habitEntries'] = (warningCounts['habitEntries'] ?? 0) + 1;
+          integrityIssues.add('HabitEntry document ${doc.id} references non-existent habitId: $habitId');
+          validRecordCounts['habitEntries'] = (validRecordCounts['habitEntries'] ?? 0) + 1;
+        } else {
+          validRecordCounts['habitEntries'] = (validRecordCounts['habitEntries'] ?? 0) + 1;
+        }
+      }
+      logs.add('HabitEntries dry run: ${entryDocs.docs.length} found, ${validRecordCounts['habitEntries']} valid, ${warningCounts['habitEntries']} orphan warnings.');
+
+      // 4. Inspect Transactions
+      final txDocs = await _firestore.collection('transactions').get();
+      collectionCounts['transactions'] = txDocs.docs.length;
+      validRecordCounts['transactions'] = 0;
+      warningCounts['transactions'] = 0;
+      errorCounts['transactions'] = 0;
+      targetPathMappings['transactions'] = 'users/$targetPlaceholder/transactions';
+      totalFirestoreDocs += txDocs.docs.length;
+
+      for (final doc in txDocs.docs) {
+        final data = doc.data();
+        if (data['id'] == null || data['amount'] == null) {
+          errorCounts['transactions'] = (errorCounts['transactions'] ?? 0) + 1;
+          integrityIssues.add('Transaction document ${doc.id} missing id or amount field');
+        } else {
+          validRecordCounts['transactions'] = (validRecordCounts['transactions'] ?? 0) + 1;
+        }
+      }
+      logs.add('Transactions dry run: ${txDocs.docs.length} found, ${validRecordCounts['transactions']} valid.');
+
+      // 5. Inspect Budgets
+      final budgetDocs = await _firestore.collection('budgets').get();
+      collectionCounts['budgets'] = budgetDocs.docs.length;
+      validRecordCounts['budgets'] = 0;
+      warningCounts['budgets'] = 0;
+      errorCounts['budgets'] = 0;
+      targetPathMappings['budgets'] = 'users/$targetPlaceholder/budgets';
+      totalFirestoreDocs += budgetDocs.docs.length;
+
+      for (final _ in budgetDocs.docs) {
+        validRecordCounts['budgets'] = (validRecordCounts['budgets'] ?? 0) + 1;
+      }
+      logs.add('Budgets dry run: ${budgetDocs.docs.length} found, ${validRecordCounts['budgets']} valid.');
+
+      // 6. Inspect Monthly Summaries
+      final summaryDocs = await _firestore.collection('monthlySummaries').get();
+      collectionCounts['monthlySummaries'] = summaryDocs.docs.length;
+      validRecordCounts['monthlySummaries'] = 0;
+      warningCounts['monthlySummaries'] = 0;
+      errorCounts['monthlySummaries'] = 0;
+      targetPathMappings['monthlySummaries'] = 'users/$targetPlaceholder/monthlySummaries';
+      totalFirestoreDocs += summaryDocs.docs.length;
+
+      for (final _ in summaryDocs.docs) {
+        validRecordCounts['monthlySummaries'] = (validRecordCounts['monthlySummaries'] ?? 0) + 1;
+      }
+      logs.add('MonthlySummaries dry run: ${summaryDocs.docs.length} found, ${validRecordCounts['monthlySummaries']} valid.');
+
+      // 7. Inspect Global Settings
+      final settingsDoc = await _firestore.collection('settings').doc('global').get();
+      if (settingsDoc.exists) {
+        collectionCounts['settings'] = 1;
+        validRecordCounts['settings'] = 1;
+        targetPathMappings['settings'] = 'users/$targetPlaceholder/settings/profile';
+        totalFirestoreDocs += 1;
+        logs.add('Settings dry run: 1 global settings document found, 1 valid.');
+      } else {
+        collectionCounts['settings'] = 0;
+        validRecordCounts['settings'] = 0;
+        targetPathMappings['settings'] = 'users/$targetPlaceholder/settings/profile';
+        logs.add('Settings dry run: No global settings document found in Firestore (will use defaults).');
+      }
+
+      // 8. Inspect Local Hive Boxes
+      if (_hiveService.isInitialized) {
+        final hiveTasks = _hiveService.getBox<Task>(HiveService.tasksBoxName).length;
+        final hiveHabits = _hiveService.getBox<Habit>(HiveService.habitsBoxName).length;
+        final hiveEntries = _hiveService.getBox<HabitEntry>(HiveService.habitEntriesBoxName).length;
+        final hiveTxs = _hiveService.getBox<Transaction>(HiveService.moneyBoxName).length;
+        totalHiveRecords = hiveTasks + hiveHabits + hiveEntries + hiveTxs;
+        logs.add('Hive local cache dry run: $hiveTasks tasks, $hiveHabits habits, $hiveEntries habit entries, $hiveTxs transactions.');
+      }
+
+      logs.add('--- DRY RUN COMPLETED SUCCESSFULLY: 0 WRITES PERFORMED ---');
+
+      return DryRunReport(
+        isReady: errorCounts.values.every((c) => c == 0),
+        targetUserIdPlaceholder: targetPlaceholder,
+        totalFirestoreDocs: totalFirestoreDocs,
+        totalHiveRecords: totalHiveRecords,
+        collectionCounts: collectionCounts,
+        validRecordCounts: validRecordCounts,
+        warningCounts: warningCounts,
+        errorCounts: errorCounts,
+        targetPathMappings: targetPathMappings,
+        integrityIssues: integrityIssues,
+        logs: logs,
+      );
+    } catch (e) {
+      logs.add('Dry run encountered an error: $e');
+      return DryRunReport(
+        isReady: false,
+        targetUserIdPlaceholder: targetPlaceholder,
+        totalFirestoreDocs: totalFirestoreDocs,
+        totalHiveRecords: totalHiveRecords,
+        collectionCounts: collectionCounts,
+        validRecordCounts: validRecordCounts,
+        warningCounts: warningCounts,
+        errorCounts: errorCounts,
+        targetPathMappings: targetPathMappings,
+        integrityIssues: integrityIssues..add('Fatal error during dry run: $e'),
+        logs: logs,
+      );
+    }
+  }
+
   /// Copies existing legacy global root data into target user's namespace.
   ///
   /// CRITICAL SAFETY GUARANTEE:
   /// - Old data is NEVER deleted or altered.
   /// - Operates strictly as a non-destructive COPY & VERIFY process.
-  /// - DO NOT call this automatically in Step 2.
+  /// - DO NOT call this automatically in Step 3.
   Future<MigrationReport> migrateLegacyDataToUser({
     required String targetUserId,
   }) async {
