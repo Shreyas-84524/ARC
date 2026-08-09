@@ -154,7 +154,7 @@ void main() {
         id: '1',
         title: 'Completed Task',
         description: '',
-        priority: 'Much',
+        priority: 'Must',
         category: 'Work',
         labels: [],
         completed: true,

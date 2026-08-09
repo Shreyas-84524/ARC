@@ -6,8 +6,10 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:arc/core/theme/app_theme.dart';
+import 'package:arc/core/utilities/responsive_layout.dart';
 import 'package:arc/core/widgets/top_bar.dart';
 import 'package:arc/features/habit_tracker/models/habit_model.dart';
+import 'package:arc/features/habit_tracker/models/habit_entry_model.dart';
 import 'package:arc/features/habit_tracker/widgets/habit_editor_sheet.dart';
 import 'package:arc/core/widgets/empty_state.dart';
 import 'package:arc/core/widgets/premium_segmented_control.dart';
@@ -23,6 +25,7 @@ class HabitsScreen extends ConsumerStatefulWidget {
 class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _selectedAnalyticsGoalType = 'Daily';
+  String _selectedIndividualFilter = 'Weekly';
 
   @override
   void initState() {
@@ -136,7 +139,10 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
                   },
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: ResponsiveLayout.horizontalPadding(context),
+                      vertical: 12,
+                    ),
                     child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -515,6 +521,92 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
                           _buildSmallMetricCard(context, 'Total Habits', '${habits.length}', AppColors.info),
                         ],
                       ).animate().fade(delay: 100.ms, duration: 250.ms),
+
+                      const SizedBox(height: 24),
+
+                      // Individual Goal Performance Section
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Individual Goal Performance",
+                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: isDark ? AppColors.darkCard : AppColors.lightCard,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight,
+                              ),
+                            ),
+                            child: DropdownButton<String>(
+                              value: _selectedIndividualFilter,
+                              underline: const SizedBox(),
+                              dropdownColor: isDark ? AppColors.darkModal : Colors.white,
+                              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                              items: const [
+                                DropdownMenuItem<String>(value: 'Weekly', child: Text('Weekly')),
+                                DropdownMenuItem<String>(value: 'Monthly', child: Text('Monthly')),
+                              ],
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() => _selectedIndividualFilter = val);
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      if (habits.isEmpty)
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20.0),
+                            child: Center(
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    LucideIcons.checkSquare,
+                                    size: 36,
+                                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    "No habits created yet",
+                                    style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    "Create habits to track individual performance.",
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ).animate().fade(duration: 200.ms)
+                      else
+                        ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: habits.length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final habit = habits[index];
+                            return _buildIndividualHabitCard(
+                              context,
+                              habit,
+                              entries,
+                              _selectedIndividualFilter,
+                            );
+                          },
+                        ).animate().fade(delay: 100.ms, duration: 250.ms),
+
                       const SizedBox(height: 80),
                     ],
                   ),
@@ -606,25 +698,211 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 24),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: theme.textTheme.bodyLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              ),
+            ),
           ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          title,
-          style: theme.textTheme.labelLarge?.copyWith(
-            color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              title,
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+              ),
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIndividualHabitCard(
+    BuildContext context,
+    Habit habit,
+    List<HabitEntry> entries,
+    String filterPeriod,
+  ) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final metrics = getHabitMetrics(habit.id, entries, habit.createdAt);
+    final currentStreak = metrics['currentStreak'] as int;
+    final longestStreak = metrics['longestStreak'] as int;
+
+    final now = DateTime.now();
+    int completedCount = 0;
+    int expectedCount = 0;
+
+    if (filterPeriod == 'Weekly') {
+      expectedCount = 7;
+      final last7Days = _getLast7Days().map((d) => DateFormat('yyyy-MM-dd').format(d)).toSet();
+      completedCount = entries
+          .where((e) => e.habitId == habit.id && last7Days.contains(e.dateStr) && e.completed)
+          .length;
+    } else {
+      // Monthly
+      final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+      expectedCount = daysInMonth;
+      final currentMonthStr = DateFormat('yyyy-MM').format(now);
+      completedCount = entries
+          .where((e) => e.habitId == habit.id && e.dateStr.startsWith(currentMonthStr) && e.completed)
+          .length;
+    }
+
+    final double completionRateVal = expectedCount > 0 ? (completedCount / expectedCount) : 0.0;
+    final int completionPercentage = (completionRateVal * 100).round();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header: Color Indicator + Name + Category Tag
+            Row(
+              children: [
+                Container(
+                  height: 10,
+                  width: 10,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(habit.colorValue),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    habit.name,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    habit.category,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Metrics Grid
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMetricTile(
+                    context,
+                    title: 'Current Streak',
+                    value: '$currentStreak Days',
+                    color: AppColors.accent,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildMetricTile(
+                    context,
+                    title: 'Longest Streak',
+                    value: '$longestStreak Days',
+                    color: AppColors.warning,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMetricTile(
+                    context,
+                    title: 'Completion Rate',
+                    value: '$completionPercentage%',
+                    color: AppColors.success,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildMetricTile(
+                    context,
+                    title: 'Completed',
+                    value: '$completedCount / $expectedCount',
+                    color: AppColors.info,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-      ],
+      ),
+    );
+  }
+
+  Widget _buildMetricTile(
+    BuildContext context, {
+    required String title,
+    required String value,
+    required Color color,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkBgSecondary : AppColors.lightBgSecondary,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            title,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+              fontSize: 10,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 }

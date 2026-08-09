@@ -3,15 +3,15 @@ import 'package:arc/core/theme/app_theme.dart';
 
 enum TaskPriority {
   high,
-  much,
+  must,
   low;
 
   Color get color {
     switch (this) {
       case TaskPriority.high:
         return AppColors.priorityHigh;
-      case TaskPriority.much:
-        return AppColors.priorityMuch;
+      case TaskPriority.must:
+        return AppColors.priorityMust;
       case TaskPriority.low:
         return AppColors.priorityLow;
     }
@@ -21,8 +21,8 @@ enum TaskPriority {
     switch (this) {
       case TaskPriority.high:
         return 'High';
-      case TaskPriority.much:
-        return 'Much';
+      case TaskPriority.must:
+        return 'Must';
       case TaskPriority.low:
         return 'Low';
     }
@@ -32,7 +32,7 @@ enum TaskPriority {
     switch (this) {
       case TaskPriority.high:
         return '🔴';
-      case TaskPriority.much:
+      case TaskPriority.must:
         return '🟠';
       case TaskPriority.low:
         return '🟡';

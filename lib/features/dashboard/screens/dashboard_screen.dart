@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:arc/core/theme/app_theme.dart';
 import 'package:arc/core/utilities/currency_formatter.dart';
+import 'package:arc/core/utilities/responsive_layout.dart';
 import 'package:arc/core/widgets/top_bar.dart';
 import 'package:arc/features/task_manager/models/task_model.dart';
 import 'package:arc/features/task_manager/widgets/task_editor_sheet.dart';
@@ -195,7 +196,10 @@ class DashboardScreen extends ConsumerWidget {
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: EdgeInsets.symmetric(
+            horizontal: ResponsiveLayout.horizontalPadding(context),
+            vertical: 16,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -271,32 +275,41 @@ class DashboardScreen extends ConsumerWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          const Icon(LucideIcons.sparkles,
-                              color: AppColors.accent, size: 24),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Productivity Score",
-                                style: theme.textTheme.bodyLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            const Icon(LucideIcons.sparkles,
+                                color: AppColors.accent, size: 24),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Productivity Score",
+                                    style: theme.textTheme.bodyLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    "Based on tasks & habit completion",
+                                    style: theme.textTheme.labelLarge?.copyWith(
+                                      color: isDark
+                                          ? AppColors.textMutedDark
+                                          : AppColors.textMutedLight,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
                               ),
-                              Text(
-                                "Based on tasks & habit completion",
-                                style: theme.textTheme.labelLarge?.copyWith(
-                                  color: isDark
-                                      ? AppColors.textMutedDark
-                                      : AppColors.textMutedLight,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 6),
@@ -326,7 +339,7 @@ class DashboardScreen extends ConsumerWidget {
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
-                childAspectRatio: 1.25,
+                childAspectRatio: ResponsiveLayout.gridAspectRatio(context),
                 children: [
                   _buildMetricCard(
                     context,
@@ -492,7 +505,7 @@ class DashboardScreen extends ConsumerWidget {
                     final task = todayTasks[index];
                     Color pColor = AppColors.priorityLow;
                     if (task.priority == 'High') pColor = AppColors.priorityHigh;
-                    if (task.priority == 'Much') pColor = AppColors.priorityMuch;
+                    if (task.priority == 'Much' || task.priority == 'Must') pColor = AppColors.priorityMust;
 
                     return AnimatedOpacity(
                       opacity: task.completed ? 0.6 : 1.0,
@@ -541,7 +554,7 @@ class DashboardScreen extends ConsumerWidget {
                             ),
                           ),
                           subtitle: Text(
-                            '${task.category} • Priority: ${task.priority}',
+                            '${task.category} • Priority: ${task.displayPriority}',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: isDark
                                   ? AppColors.textMutedDark
@@ -724,7 +737,7 @@ class DashboardScreen extends ConsumerWidget {
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -733,50 +746,65 @@ class DashboardScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, color: color, size: 20),
+                  child: Icon(icon, color: color, size: 18),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.5,
+            const SizedBox(height: 4),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      value,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  title,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
+                  const SizedBox(height: 2),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      title,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  subtitle,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: isDark
-                        ? AppColors.textMutedDark
-                        : AppColors.textMutedLight,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      subtitle,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: isDark
+                            ? AppColors.textMutedDark
+                            : AppColors.textMutedLight,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            )
+                ],
+              ),
+            ),
           ],
         ),
       ),

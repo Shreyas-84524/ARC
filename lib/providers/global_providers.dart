@@ -381,6 +381,7 @@ int _priorityValue(String priority) {
   switch (priority) {
     case 'High':
       return 3;
+    case 'Must':
     case 'Much':
       return 2;
     case 'Low':

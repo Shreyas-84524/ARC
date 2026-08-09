@@ -15,7 +15,11 @@ class Task extends HiveObject {
   final String description;
 
   @HiveField(3)
-  final String priority; // High, Much, Low
+  final String priority; // High, Must, Low
+
+  /// User-facing display priority ("High", "Must", "Low").
+  /// Provides backward compatibility for legacy tasks saved with "Much".
+  String get displayPriority => (priority == 'Much') ? 'Must' : priority;
 
   @HiveField(4)
   final String category; // Work, Personal, etc.
@@ -112,11 +116,13 @@ class Task extends HiveObject {
   }
 
   factory Task.fromMap(Map<String, dynamic> map) {
+    final rawPriority = map['priority'] ?? 'Low';
+    final priority = (rawPriority == 'Much') ? 'Must' : rawPriority;
     return Task(
       id: map['id'] ?? '',
       title: map['title'] ?? '',
       description: map['description'] ?? '',
-      priority: map['priority'] ?? 'Low',
+      priority: priority,
       category: map['category'] ?? 'Other',
       labels: List<String>.from(map['labels'] ?? []),
       dueDate: map['dueDate'] != null ? DateTime.parse(map['dueDate']) : null,

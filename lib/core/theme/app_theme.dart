@@ -24,7 +24,8 @@ class AppColors {
 
   // Priorities
   static const Color priorityHigh = Color(0xffFF4D4F);
-  static const Color priorityMuch = Color(0xffFF9F43);
+  static const Color priorityMust = Color(0xffFF9F43);
+  static const Color priorityMuch = priorityMust;
   static const Color priorityLow = Color(0xffFFD93D);
 
   // Status

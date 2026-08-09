@@ -46,7 +46,8 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
     }
     _labelsController = TextEditingController(text: labelString);
 
-    _selectedPriority = editTask?.priority ?? 'Low';
+    _selectedPriority = editTask?.displayPriority ?? 'Low';
+    if (_selectedPriority == 'Much') _selectedPriority = 'Must';
     _selectedCategory = editTask?.category ?? 'Work';
     _selectedDueDate = editTask?.dueDate;
 
@@ -205,17 +206,21 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 20,
-        right: 20,
-        top: 20,
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
       ),
-      child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 20,
+          right: 20,
+          top: 20,
+        ),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -293,12 +298,12 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
                         labelText: 'Priority',
                         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       ),
-                      items: ['High', 'Much', 'Low'].map((p) {
+                      items: ['High', 'Must', 'Low'].map((p) {
                         return DropdownMenuItem<String>(
                           value: p,
                           child: Row(
                             children: [
-                              Text(p == 'High' ? '🔴' : (p == 'Much' ? '🟠' : '🟡')),
+                              Text(p == 'High' ? '🔴' : (p == 'Must' ? '🟠' : '🟡')),
                               const SizedBox(width: 6),
                               Text(p, style: theme.textTheme.bodyMedium),
                             ],
@@ -411,6 +416,7 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

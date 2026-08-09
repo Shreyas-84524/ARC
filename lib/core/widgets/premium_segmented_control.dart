@@ -101,28 +101,31 @@ class PremiumSegmentedControl extends StatelessWidget {
                             if (onTap != null) onTap!(index);
                           },
                           child: Center(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (icons != null && index < icons!.length) ...[
-                                  Icon(
-                                    icons![index],
-                                    size: 16,
-                                    color: currentColor,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (icons != null && index < icons!.length) ...[
+                                    Icon(
+                                      icons![index],
+                                      size: 16,
+                                      color: currentColor,
+                                    ),
+                                    const SizedBox(width: 6),
+                                  ],
+                                  Text(
+                                    tabs[index],
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                                      color: currentColor,
+                                      letterSpacing: 0.1,
+                                    ),
                                   ),
-                                  const SizedBox(width: 6),
                                 ],
-                                Text(
-                                  tabs[index],
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                                    color: currentColor,
-                                    letterSpacing: 0.1,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         ),

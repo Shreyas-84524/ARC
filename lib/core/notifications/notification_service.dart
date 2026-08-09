@@ -189,6 +189,7 @@ class NotificationService {
     switch (priority) {
       case 'High':
         return '🔴 High Priority';
+      case 'Must':
       case 'Much':
         return '🟠 Must Priority';
       case 'Low':

@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:arc/core/theme/app_theme.dart';
 import 'package:arc/core/constants/app_constants.dart';
+import 'package:arc/core/utilities/responsive_layout.dart';
 import 'package:arc/core/widgets/top_bar.dart';
 import 'package:arc/features/task_manager/models/task_model.dart';
 import 'package:arc/features/task_manager/widgets/task_editor_sheet.dart';
@@ -73,6 +74,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     // Subscriptions
     final filteredTasks = ref.watch(filteredTasksProvider);
     final activeStatus = ref.watch(taskStatusFilterProvider);
@@ -88,7 +90,10 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
         children: [
           // Task Statistics Strip
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            padding: EdgeInsets.symmetric(
+              horizontal: ResponsiveLayout.horizontalPadding(context),
+              vertical: 4,
+            ),
             child: Row(
               children: [
                 Expanded(
@@ -133,7 +138,10 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
 
           // Search & Filter header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            padding: EdgeInsets.symmetric(
+              horizontal: ResponsiveLayout.horizontalPadding(context),
+              vertical: 8,
+            ),
             child: Column(
               children: [
                 // Live Search Bar
@@ -165,30 +173,37 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                     // Sorting Dropdown
                     Expanded(
                       child: DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        menuMaxHeight: 220.0,
+                        iconSize: 18,
                         initialValue: activeSort,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontSize: 13,
+                        ),
                         decoration: const InputDecoration(
+                          isDense: true,
                           labelText: 'Sort By',
                           contentPadding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 6,
+                            horizontal: 10,
+                            vertical: 2,
                           ),
                         ),
                         items: const [
                           DropdownMenuItem(
                             value: 'DueDate',
-                            child: Text('Due Date'),
+                            child: Text('Due Date', overflow: TextOverflow.ellipsis),
                           ),
                           DropdownMenuItem(
                             value: 'Priority',
-                            child: Text('Priority'),
+                            child: Text('Priority', overflow: TextOverflow.ellipsis),
                           ),
                           DropdownMenuItem(
                             value: 'CreationDate',
-                            child: Text('Creation Date'),
+                            child: Text('Creation Date', overflow: TextOverflow.ellipsis),
                           ),
                           DropdownMenuItem(
                             value: 'Alphabetical',
-                            child: Text('Alphabetical'),
+                            child: Text('Alphabetical', overflow: TextOverflow.ellipsis),
                           ),
                         ],
                         onChanged: (val) {
@@ -198,25 +213,35 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                         },
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     // Category Dropdown
                     Expanded(
                       child: DropdownButtonFormField<String?>(
+                        isExpanded: true,
+                        menuMaxHeight: 220.0,
+                        iconSize: 18,
                         initialValue: activeCategory,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontSize: 13,
+                        ),
                         decoration: const InputDecoration(
+                          isDense: true,
                           labelText: 'Category',
                           contentPadding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 6,
+                            horizontal: 10,
+                            vertical: 2,
                           ),
                         ),
                         items: [
                           const DropdownMenuItem(
                             value: null,
-                            child: Text('All'),
+                            child: Text('All', overflow: TextOverflow.ellipsis),
                           ),
                           ...AppConstants.taskCategories.map((c) {
-                            return DropdownMenuItem(value: c, child: Text(c));
+                            return DropdownMenuItem(
+                              value: c,
+                              child: Text(c, overflow: TextOverflow.ellipsis),
+                            );
                           }),
                         ],
                         onChanged: (val) {
@@ -364,8 +389,8 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
     Color priorityColor = AppColors.priorityLow;
     if (task.priority == 'High') {
       priorityColor = AppColors.priorityHigh;
-    } else if (task.priority == 'Much') {
-      priorityColor = AppColors.priorityMuch;
+    } else if (task.priority == 'Must' || task.priority == 'Much') {
+      priorityColor = AppColors.priorityMust;
     }
 
     return Slidable(
@@ -729,24 +754,30 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
           ),
           child: Column(
             children: [
-              Text(
-                value,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: isError
-                      ? AppColors.danger
-                      : (isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isError
+                        ? AppColors.danger
+                        : (isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight),
+                  ),
                 ),
               ),
-              Text(
-                label,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: isDark
-                      ? AppColors.textMutedDark
-                      : AppColors.textMutedLight,
-                  fontSize: 10,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: isDark
+                        ? AppColors.textMutedDark
+                        : AppColors.textMutedLight,
+                    fontSize: 10,
+                  ),
                 ),
               ),
             ],

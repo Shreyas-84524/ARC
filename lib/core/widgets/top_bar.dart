@@ -37,25 +37,29 @@ class CustomTopBar extends StatelessWidget implements PreferredSizeWidget {
       scrolledUnderElevation: 0,
       centerTitle: false,
       titleSpacing: 20,
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            title == 'Dashboard' ? '$greeting, Shreyas' : title,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+      title: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              title == 'Dashboard' ? '$greeting, Shreyas' : title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              ),
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            formattedDate,
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+            const SizedBox(height: 2),
+            Text(
+              formattedDate,
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       actions: showActions
           ? [

@@ -188,7 +188,7 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             subtitle: Text(
-                                '${task.category} • Priority: ${task.priority}'),
+                                '${task.category} • Priority: ${task.displayPriority}'),
                           ),
                         );
                       }),

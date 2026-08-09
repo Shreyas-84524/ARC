@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:arc/core/theme/app_theme.dart';
 import 'package:arc/core/utilities/currency_formatter.dart';
+import 'package:arc/core/utilities/responsive_layout.dart';
 import 'package:arc/core/widgets/top_bar.dart';
 import 'package:arc/features/money_tracker/models/transaction_model.dart';
 import 'package:arc/features/money_tracker/widgets/transaction_editor_sheet.dart';
@@ -190,7 +191,10 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
                   },
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: ResponsiveLayout.horizontalPadding(context),
+                      vertical: 12,
+                    ),
                     child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -258,34 +262,46 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
                                   ),
                                 ),
                                 const SizedBox(height: 8),
-                                 Text(
-                                  CurrencyFormatter.format(remainingBudget),
-                                  style: theme.textTheme.headlineMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: remainingBudget >= 0 ? AppColors.success : AppColors.danger,
-                                    letterSpacing: -0.5,
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    CurrencyFormatter.format(remainingBudget),
+                                    style: theme.textTheme.headlineMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: remainingBudget >= 0 ? AppColors.success : AppColors.danger,
+                                      letterSpacing: -0.5,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 20),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    _buildBudgetStat(
-                                      context,
-                                      label: 'Budget Limit',
-                                      value: CurrencyFormatter.format(monthlyBudget),
+                                    Expanded(
+                                      child: _buildBudgetStat(
+                                        context,
+                                        label: 'Budget Limit',
+                                        value: CurrencyFormatter.format(monthlyBudget),
+                                      ),
                                     ),
-                                    _buildBudgetStat(
-                                      context,
-                                      label: 'Total Income',
-                                      value: CurrencyFormatter.format(totalIncome),
-                                      isIncome: true,
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _buildBudgetStat(
+                                        context,
+                                        label: 'Total Income',
+                                        value: CurrencyFormatter.format(totalIncome),
+                                        isIncome: true,
+                                      ),
                                     ),
-                                    _buildBudgetStat(
-                                      context,
-                                      label: 'Total Expense',
-                                      value: CurrencyFormatter.format(totalExpenses),
-                                      isNegative: true,
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _buildBudgetStat(
+                                        context,
+                                        label: 'Total Expense',
+                                        value: CurrencyFormatter.format(totalExpenses),
+                                        isNegative: true,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -881,42 +897,34 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
   Widget _buildTransactionSlidable(BuildContext context, Transaction tx) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isIncome = tx.type == 'Income';
+    final Color color = isIncome ? AppColors.income : AppColors.danger;
     
     IconData icon = LucideIcons.wallet;
-    Color color = AppColors.info;
     
     switch (tx.category) {
       case 'Food':
         icon = LucideIcons.utensils;
-        color = AppColors.warning;
         break;
       case 'Transport':
         icon = LucideIcons.car;
-        color = AppColors.info;
         break;
       case 'Rent':
         icon = LucideIcons.home;
-        color = AppColors.accentPressed;
         break;
       case 'Bills':
         icon = LucideIcons.fileText;
-        color = AppColors.danger;
         break;
       case 'Entertainment':
         icon = LucideIcons.film;
-        color = AppColors.accent;
         break;
       case 'Shopping':
         icon = LucideIcons.shoppingBag;
-        color = AppColors.priorityMuch;
         break;
       case 'Salary':
         icon = LucideIcons.banknote;
-        color = AppColors.success;
         break;
       case 'Freelance':
         icon = LucideIcons.laptop;
-        color = AppColors.accent;
         break;
     }
 
@@ -951,7 +959,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
+                    color: color.withValues(alpha: isDark ? 0.18 : 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(icon, color: color, size: 20),
@@ -984,7 +992,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
                   '${isIncome ? '+' : '-'}${CurrencyFormatter.format(tx.amount)}',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: isIncome ? AppColors.success : AppColors.danger,
+                    color: isIncome ? AppColors.income : AppColors.danger,
                   ),
                 ),
               ],
@@ -1025,18 +1033,26 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: theme.textTheme.labelLarge?.copyWith(
-            color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            label,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+            ),
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: theme.textTheme.bodyLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: valColor,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: valColor,
+            ),
           ),
         ),
       ],
