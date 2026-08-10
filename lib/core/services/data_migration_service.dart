@@ -75,7 +75,7 @@ class DryRunReport {
 /// Preparation service for migrating legacy unowned root collection data
 /// into a user-scoped namespace (e.g. Shreyas) non-destructively.
 class DataMigrationService {
-  final fs.FirebaseFirestore _firestore;
+  final fs.FirebaseFirestore? _firestore;
   final HiveService _hiveService;
 
   static const String pendingUidPlaceholder = '<SHREYAS_FIREBASE_UID_PENDING_STEP_4>';
@@ -83,8 +83,10 @@ class DataMigrationService {
   DataMigrationService({
     fs.FirebaseFirestore? firestore,
     HiveService? hiveService,
-  })  : _firestore = firestore ?? fs.FirebaseFirestore.instance,
+  })  : _firestore = firestore,
         _hiveService = hiveService ?? HiveService();
+
+  fs.FirebaseFirestore get _db => _firestore ?? fs.FirebaseFirestore.instance;
 
   /// Inspects and counts legacy root collection items to validate readiness for migration.
   Future<Map<String, dynamic>> inspectLegacyData() async {
@@ -103,25 +105,25 @@ class DataMigrationService {
     };
 
     try {
-      final taskDocs = await _firestore.collection('tasks').get();
+      final taskDocs = await _db.collection('tasks').get();
       status['legacyTasksCount'] = taskDocs.docs.length;
 
-      final habitDocs = await _firestore.collection('habits').get();
+      final habitDocs = await _db.collection('habits').get();
       status['legacyHabitsCount'] = habitDocs.docs.length;
 
-      final entryDocs = await _firestore.collection('habitEntries').get();
+      final entryDocs = await _db.collection('habitEntries').get();
       status['legacyHabitEntriesCount'] = entryDocs.docs.length;
 
-      final txDocs = await _firestore.collection('transactions').get();
+      final txDocs = await _db.collection('transactions').get();
       status['legacyTransactionsCount'] = txDocs.docs.length;
 
-      final budgetDocs = await _firestore.collection('budgets').get();
+      final budgetDocs = await _db.collection('budgets').get();
       status['legacyBudgetsCount'] = budgetDocs.docs.length;
 
-      final summaryDocs = await _firestore.collection('monthlySummaries').get();
+      final summaryDocs = await _db.collection('monthlySummaries').get();
       status['legacySummariesCount'] = summaryDocs.docs.length;
 
-      final settingsDoc = await _firestore.collection('settings').doc('global').get();
+      final settingsDoc = await _db.collection('settings').doc('global').get();
       status['legacySettingsExist'] = settingsDoc.exists;
 
       if (_hiveService.isInitialized) {
@@ -167,7 +169,7 @@ class DataMigrationService {
 
     try {
       // 1. Inspect Tasks
-      final taskDocs = await _firestore.collection('tasks').get();
+      final taskDocs = await _db.collection('tasks').get();
       collectionCounts['tasks'] = taskDocs.docs.length;
       validRecordCounts['tasks'] = 0;
       warningCounts['tasks'] = 0;
@@ -187,7 +189,7 @@ class DataMigrationService {
       logs.add('Tasks dry run: ${taskDocs.docs.length} found, ${validRecordCounts['tasks']} valid.');
 
       // 2. Inspect Habits
-      final habitDocs = await _firestore.collection('habits').get();
+      final habitDocs = await _db.collection('habits').get();
       collectionCounts['habits'] = habitDocs.docs.length;
       validRecordCounts['habits'] = 0;
       warningCounts['habits'] = 0;
@@ -209,7 +211,7 @@ class DataMigrationService {
       logs.add('Habits dry run: ${habitDocs.docs.length} found, ${validRecordCounts['habits']} valid.');
 
       // 3. Inspect Habit Entries & Cross-Reference Integrity
-      final entryDocs = await _firestore.collection('habitEntries').get();
+      final entryDocs = await _db.collection('habitEntries').get();
       collectionCounts['habitEntries'] = entryDocs.docs.length;
       validRecordCounts['habitEntries'] = 0;
       warningCounts['habitEntries'] = 0;
@@ -234,7 +236,7 @@ class DataMigrationService {
       logs.add('HabitEntries dry run: ${entryDocs.docs.length} found, ${validRecordCounts['habitEntries']} valid, ${warningCounts['habitEntries']} orphan warnings.');
 
       // 4. Inspect Transactions
-      final txDocs = await _firestore.collection('transactions').get();
+      final txDocs = await _db.collection('transactions').get();
       collectionCounts['transactions'] = txDocs.docs.length;
       validRecordCounts['transactions'] = 0;
       warningCounts['transactions'] = 0;
@@ -254,7 +256,7 @@ class DataMigrationService {
       logs.add('Transactions dry run: ${txDocs.docs.length} found, ${validRecordCounts['transactions']} valid.');
 
       // 5. Inspect Budgets
-      final budgetDocs = await _firestore.collection('budgets').get();
+      final budgetDocs = await _db.collection('budgets').get();
       collectionCounts['budgets'] = budgetDocs.docs.length;
       validRecordCounts['budgets'] = 0;
       warningCounts['budgets'] = 0;
@@ -268,7 +270,7 @@ class DataMigrationService {
       logs.add('Budgets dry run: ${budgetDocs.docs.length} found, ${validRecordCounts['budgets']} valid.');
 
       // 6. Inspect Monthly Summaries
-      final summaryDocs = await _firestore.collection('monthlySummaries').get();
+      final summaryDocs = await _db.collection('monthlySummaries').get();
       collectionCounts['monthlySummaries'] = summaryDocs.docs.length;
       validRecordCounts['monthlySummaries'] = 0;
       warningCounts['monthlySummaries'] = 0;
@@ -282,7 +284,7 @@ class DataMigrationService {
       logs.add('MonthlySummaries dry run: ${summaryDocs.docs.length} found, ${validRecordCounts['monthlySummaries']} valid.');
 
       // 7. Inspect Global Settings
-      final settingsDoc = await _firestore.collection('settings').doc('global').get();
+      final settingsDoc = await _db.collection('settings').doc('global').get();
       if (settingsDoc.exists) {
         collectionCounts['settings'] = 1;
         validRecordCounts['settings'] = 1;
@@ -360,10 +362,10 @@ class DataMigrationService {
     bool settingsDone = false;
 
     try {
-      final userRef = _firestore.collection('users').doc(targetUserId);
+      final userRef = _db.collection('users').doc(targetUserId);
 
       // 1. Copy Tasks
-      final taskDocs = await _firestore.collection('tasks').get();
+      final taskDocs = await _db.collection('tasks').get();
       for (final doc in taskDocs.docs) {
         await userRef.collection('tasks').doc(doc.id).set(doc.data());
         tasksCount++;
@@ -371,7 +373,7 @@ class DataMigrationService {
       logs.add('Copied $tasksCount task documents to users/$targetUserId/tasks.');
 
       // 2. Copy Habits
-      final habitDocs = await _firestore.collection('habits').get();
+      final habitDocs = await _db.collection('habits').get();
       for (final doc in habitDocs.docs) {
         await userRef.collection('habits').doc(doc.id).set(doc.data());
         habitsCount++;
@@ -379,7 +381,7 @@ class DataMigrationService {
       logs.add('Copied $habitsCount habit documents to users/$targetUserId/habits.');
 
       // 3. Copy Habit Entries
-      final entryDocs = await _firestore.collection('habitEntries').get();
+      final entryDocs = await _db.collection('habitEntries').get();
       for (final doc in entryDocs.docs) {
         await userRef.collection('habitEntries').doc(doc.id).set(doc.data());
         entriesCount++;
@@ -387,7 +389,7 @@ class DataMigrationService {
       logs.add('Copied $entriesCount habit entry documents to users/$targetUserId/habitEntries.');
 
       // 4. Copy Transactions
-      final txDocs = await _firestore.collection('transactions').get();
+      final txDocs = await _db.collection('transactions').get();
       for (final doc in txDocs.docs) {
         await userRef.collection('transactions').doc(doc.id).set(doc.data());
         txCount++;
@@ -395,7 +397,7 @@ class DataMigrationService {
       logs.add('Copied $txCount transaction documents to users/$targetUserId/transactions.');
 
       // 5. Copy Monthly Budgets
-      final budgetDocs = await _firestore.collection('budgets').get();
+      final budgetDocs = await _db.collection('budgets').get();
       for (final doc in budgetDocs.docs) {
         await userRef.collection('budgets').doc(doc.id).set(doc.data());
         budgetsCount++;
@@ -403,7 +405,7 @@ class DataMigrationService {
       logs.add('Copied $budgetsCount budget documents to users/$targetUserId/budgets.');
 
       // 6. Copy Monthly Summaries
-      final summaryDocs = await _firestore.collection('monthlySummaries').get();
+      final summaryDocs = await _db.collection('monthlySummaries').get();
       for (final doc in summaryDocs.docs) {
         await userRef.collection('monthlySummaries').doc(doc.id).set(doc.data());
         summariesCount++;
@@ -411,7 +413,7 @@ class DataMigrationService {
       logs.add('Copied $summariesCount monthly summary documents to users/$targetUserId/monthlySummaries.');
 
       // 7. Copy Settings
-      final settingsDoc = await _firestore.collection('settings').doc('global').get();
+      final settingsDoc = await _db.collection('settings').doc('global').get();
       if (settingsDoc.exists && settingsDoc.data() != null) {
         await userRef.collection('settings').doc('profile').set(settingsDoc.data()!);
         settingsDone = true;

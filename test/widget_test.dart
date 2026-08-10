@@ -149,8 +149,7 @@ class FakeSettingsRepository implements SettingsRepository {
 }
 
 void main() {
-  testWidgets('App renders successfully and shows dashboard contents', (WidgetTester tester) async {
-    // Build our app with all fake overrides and trigger a frame.
+  testWidgets('App renders successfully and shows login screen initially', (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -163,10 +162,7 @@ void main() {
       ),
     );
 
-    // Let all animations complete and timers settle
     await tester.pumpAndSettle();
-
-    // Verify that the app launches and shows text from the dashboard.
-    expect(find.textContaining("Today's Progress"), findsOneWidget);
+    expect(find.textContaining('Welcome to Project Arc'), findsOneWidget);
   });
 }
