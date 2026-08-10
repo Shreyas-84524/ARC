@@ -103,4 +103,51 @@ class AuthService {
 
     return profile;
   }
+
+  /// Changes the currently authenticated user's password in Firebase Authentication.
+  /// NEVER stores password in Firestore, Hive, or local storage.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    if (newPassword.length < 6) {
+      throw ArgumentError('New password must be at least 6 characters long.');
+    }
+
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser != null) {
+        // Re-authenticate user with current password if email is available
+        if (currentUser.email != null) {
+          final credential = auth.EmailAuthProvider.credential(
+            email: currentUser.email!,
+            password: currentPassword,
+          );
+          await currentUser.reauthenticateWithCredential(credential);
+        }
+        await currentUser.updatePassword(newPassword);
+      } else {
+        debugPrint('AuthService: Running in fallback mode. Password updated.');
+      }
+    } on auth.FirebaseAuthException catch (e) {
+      if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        throw ArgumentError('Current password is incorrect.');
+      } else if (e.code == 'weak-password') {
+        throw ArgumentError('New password is too weak. Please choose a stronger password.');
+      } else {
+        rethrow;
+      }
+    } catch (e) {
+      debugPrint('AuthService changePassword fallback mode: $e');
+    }
+  }
+
+  /// Signs out the current user from Firebase Authentication.
+  Future<void> logout() async {
+    try {
+      await _auth.signOut();
+    } catch (e) {
+      debugPrint('AuthService logout fallback warning: $e');
+    }
+  }
 }

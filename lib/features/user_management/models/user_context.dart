@@ -16,6 +16,8 @@ class UserContext {
 
   bool get isAuthenticated => userId != null && userId!.isNotEmpty;
 
+  bool get isLegacy => !isAuthenticated;
+
   String get userNamespace => (userId != null && userId!.isNotEmpty) ? userId! : 'global';
 
   /// Generates the target Firestore collection path for a given base collection.

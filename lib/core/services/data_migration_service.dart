@@ -364,6 +364,24 @@ class DataMigrationService {
     try {
       final userRef = _db.collection('users').doc(targetUserId);
 
+      // Check if target user namespace is already migrated
+      final existingUserTasks = await userRef.collection('tasks').get();
+      if (existingUserTasks.docs.isNotEmpty) {
+        logs.add('Target user $targetUserId already contains ${existingUserTasks.docs.length} migrated tasks. Skipping migration.');
+        return MigrationReport(
+          success: true,
+          targetUserId: targetUserId,
+          tasksMigrated: existingUserTasks.docs.length,
+          habitsMigrated: (await userRef.collection('habits').get()).docs.length,
+          habitEntriesMigrated: (await userRef.collection('habitEntries').get()).docs.length,
+          transactionsMigrated: (await userRef.collection('transactions').get()).docs.length,
+          budgetsMigrated: (await userRef.collection('budgets').get()).docs.length,
+          summariesMigrated: (await userRef.collection('monthlySummaries').get()).docs.length,
+          settingsMigrated: (await userRef.collection('settings').doc('profile').get()).exists,
+          logs: logs,
+        );
+      }
+
       // 1. Copy Tasks
       final taskDocs = await _db.collection('tasks').get();
       for (final doc in taskDocs.docs) {

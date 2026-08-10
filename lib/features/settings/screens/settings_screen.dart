@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:arc/core/theme/app_theme.dart';
 import 'package:arc/providers/global_providers.dart';
+import 'package:arc/features/user_management/providers/user_context_provider.dart';
+import 'package:arc/features/user_management/services/auth_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -13,10 +16,128 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  final AuthService _authService = AuthService();
+
   bool _masterNotifications = true;
   bool _taskReminders = true;
   bool _habitReminders = true;
   bool _moneyReminders = true;
+
+  // Password Change controllers
+  final _changePasswordFormKey = GlobalKey<FormState>();
+  final _currentPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  bool _isChangingPassword = false;
+  bool _isPasswordSectionExpanded = false;
+  bool _obscureCurrentPassword = true;
+  bool _obscureNewPassword = true;
+  bool _obscureConfirmPassword = true;
+
+  @override
+  void dispose() {
+    _currentPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleChangePassword() async {
+    if (!_changePasswordFormKey.currentState!.validate()) return;
+
+    setState(() {
+      _isChangingPassword = true;
+    });
+
+    try {
+      await _authService.changePassword(
+        currentPassword: _currentPasswordController.text,
+        newPassword: _newPasswordController.text,
+      );
+
+      if (mounted) {
+        _currentPasswordController.clear();
+        _newPasswordController.clear();
+        _confirmPasswordController.clear();
+
+        setState(() {
+          _isPasswordSectionExpanded = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Password updated successfully!'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('ArgumentError:', '').replaceAll('Exception:', '').trim()),
+            backgroundColor: AppColors.danger,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isChangingPassword = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout Confirmation'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white70
+                    : AppColors.textSecondaryLight,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              HapticFeedback.mediumImpact();
+              Navigator.of(context).pop(true);
+            },
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      // 1. Sign out from Firebase Auth
+      await _authService.logout();
+
+      // 2. Reset active user context to legacy / unauthenticated
+      ref.read(userContextProvider.notifier).resetToLegacy();
+
+      // 3. Navigate to Login screen
+      if (mounted) {
+        context.go('/login');
+      }
+    }
+  }
 
   Future<void> _manualSync() async {
     HapticFeedback.mediumImpact();
@@ -119,11 +240,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     final themeMode = ref.watch(themeModeProvider);
+    final userContext = ref.watch(userContextProvider);
+    final currentUsername = userContext.profile?.username ?? 'Shreyas';
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Settings & Diagnostics',
+          'Settings & Profile',
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -132,7 +255,153 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         children: [
-          // 1. Appearance Section
+          // ==========================================
+          // 1. ACCOUNT & CHANGE PASSWORD (START OF SETTINGS)
+          // ==========================================
+          Text('Account & Security', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: theme.colorScheme.primaryContainer,
+                        child: Icon(LucideIcons.user, color: theme.colorScheme.primary),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              currentUsername,
+                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              '${currentUsername.toLowerCase()}@arc.app',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _isPasswordSectionExpanded = !_isPasswordSectionExpanded;
+                          });
+                        },
+                        icon: Icon(
+                          _isPasswordSectionExpanded ? LucideIcons.chevronUp : LucideIcons.key,
+                          size: 16,
+                        ),
+                        label: Text(_isPasswordSectionExpanded ? 'Close' : 'Change Password'),
+                      ),
+                    ],
+                  ),
+
+                  if (_isPasswordSectionExpanded) ...[
+                    const Divider(height: 24),
+                    Form(
+                      key: _changePasswordFormKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Change Password',
+                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _currentPasswordController,
+                            obscureText: _obscureCurrentPassword,
+                            enabled: !_isChangingPassword,
+                            decoration: InputDecoration(
+                              labelText: 'Current Password',
+                              prefixIcon: const Icon(LucideIcons.lock),
+                              border: const OutlineInputBorder(),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              suffixIcon: IconButton(
+                                icon: Icon(_obscureCurrentPassword ? LucideIcons.eyeOff : LucideIcons.eye),
+                                onPressed: () => setState(() => _obscureCurrentPassword = !_obscureCurrentPassword),
+                              ),
+                            ),
+                            validator: (v) => (v == null || v.isEmpty) ? 'Please enter your current password' : null,
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _newPasswordController,
+                            obscureText: _obscureNewPassword,
+                            enabled: !_isChangingPassword,
+                            decoration: InputDecoration(
+                              labelText: 'New Password',
+                              prefixIcon: const Icon(LucideIcons.keyRound),
+                              border: const OutlineInputBorder(),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              suffixIcon: IconButton(
+                                icon: Icon(_obscureNewPassword ? LucideIcons.eyeOff : LucideIcons.eye),
+                                onPressed: () => setState(() => _obscureNewPassword = !_obscureNewPassword),
+                              ),
+                            ),
+                            validator: (v) {
+                              if (v == null || v.isEmpty) return 'Please enter a new password';
+                              if (v.length < 6) return 'Password must be at least 6 characters';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _confirmPasswordController,
+                            obscureText: _obscureConfirmPassword,
+                            enabled: !_isChangingPassword,
+                            decoration: InputDecoration(
+                              labelText: 'Confirm New Password',
+                              prefixIcon: const Icon(LucideIcons.checkCheck),
+                              border: const OutlineInputBorder(),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              suffixIcon: IconButton(
+                                icon: Icon(_obscureConfirmPassword ? LucideIcons.eyeOff : LucideIcons.eye),
+                                onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                              ),
+                            ),
+                            validator: (v) {
+                              if (v != _newPasswordController.text) return 'Passwords do not match';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _isChangingPassword ? null : _handleChangePassword,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: theme.colorScheme.primary,
+                              foregroundColor: theme.colorScheme.onPrimary,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: _isChangingPassword
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : const Text('Update Password', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // 2. Appearance Section
           Text('Appearance', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Card(
@@ -154,7 +423,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const SizedBox(height: 20),
 
-          // 2. Notifications Section
+          // 3. Notifications Section
           Text('Notifications', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Card(
@@ -210,7 +479,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const SizedBox(height: 20),
 
-          // 3. Data & Storage Diagnostics
+          // 4. Data & Storage Diagnostics
           Text('Data & Storage Diagnostics', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Card(
@@ -240,7 +509,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ListTile(
                   leading: const Icon(LucideIcons.database, color: AppColors.warning),
                   title: const Text('Hive Storage Engine', style: TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: const Text('6 Encrypted Hive Boxes Operational'),
+                  subtitle: const Text('User Isolated Hive Boxes Operational'),
                   trailing: TextButton.icon(
                     onPressed: _manualSync,
                     icon: const Icon(LucideIcons.refreshCw, size: 14),
@@ -253,7 +522,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const SizedBox(height: 20),
 
-          // 4. Backup & Maintenance
+          // 5. Backup & Maintenance
           Text('Backup & Maintenance', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Card(
@@ -278,7 +547,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const SizedBox(height: 24),
 
-          // 5. About & Legal Info
+          // 6. About & App Version Info
           Center(
             child: Column(
               children: [
@@ -291,22 +560,49 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Version 1.0.0 • Build 2026.07',
+                  'Version 1.0.0 • Build 2026.08',
                   style: theme.textTheme.labelLarge?.copyWith(
                     color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Single-User Local First Architecture',
+                  'Multi-User Isolated Cloud & Local Architecture',
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
                   ),
                 ),
-                const SizedBox(height: 24),
               ],
             ),
           ),
+
+          const SizedBox(height: 24),
+
+          // ==========================================
+          // 7. LOGOUT BUTTON (END OF SETTINGS)
+          // ==========================================
+          SizedBox(
+            height: 50,
+            child: OutlinedButton.icon(
+              onPressed: _handleLogout,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.danger,
+                side: const BorderSide(color: AppColors.danger, width: 1.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: const Icon(LucideIcons.logOut, size: 20),
+              label: const Text(
+                'Logout',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
         ],
       ),
     );
