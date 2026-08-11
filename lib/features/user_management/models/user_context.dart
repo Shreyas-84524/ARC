@@ -5,20 +5,29 @@ import 'package:arc/features/user_management/models/user_profile.dart';
 class UserContext {
   final String? userId;
   final UserProfile? profile;
+  final bool isInitializing;
 
   const UserContext({
     this.userId,
     this.profile,
+    this.isInitializing = false,
   });
 
+  /// Initializing state during app launch while Firebase Auth restores persistent session
+  static const UserContext initializing =
+      UserContext(userId: null, profile: null, isInitializing: true);
+
   /// Default unauthenticated context representing legacy single-user mode
-  static const UserContext legacy = UserContext(userId: null, profile: null);
+  static const UserContext legacy =
+      UserContext(userId: null, profile: null, isInitializing: false);
 
-  bool get isAuthenticated => userId != null && userId!.isNotEmpty;
+  bool get isAuthenticated =>
+      userId != null && userId!.isNotEmpty && !isInitializing;
 
-  bool get isLegacy => !isAuthenticated;
+  bool get isLegacy => !isAuthenticated && !isInitializing;
 
-  String get userNamespace => (userId != null && userId!.isNotEmpty) ? userId! : 'global';
+  String get userNamespace =>
+      (userId != null && userId!.isNotEmpty) ? userId! : 'global';
 
   /// Generates the target Firestore collection path for a given base collection.
   ///
@@ -41,11 +50,13 @@ class UserContext {
   UserContext copyWith({
     String? userId,
     UserProfile? profile,
+    bool? isInitializing,
     bool setNullUser = false,
   }) {
     return UserContext(
       userId: setNullUser ? null : (userId ?? this.userId),
       profile: setNullUser ? null : (profile ?? this.profile),
+      isInitializing: isInitializing ?? this.isInitializing,
     );
   }
 
@@ -54,9 +65,10 @@ class UserContext {
     if (identical(this, other)) return true;
     return other is UserContext &&
         other.userId == userId &&
-        other.profile == profile;
+        other.profile == profile &&
+        other.isInitializing == isInitializing;
   }
 
   @override
-  int get hashCode => Object.hash(userId, profile);
+  int get hashCode => Object.hash(userId, profile, isInitializing);
 }

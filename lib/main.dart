@@ -10,6 +10,7 @@ import 'package:arc/core/services/hive_service.dart';
 import 'package:arc/core/notifications/notification_service.dart';
 import 'package:arc/providers/global_providers.dart';
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
+import 'package:arc/features/user_management/models/user_context.dart';
 
 void main() async {
   runZonedGuarded<Future<void>>(() async {
@@ -113,6 +114,12 @@ class _SyncInitializerState extends ConsumerState<SyncInitializer> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<UserContext>(userContextProvider, (previous, next) {
+      if (next.isAuthenticated && (previous == null || !previous.isAuthenticated)) {
+        _startSyncProcess();
+      }
+    });
+
     return widget.child;
   }
 }
@@ -122,8 +129,9 @@ class ProjectArcApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Read the active theme state from Riverpod
+    // Read the active theme state and reactive router from Riverpod
     final activeThemeMode = ref.watch(themeModeProvider);
+    final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
       title: 'Project Arc',
@@ -131,7 +139,7 @@ class ProjectArcApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: activeThemeMode,
-      routerConfig: appRouter,
+      routerConfig: router,
     );
   }
 }

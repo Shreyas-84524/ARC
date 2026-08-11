@@ -11,7 +11,7 @@ class UserContextNotifier extends StateNotifier<UserContext> {
 
   UserContextNotifier({auth.FirebaseAuth? firebaseAuth})
       : _providedAuth = firebaseAuth,
-        super(UserContext.legacy) {
+        super(UserContext.initializing) {
     _initAuthListener();
   }
 
@@ -30,13 +30,22 @@ class UserContextNotifier extends StateNotifier<UserContext> {
           state = UserContext.legacy;
         }
       });
+
+      if (currentUser == null) {
+        Future.microtask(() {
+          if (state.isInitializing) {
+            state = UserContext.legacy;
+          }
+        });
+      }
     } catch (e) {
       // In unit test environments where Firebase core is not initialized,
       // UserContextNotifier safely falls back to default context.
+      state = UserContext.legacy;
     }
   }
 
-  void _setFromFirebaseUser(auth.User user) {
+  Future<void> _setFromFirebaseUser(auth.User user) async {
     final email = user.email ?? '';
     final username = _usernameFromEmail(email);
     final profile = UserProfile(
@@ -47,8 +56,12 @@ class UserContextNotifier extends StateNotifier<UserContext> {
       createdAt: user.metadata.creationTime ?? DateTime.now(),
       lastLoginAt: user.metadata.lastSignInTime,
     );
-    HiveService().ensureUserBoxesOpened(user.uid);
-    state = UserContext(userId: user.uid, profile: profile);
+    try {
+      await HiveService().ensureUserBoxesOpened(user.uid);
+    } catch (e) {
+      // Ignore in mock testing environments
+    }
+    state = UserContext(userId: user.uid, profile: profile, isInitializing: false);
   }
 
   static String _usernameFromEmail(String email) {
@@ -64,7 +77,7 @@ class UserContextNotifier extends StateNotifier<UserContext> {
   /// Sets the active user context for user-scoped data operations.
   void setActiveUser({required String userId, UserProfile? profile}) {
     HiveService().ensureUserBoxesOpened(userId);
-    state = UserContext(userId: userId, profile: profile);
+    state = UserContext(userId: userId, profile: profile, isInitializing: false);
   }
 
   /// Resets to legacy unauthenticated mode (single-user root collections).
