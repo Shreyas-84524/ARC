@@ -7,7 +7,7 @@ import 'package:arc/core/utilities/currency_formatter.dart';
 import 'package:arc/providers/global_providers.dart';
 import 'package:arc/features/task_manager/widgets/task_editor_sheet.dart';
 import 'package:arc/features/habit_tracker/widgets/habit_editor_sheet.dart';
-import 'package:arc/features/money_tracker/widgets/transaction_editor_sheet.dart';
+import 'package:arc/features/money_tracker/widgets/transaction_details_sheet.dart';
 
 class GlobalSearchScreen extends ConsumerStatefulWidget {
   const GlobalSearchScreen({super.key});
@@ -252,7 +252,7 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
                                     .dialogTheme
                                     .backgroundColor,
                                 builder: (context) =>
-                                    TransactionEditorSheet(transactionToEdit: tx),
+                                    TransactionDetailsSheet(transaction: tx),
                               );
                             },
                             leading: Icon(

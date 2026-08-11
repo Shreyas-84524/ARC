@@ -163,6 +163,6 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    expect(find.textContaining('Welcome to Project Arc'), findsOneWidget);
+    expect(find.textContaining('Welcome Back'), findsOneWidget);
   });
 }

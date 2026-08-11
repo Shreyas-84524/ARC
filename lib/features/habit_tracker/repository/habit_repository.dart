@@ -10,30 +10,33 @@ class HabitRepository {
   final Box<Habit> _habitBox;
   final Box<HabitEntry> _entryBox;
   final Box _queueBox;
-  final fs.FirebaseFirestore _firestore = fs.FirebaseFirestore.instance;
+  final fs.FirebaseFirestore? _firestore;
 
-  HabitRepository({String? userId})
+  HabitRepository({String? userId, fs.FirebaseFirestore? firestore})
       : _userId = userId,
         _habitBox = HiveService().getUserBox<Habit>(HiveService.habitsBoxName, userId),
         _entryBox = HiveService().getUserBox<HabitEntry>(HiveService.habitEntriesBoxName, userId),
-        _queueBox = HiveService().getUserBox(HiveService.habitsSyncQueueBoxName, userId);
+        _queueBox = HiveService().getUserBox(HiveService.habitsSyncQueueBoxName, userId),
+        _firestore = firestore;
+
+  fs.FirebaseFirestore get _db => _firestore ?? fs.FirebaseFirestore.instance;
 
   String? get userId => _userId;
 
   fs.CollectionReference<Map<String, dynamic>> _habitsRef() {
     final uid = _userId;
     if (uid != null && uid.isNotEmpty) {
-      return _firestore.collection('users').doc(uid).collection('habits');
+      return _db.collection('users').doc(uid).collection('habits');
     }
-    return _firestore.collection('habits');
+    return _db.collection('habits');
   }
 
   fs.CollectionReference<Map<String, dynamic>> _entriesRef() {
     final uid = _userId;
     if (uid != null && uid.isNotEmpty) {
-      return _firestore.collection('users').doc(uid).collection('habitEntries');
+      return _db.collection('users').doc(uid).collection('habitEntries');
     }
-    return _firestore.collection('habitEntries');
+    return _db.collection('habitEntries');
   }
 
   List<Habit> getHabits() => _habitBox.values.toList();

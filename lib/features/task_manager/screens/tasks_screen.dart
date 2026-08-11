@@ -22,14 +22,6 @@ class TasksScreen extends ConsumerStatefulWidget {
 }
 
 class _TasksScreenState extends ConsumerState<TasksScreen> {
-  final TextEditingController _searchController = TextEditingController();
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
   void _showTaskEditor(BuildContext context, [Task? task]) {
     showModalBottomSheet(
       context: context,
@@ -140,121 +132,93 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
             ),
           ),
 
-          // Search & Filter header
+          // Sorting and Category filters header
           Padding(
             padding: EdgeInsets.symmetric(
               horizontal: ResponsiveLayout.horizontalPadding(context),
               vertical: 8,
             ),
-            child: Column(
+            child: Row(
               children: [
-                // Live Search Bar
-                TextField(
-                  controller: _searchController,
-                  onChanged: (val) {
-                    ref.read(taskSearchQueryProvider.notifier).state = val;
-                  },
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(LucideIcons.search, size: 20),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(LucideIcons.x, size: 16),
-                            onPressed: () {
-                              _searchController.clear();
-                              ref.read(taskSearchQueryProvider.notifier).state =
-                                  '';
-                            },
-                          )
-                        : null,
-                    hintText: 'Search tasks...',
+                // Sorting Dropdown
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    isExpanded: true,
+                    menuMaxHeight: 220.0,
+                    iconSize: 18,
+                    initialValue: activeSort,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: 13,
+                    ),
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      labelText: 'Sort By',
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 3.5,
+                      ),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'DueDate',
+                        child: Text('Due Date', overflow: TextOverflow.ellipsis),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Priority',
+                        child: Text('Priority', overflow: TextOverflow.ellipsis),
+                      ),
+                      DropdownMenuItem(
+                        value: 'CreationDate',
+                        child: Text('Creation Date', overflow: TextOverflow.ellipsis),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Alphabetical',
+                        child: Text('Alphabetical', overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        ref.read(taskSortProvider.notifier).state = val;
+                      }
+                    },
                   ),
                 ),
-                const SizedBox(height: 12),
-
-                // Sorting and category filters row
-                Row(
-                  children: [
-                    // Sorting Dropdown
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        menuMaxHeight: 220.0,
-                        iconSize: 18,
-                        initialValue: activeSort,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontSize: 13,
-                        ),
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          labelText: 'Sort By',
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 2,
-                          ),
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'DueDate',
-                            child: Text('Due Date', overflow: TextOverflow.ellipsis),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Priority',
-                            child: Text('Priority', overflow: TextOverflow.ellipsis),
-                          ),
-                          DropdownMenuItem(
-                            value: 'CreationDate',
-                            child: Text('Creation Date', overflow: TextOverflow.ellipsis),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Alphabetical',
-                            child: Text('Alphabetical', overflow: TextOverflow.ellipsis),
-                          ),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            ref.read(taskSortProvider.notifier).state = val;
-                          }
-                        },
+                const SizedBox(width: 8),
+                // Category Dropdown
+                Expanded(
+                  child: DropdownButtonFormField<String?>(
+                    isExpanded: true,
+                    menuMaxHeight: 220.0,
+                    iconSize: 18,
+                    initialValue: activeCategory,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: 13,
+                    ),
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      labelText: 'Category',
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 3.5,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    // Category Dropdown
-                    Expanded(
-                      child: DropdownButtonFormField<String?>(
-                        isExpanded: true,
-                        menuMaxHeight: 220.0,
-                        iconSize: 18,
-                        initialValue: activeCategory,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontSize: 13,
-                        ),
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          labelText: 'Category',
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 2,
-                          ),
-                        ),
-                        items: [
-                          const DropdownMenuItem(
-                            value: null,
-                            child: Text('All', overflow: TextOverflow.ellipsis),
-                          ),
-                          ...AppConstants.taskCategories.map((c) {
-                            return DropdownMenuItem(
-                              value: c,
-                              child: Text(c, overflow: TextOverflow.ellipsis),
-                            );
-                          }),
-                        ],
-                        onChanged: (val) {
-                          ref.read(taskCategoryFilterProvider.notifier).state =
-                              val;
-                        },
+                    items: [
+                      const DropdownMenuItem(
+                        value: null,
+                        child: Text('All', overflow: TextOverflow.ellipsis),
                       ),
-                    ),
-                  ],
+                      ...AppConstants.taskCategories.map((c) {
+                        return DropdownMenuItem(
+                          value: c,
+                          child: Text(c, overflow: TextOverflow.ellipsis),
+                        );
+                      }),
+                    ],
+                    onChanged: (val) {
+                      ref.read(taskCategoryFilterProvider.notifier).state =
+                          val;
+                    },
+                  ),
                 ),
               ],
             ),
@@ -286,15 +250,6 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                     onTap: () {
                       ref.read(taskStatusFilterProvider.notifier).state = 'Pending';
                       ref.read(taskDateFilterProvider.notifier).state = 'All';
-                    },
-                  ),
-                  _buildFilterChip(
-                    context,
-                    label: 'Today',
-                    selected: activeDate == 'Today' && activeStatus == 'All',
-                    onTap: () {
-                      ref.read(taskStatusFilterProvider.notifier).state = 'All';
-                      ref.read(taskDateFilterProvider.notifier).state = 'Today';
                     },
                   ),
                   _buildFilterChip(

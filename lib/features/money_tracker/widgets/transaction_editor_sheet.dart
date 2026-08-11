@@ -10,12 +10,7 @@ import 'package:arc/features/money_tracker/models/transaction_model.dart';
 import 'package:arc/providers/global_providers.dart';
 
 class TransactionEditorSheet extends ConsumerStatefulWidget {
-  final Transaction? transactionToEdit;
-
-  const TransactionEditorSheet({
-    super.key,
-    this.transactionToEdit,
-  });
+  const TransactionEditorSheet({super.key});
 
   @override
   ConsumerState<TransactionEditorSheet> createState() => _TransactionEditorSheetState();
@@ -38,23 +33,12 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
   @override
   void initState() {
     super.initState();
-    final editTx = widget.transactionToEdit;
-
-    _amountController = TextEditingController(text: editTx != null ? editTx.amount.toString() : '');
-    _notesController = TextEditingController(text: editTx?.notes ?? '');
-    _selectedType = editTx?.type ?? 'Expense';
-    _selectedCategory = editTx?.category ?? (_selectedType == 'Income' ? 'Salary' : 'Food');
-    _selectedDate = editTx?.date ?? DateTime.now();
-
-    if (editTx?.time != null) {
-      final parts = editTx!.time.split(':');
-      if (parts.length == 2) {
-        _selectedTime = TimeOfDay(
-          hour: int.parse(parts[0]),
-          minute: int.parse(parts[1]),
-        );
-      }
-    }
+    _amountController = TextEditingController();
+    _notesController = TextEditingController();
+    _selectedType = 'Expense';
+    _selectedCategory = 'Food';
+    _selectedDate = DateTime.now();
+    _selectedTime = TimeOfDay.now();
   }
 
   @override
@@ -141,7 +125,7 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
     final minute = _selectedTime.minute.toString().padLeft(2, '0');
     final timeStr = '$hour:$minute';
 
-    final id = widget.transactionToEdit?.id ?? const Uuid().v4();
+    final id = const Uuid().v4();
     final now = DateTime.now();
 
     final tx = Transaction(
@@ -152,59 +136,13 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
       date: _selectedDate,
       time: timeStr,
       notes: _notesController.text.trim(),
-      createdAt: widget.transactionToEdit?.createdAt ?? now,
+      createdAt: now,
     );
 
     HapticFeedback.mediumImpact();
-    if (widget.transactionToEdit == null) {
-      ref.read(moneyProvider.notifier).addTransaction(tx);
-    } else {
-      ref.read(moneyProvider.notifier).updateTransaction(tx);
-    }
+    ref.read(moneyProvider.notifier).addTransaction(tx);
 
     Navigator.of(context).pop();
-  }
-
-  Future<void> _deleteTransaction() async {
-    if (widget.transactionToEdit != null) {
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Delete Transaction'),
-          content: Text('Are you sure you want to delete this ${widget.transactionToEdit!.type.toLowerCase()} of ${CurrencyFormatter.format(widget.transactionToEdit!.amount)}?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white70
-                      : AppColors.textSecondaryLight,
-                ),
-              ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.danger,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(80, 40),
-              ),
-              onPressed: () {
-                HapticFeedback.mediumImpact();
-                Navigator.of(context).pop(true);
-              },
-              child: const Text('Delete'),
-            ),
-          ],
-        ),
-      );
-
-      if (confirm == true && mounted) {
-        ref.read(moneyProvider.notifier).deleteTransaction(widget.transactionToEdit!.id);
-        Navigator.of(context).pop();
-      }
-    }
   }
 
   @override
@@ -228,227 +166,210 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
           key: _formKey,
           child: SingleChildScrollView(
             child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    widget.transactionToEdit == null ? 'Add Transaction' : 'Edit Transaction',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(LucideIcons.x, size: 20),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Transaction Type Toggle (Income / Expense)
-              Row(
-                children: [
-                  Expanded(
-                    child: ChoiceChip(
-                      label: const Center(child: Text('Expense')),
-                      selected: _selectedType == 'Expense',
-                      onSelected: (selected) {
-                        if (selected) {
-                          setState(() {
-                            _selectedType = 'Expense';
-                            _selectedCategory = 'Food';
-                          });
-                        }
-                      },
-                      backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
-                      selectedColor: AppColors.danger,
-                      labelStyle: TextStyle(
-                        color: _selectedType == 'Expense' ? Colors.white : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Add Transaction',
+                      style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ChoiceChip(
-                      label: const Center(child: Text('Income')),
-                      selected: _selectedType == 'Income',
-                      onSelected: (selected) {
-                        if (selected) {
-                          setState(() {
-                            _selectedType = 'Income';
-                            _selectedCategory = 'Salary';
-                          });
-                        }
-                      },
-                      backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
-                      selectedColor: AppColors.success,
-                      labelStyle: TextStyle(
-                        color: _selectedType == 'Income' ? Colors.white : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-                        fontWeight: FontWeight.bold,
-                      ),
+                    IconButton(
+                      icon: const Icon(LucideIcons.x, size: 20),
+                      onPressed: () => Navigator.of(context).pop(),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Amount Field
-              TextFormField(
-                controller: _amountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
-                decoration: const InputDecoration(
-                  hintText: '0.00',
-                  prefixText: '${CurrencyFormatter.symbol} ',
-                  labelText: 'Amount',
+                  ],
                 ),
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Please enter an amount';
-                  }
-                  if (double.tryParse(val.trim()) == null) {
-                    return 'Please enter a valid number';
-                  }
-                  if (double.parse(val.trim()) <= 0) {
-                    return 'Amount must be greater than zero';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Category selector dropdown
-              DropdownButtonFormField<String>(
-                initialValue: _selectedCategory,
-                decoration: const InputDecoration(
-                  labelText: 'Category',
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                ),
-                items: categories.map((c) {
-                  return DropdownMenuItem<String>(
-                    value: c,
-                    child: Text(c, style: theme.textTheme.bodyMedium),
-                  );
-                }).toList(),
-                onChanged: (val) {
-                  if (val != null) setState(() => _selectedCategory = val);
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Date & Time pickers
-              Row(
-                children: [
-                  // Date Picker
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _selectDate(context),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusInput),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
-                          borderRadius: BorderRadius.circular(AppTheme.radiusInput),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(LucideIcons.calendar, size: 18, color: AppColors.accent),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                DateFormat('MMM d, yyyy').format(_selectedDate),
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Time Picker
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _selectTime(context),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusInput),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
-                          borderRadius: BorderRadius.circular(AppTheme.radiusInput),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(LucideIcons.clock, size: 18, color: AppColors.accent),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _selectedTime.format(context),
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Notes field
-              TextFormField(
-                controller: _notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Notes',
-                  hintText: 'Enter tags or notes...',
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Action buttons (Save & optional Delete)
-              Row(
-                children: [
-                  if (widget.transactionToEdit != null) ...[
+                // Transaction Type Toggle (Income / Expense)
+                Row(
+                  children: [
                     Expanded(
-                      child: TextButton.icon(
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.danger,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: ChoiceChip(
+                        label: const Center(child: Text('Expense')),
+                        selected: _selectedType == 'Expense',
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() {
+                              _selectedType = 'Expense';
+                              _selectedCategory = 'Food';
+                            });
+                          }
+                        },
+                        backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
+                        selectedColor: AppColors.danger,
+                        labelStyle: TextStyle(
+                          color: _selectedType == 'Expense' ? Colors.white : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                          fontWeight: FontWeight.bold,
                         ),
-                        onPressed: _deleteTransaction,
-                        icon: const Icon(LucideIcons.trash2, size: 18),
-                        label: const Text('Delete'),
                       ),
                     ),
                     const SizedBox(width: 12),
-                  ],
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: _saveForm,
-                      child: Text(
-                        widget.transactionToEdit == null ? 'Add Transaction' : 'Save Changes',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                    Expanded(
+                      child: ChoiceChip(
+                        label: const Center(child: Text('Income')),
+                        selected: _selectedType == 'Income',
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() {
+                              _selectedType = 'Income';
+                              _selectedCategory = 'Salary';
+                            });
+                          }
+                        },
+                        backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
+                        selectedColor: AppColors.success,
+                        labelStyle: TextStyle(
+                          color: _selectedType == 'Income' ? Colors.white : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Amount Field
+                TextFormField(
+                  controller: _amountController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                  decoration: const InputDecoration(
+                    hintText: '0.00',
+                    prefixText: '${CurrencyFormatter.symbol} ',
+                    labelText: 'Amount',
                   ),
-                ],
-              ),
-              const SizedBox(height: 24),
-            ],
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Please enter an amount';
+                    }
+                    if (double.tryParse(val.trim()) == null) {
+                      return 'Please enter a valid number';
+                    }
+                    if (double.parse(val.trim()) <= 0) {
+                      return 'Amount must be greater than zero';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Category selector dropdown
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedCategory,
+                  decoration: const InputDecoration(
+                    labelText: 'Category',
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
+                  items: categories.map((c) {
+                    return DropdownMenuItem<String>(
+                      value: c,
+                      child: Text(c, style: theme.textTheme.bodyMedium),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) setState(() => _selectedCategory = val);
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Date & Time pickers
+                Row(
+                  children: [
+                    // Date Picker
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _selectDate(context),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
+                            borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(LucideIcons.calendar, size: 18, color: AppColors.accent),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  DateFormat('MMM d, yyyy').format(_selectedDate),
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Time Picker
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _selectTime(context),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
+                            borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(LucideIcons.clock, size: 18, color: AppColors.accent),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _selectedTime.format(context),
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Notes field
+                TextFormField(
+                  controller: _notesController,
+                  decoration: const InputDecoration(
+                    labelText: 'Notes',
+                    hintText: 'Enter tags or notes...',
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Action button (Add Transaction)
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: _saveForm,
+                    child: const Text(
+                      'Add Transaction',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

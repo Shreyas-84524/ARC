@@ -13,6 +13,11 @@ class HiveService {
   bool _initialized = false;
   bool get isInitialized => _initialized;
 
+  @visibleForTesting
+  void setInitializedForTesting(bool value) {
+    _initialized = value;
+  }
+
   // Box names
   static const String tasksBoxName = 'tasks_box';
   static const String tasksSyncQueueBoxName = 'tasks_sync_queue_box';
@@ -72,26 +77,137 @@ class HiveService {
     return '${baseBoxName}_$userId';
   }
 
-  /// Opens a user-scoped Hive box dynamically if not already open.
-  Future<Box<T>> openUserBox<T>(String baseBoxName, String? userId) async {
+  /// Opens all user-scoped Hive boxes for [userId].
+  /// If user-scoped box is empty and legacy base box has records,
+  /// copies legacy local records into the user-scoped box.
+  Future<void> ensureUserBoxesOpened(String? userId) async {
+    if (!_initialized) return;
+    if (userId == null || userId.isEmpty) return;
+
+    await _openAndMigrateUserBox<Task>(tasksBoxName, userId);
+    await _openAndMigrateUntypedBox(tasksSyncQueueBoxName, userId);
+    await _openAndMigrateUserBox<Habit>(habitsBoxName, userId);
+    await _openAndMigrateUserBox<HabitEntry>(habitEntriesBoxName, userId);
+    await _openAndMigrateUntypedBox(habitsSyncQueueBoxName, userId);
+    await _openAndMigrateUserBox<Transaction>(moneyBoxName, userId);
+    await _openAndMigrateUntypedBox(moneySyncQueueBoxName, userId);
+    await _openAndMigrateUntypedBox(settingsBoxName, userId);
+
+    debugPrint('HiveService: All user-scoped boxes opened for UID: $userId');
+  }
+
+  /// Closes all user-scoped Hive boxes for [userId].
+  /// Leaves box files on disk completely intact so data is restored on next login.
+  Future<void> closeUserBoxes(String? userId) async {
+    if (userId == null || userId.isEmpty) return;
+
+    final typedBoxNames = [
+      getUserBoxName(tasksBoxName, userId),
+      getUserBoxName(habitsBoxName, userId),
+      getUserBoxName(habitEntriesBoxName, userId),
+      getUserBoxName(moneyBoxName, userId),
+    ];
+
+    for (final name in typedBoxNames) {
+      if (Hive.isBoxOpen(name)) {
+        try {
+          if (name.startsWith(tasksBoxName)) {
+            await Hive.box<Task>(name).close();
+          } else if (name.startsWith(habitEntriesBoxName)) {
+            await Hive.box<HabitEntry>(name).close();
+          } else if (name.startsWith(habitsBoxName)) {
+            await Hive.box<Habit>(name).close();
+          } else if (name.startsWith(moneyBoxName)) {
+            await Hive.box<Transaction>(name).close();
+          }
+          debugPrint('HiveService: Closed typed user-scoped box: $name');
+        } catch (e) {
+          debugPrint('HiveService warning closing typed box $name: $e');
+        }
+      }
+    }
+
+    final untypedBoxNames = [
+      getUserBoxName(tasksSyncQueueBoxName, userId),
+      getUserBoxName(habitsSyncQueueBoxName, userId),
+      getUserBoxName(moneySyncQueueBoxName, userId),
+      getUserBoxName(settingsBoxName, userId),
+    ];
+
+    for (final name in untypedBoxNames) {
+      if (Hive.isBoxOpen(name)) {
+        try {
+          await Hive.box(name).close();
+          debugPrint('HiveService: Closed untyped user-scoped box: $name');
+        } catch (e) {
+          debugPrint('HiveService warning closing untyped box $name: $e');
+        }
+      }
+    }
+  }
+
+  Future<Box<T>> _openAndMigrateUserBox<T>(String baseBoxName, String userId) async {
     final scopedName = getUserBoxName(baseBoxName, userId);
     if (!Hive.isBoxOpen(scopedName)) {
-      return await Hive.openBox<T>(scopedName);
+      await Hive.openBox<T>(scopedName);
     }
-    return Hive.box<T>(scopedName);
+    final scopedBox = Hive.box<T>(scopedName);
+
+    // If scoped box is brand new/empty and base box has data, copy existing local data safely
+    if (scopedBox.isEmpty && Hive.isBoxOpen(baseBoxName)) {
+      final baseBox = Hive.box<T>(baseBoxName);
+      if (baseBox.isNotEmpty) {
+        debugPrint('HiveService: Copying ${baseBox.length} legacy records from $baseBoxName to $scopedName');
+        for (final key in baseBox.keys) {
+          final val = baseBox.get(key);
+          if (val != null) {
+            await scopedBox.put(key, val);
+          }
+        }
+      }
+    }
+    return scopedBox;
+  }
+
+  Future<Box> _openAndMigrateUntypedBox(String baseBoxName, String userId) async {
+    final scopedName = getUserBoxName(baseBoxName, userId);
+    if (!Hive.isBoxOpen(scopedName)) {
+      await Hive.openBox(scopedName);
+    }
+    final scopedBox = Hive.box(scopedName);
+
+    if (scopedBox.isEmpty && Hive.isBoxOpen(baseBoxName)) {
+      final baseBox = Hive.box(baseBoxName);
+      if (baseBox.isNotEmpty) {
+        debugPrint('HiveService: Copying ${baseBox.length} legacy records from $baseBoxName to $scopedName');
+        for (final key in baseBox.keys) {
+          final val = baseBox.get(key);
+          if (val != null) {
+            await scopedBox.put(key, val);
+          }
+        }
+      }
+    }
+    return scopedBox;
   }
 
   /// Retrieves a user-scoped Hive box if open, falling back to legacy default box.
   Box<T> getUserBox<T>(String baseBoxName, String? userId) {
     final scopedName = getUserBoxName(baseBoxName, userId);
-    if (!_initialized || !Hive.isBoxOpen(scopedName)) {
-      // Fallback to base box if open, or throw error
-      if (Hive.isBoxOpen(baseBoxName)) {
-        return Hive.box<T>(baseBoxName);
-      }
-      throw StateError('HiveService: box $scopedName is not open.');
+    if (!_initialized) {
+      throw StateError('HiveService has not been initialized.');
     }
-    return Hive.box<T>(scopedName);
+
+    if (Hive.isBoxOpen(scopedName)) {
+      return Hive.box<T>(scopedName);
+    }
+
+    // Fallback to base box if open
+    if (Hive.isBoxOpen(baseBoxName)) {
+      return Hive.box<T>(baseBoxName);
+    }
+
+    throw StateError('HiveService: box $scopedName (or fallback $baseBoxName) is not open.');
   }
 
   // Helper methods to read/write settings cache
@@ -105,3 +221,4 @@ class HiveService {
     return box.get(key, defaultValue: defaultValue);
   }
 }
+

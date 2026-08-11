@@ -64,7 +64,7 @@ class DashboardRepository {
       }
     }
 
-    final remainingBudget = monthlyBudget + totalIncome - totalExpenses;
+    final remainingBudget = monthlyBudget - totalExpenses;
     final monthlySavings = totalIncome - totalExpenses;
     final monthlySavingsRate =
         totalIncome > 0 ? (monthlySavings / totalIncome).clamp(0.0, 1.0) : 0.0;

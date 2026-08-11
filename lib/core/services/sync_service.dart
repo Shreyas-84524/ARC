@@ -63,6 +63,7 @@ class SyncService {
   }
 
   bool isFirstInstallAndEmpty() {
+    if (_userId == null || _userId.isEmpty) return false;
     if (isInitialSyncCompleted()) return false;
     final taskBox = HiveService().getUserBox<Task>(HiveService.tasksBoxName, _userId);
     final habitBox = HiveService().getUserBox<Habit>(HiveService.habitsBoxName, _userId);
@@ -89,20 +90,46 @@ class SyncService {
   }
 
   Future<void> pullInitialDataFromFirestore({VoidCallback? onRefreshState}) async {
-    try {
-      debugPrint('SyncService: Downloading Cloud Firestore data to local database...');
+    if (_userId == null || _userId.isEmpty) {
+      debugPrint('SyncService: Skipping Firestore pull for unauthenticated session.');
+      return;
+    }
 
-      // 1. Sync tasks collection
+    try {
+      debugPrint('SyncService: Parallel downloading Cloud Firestore data to local database...');
+
       final taskBox = HiveService().getUserBox<Task>(HiveService.tasksBoxName, _userId);
       final taskQueue = HiveService().getUserBox(HiveService.tasksSyncQueueBoxName, _userId);
-      final taskDocs = await _collectionRef('tasks').get().timeout(const Duration(seconds: 10));
+      final habitBox = HiveService().getUserBox<Habit>(HiveService.habitsBoxName, _userId);
+      final habitQueue = HiveService().getUserBox(HiveService.habitsSyncQueueBoxName, _userId);
+      final entryBox = HiveService().getUserBox<HabitEntry>(HiveService.habitEntriesBoxName, _userId);
+      final txBox = HiveService().getUserBox<Transaction>(HiveService.moneyBoxName, _userId);
+      final moneyQueue = HiveService().getUserBox(HiveService.moneySyncQueueBoxName, _userId);
 
+      // Execute all 7 Cloud Firestore queries concurrently in parallel
+      final results = await Future.wait([
+        _collectionRef('tasks').get().timeout(const Duration(seconds: 10)),
+        _collectionRef('habits').get().timeout(const Duration(seconds: 10)),
+        _collectionRef('habitEntries').get().timeout(const Duration(seconds: 10)),
+        _collectionRef('transactions').get().timeout(const Duration(seconds: 10)),
+        _collectionRef('budgets').get().timeout(const Duration(seconds: 10)),
+        _collectionRef('monthlySummaries').get().timeout(const Duration(seconds: 10)),
+        _settingsDocRef().get().timeout(const Duration(seconds: 10)),
+      ]);
+
+      final taskDocs = results[0] as fs.QuerySnapshot<Map<String, dynamic>>;
+      final habitDocs = results[1] as fs.QuerySnapshot<Map<String, dynamic>>;
+      final entryDocs = results[2] as fs.QuerySnapshot<Map<String, dynamic>>;
+      final txDocs = results[3] as fs.QuerySnapshot<Map<String, dynamic>>;
+      final budgetDocs = results[4] as fs.QuerySnapshot<Map<String, dynamic>>;
+      final summaryDocs = results[5] as fs.QuerySnapshot<Map<String, dynamic>>;
+      final settingsDoc = results[6] as fs.DocumentSnapshot<Map<String, dynamic>>;
+
+      // 1. Process tasks collection
       for (final doc in taskDocs.docs) {
         final data = doc.data();
         final remoteTask = Task.fromMap(data);
         final localTask = taskBox.get(remoteTask.id);
-
-        // Check if there is an unpushed local edit in queue
         if (taskQueue.containsKey(remoteTask.id)) continue;
 
         if (localTask == null || remoteTask.updatedAt.isAfter(localTask.updatedAt) || remoteTask.updatedAt.isAtSameMomentAs(localTask.updatedAt)) {
@@ -110,16 +137,11 @@ class SyncService {
         }
       }
 
-      // 2. Sync habits collection
-      final habitBox = HiveService().getUserBox<Habit>(HiveService.habitsBoxName, _userId);
-      final habitQueue = HiveService().getUserBox(HiveService.habitsSyncQueueBoxName, _userId);
-      final habitDocs = await _collectionRef('habits').get().timeout(const Duration(seconds: 10));
-
+      // 2. Process habits collection
       for (final doc in habitDocs.docs) {
         final data = doc.data();
         final remoteHabit = Habit.fromMap(data);
         final localHabit = habitBox.get(remoteHabit.id);
-
         if (habitQueue.containsKey('habit_${remoteHabit.id}')) continue;
 
         if (localHabit == null || remoteHabit.updatedAt.isAfter(localHabit.updatedAt) || remoteHabit.updatedAt.isAtSameMomentAs(localHabit.updatedAt)) {
@@ -127,10 +149,7 @@ class SyncService {
         }
       }
 
-      // 3. Sync habit entries collection
-      final entryBox = HiveService().getUserBox<HabitEntry>(HiveService.habitEntriesBoxName, _userId);
-      final entryDocs = await _collectionRef('habitEntries').get().timeout(const Duration(seconds: 10));
-
+      // 3. Process habit entries collection
       for (final doc in entryDocs.docs) {
         final data = doc.data();
         final entry = HabitEntry.fromMap(data);
@@ -138,11 +157,7 @@ class SyncService {
         await entryBox.put(entry.id, entry);
       }
 
-      // 4. Sync transactions collection
-      final txBox = HiveService().getUserBox<Transaction>(HiveService.moneyBoxName, _userId);
-      final moneyQueue = HiveService().getUserBox(HiveService.moneySyncQueueBoxName, _userId);
-      final txDocs = await _collectionRef('transactions').get().timeout(const Duration(seconds: 10));
-
+      // 4. Process transactions collection
       for (final doc in txDocs.docs) {
         final data = doc.data();
         final remoteTx = Transaction.fromMap(data);
@@ -150,8 +165,7 @@ class SyncService {
         await txBox.put(remoteTx.id, remoteTx);
       }
 
-      // 5. Sync monthly budgets collection
-      final budgetDocs = await _collectionRef('budgets').get().timeout(const Duration(seconds: 10));
+      // 5. Process monthly budgets collection
       for (final doc in budgetDocs.docs) {
         final data = doc.data();
         final month = doc.id;
@@ -161,8 +175,7 @@ class SyncService {
         }
       }
 
-      // 6. Sync monthly summaries collection
-      final summaryDocs = await _collectionRef('monthlySummaries').get().timeout(const Duration(seconds: 10));
+      // 6. Process monthly summaries collection
       for (final doc in summaryDocs.docs) {
         final data = doc.data();
         final month = doc.id;
@@ -171,8 +184,7 @@ class SyncService {
         }
       }
 
-      // 7. Sync settings document
-      final settingsDoc = await _settingsDocRef().get().timeout(const Duration(seconds: 10));
+      // 7. Process settings document
       if (settingsDoc.exists && settingsDoc.data() != null) {
         final data = settingsDoc.data()!;
         final isQueued = _settingsBox.get('settings_sync_queued', defaultValue: false) as bool;
@@ -185,19 +197,25 @@ class SyncService {
       await syncAllPending();
 
       await _settingsBox.put('initial_sync_completed', true);
-      debugPrint('SyncService: Download from Firestore completed successfully.');
+      debugPrint('SyncService: Parallel download from Firestore completed successfully.');
 
       if (onRefreshState != null) {
         onRefreshState();
       }
     } catch (e) {
-      debugPrint("SyncService notice: You're offline. Using locally stored data. Error: $e");
+      debugPrint("SyncService notice: Offline or sync warning: $e");
+      rethrow;
     }
   }
 
   void startRealTimeSync({VoidCallback? onRefreshState}) {
     // Cancel existing listeners if any
     stopRealTimeSync();
+
+    if (_userId == null || _userId.isEmpty) {
+      debugPrint('SyncService: Real-time listeners skipped for unauthenticated user.');
+      return;
+    }
 
     try {
       // 1. Tasks Listener

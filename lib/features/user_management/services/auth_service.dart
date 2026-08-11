@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:cloud_firestore/cloud_firestore.dart' as fs;
 import 'package:arc/features/user_management/models/user_profile.dart';
 import 'package:arc/core/services/data_migration_service.dart';
+import 'package:arc/core/services/hive_service.dart';
 
 /// Authentication service for Project Arc supporting Option A username login.
 class AuthService {
@@ -74,7 +75,14 @@ class AuthService {
 
     final now = DateTime.now();
 
-    // 2. Build non-sensitive UserProfile
+    // 2. Open user-scoped Hive boxes for authenticated UID
+    try {
+      await HiveService().ensureUserBoxesOpened(uid);
+    } catch (e) {
+      debugPrint('AuthService Hive box scoping warning: $e');
+    }
+
+    // 3. Build non-sensitive UserProfile
     final profile = UserProfile(
       id: uid,
       username: matchingUsername,

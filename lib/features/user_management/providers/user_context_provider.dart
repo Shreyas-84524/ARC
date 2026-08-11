@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:arc/features/user_management/models/user_context.dart';
 import 'package:arc/features/user_management/models/user_profile.dart';
+import 'package:arc/core/services/hive_service.dart';
 
 class UserContextNotifier extends StateNotifier<UserContext> {
   StreamSubscription<auth.User?>? _authSubscription;
@@ -46,6 +47,7 @@ class UserContextNotifier extends StateNotifier<UserContext> {
       createdAt: user.metadata.creationTime ?? DateTime.now(),
       lastLoginAt: user.metadata.lastSignInTime,
     );
+    HiveService().ensureUserBoxesOpened(user.uid);
     state = UserContext(userId: user.uid, profile: profile);
   }
 
@@ -61,6 +63,7 @@ class UserContextNotifier extends StateNotifier<UserContext> {
 
   /// Sets the active user context for user-scoped data operations.
   void setActiveUser({required String userId, UserProfile? profile}) {
+    HiveService().ensureUserBoxesOpened(userId);
     state = UserContext(userId: userId, profile: profile);
   }
 

@@ -10,38 +10,41 @@ class MoneyRepository {
   final Box<Transaction> _txBox;
   final Box _settingsBox;
   final Box _queueBox;
-  final fs.FirebaseFirestore _firestore = fs.FirebaseFirestore.instance;
+  final fs.FirebaseFirestore? _firestore;
 
-  MoneyRepository({String? userId})
+  MoneyRepository({String? userId, fs.FirebaseFirestore? firestore})
       : _userId = userId,
         _txBox = HiveService().getUserBox<Transaction>(HiveService.moneyBoxName, userId),
         _settingsBox = HiveService().getUserBox(HiveService.settingsBoxName, userId),
-        _queueBox = HiveService().getUserBox(HiveService.moneySyncQueueBoxName, userId);
+        _queueBox = HiveService().getUserBox(HiveService.moneySyncQueueBoxName, userId),
+        _firestore = firestore;
+
+  fs.FirebaseFirestore get _db => _firestore ?? fs.FirebaseFirestore.instance;
 
   String? get userId => _userId;
 
   fs.CollectionReference<Map<String, dynamic>> _txRef() {
     final uid = _userId;
     if (uid != null && uid.isNotEmpty) {
-      return _firestore.collection('users').doc(uid).collection('transactions');
+      return _db.collection('users').doc(uid).collection('transactions');
     }
-    return _firestore.collection('transactions');
+    return _db.collection('transactions');
   }
 
   fs.CollectionReference<Map<String, dynamic>> _budgetsRef() {
     final uid = _userId;
     if (uid != null && uid.isNotEmpty) {
-      return _firestore.collection('users').doc(uid).collection('budgets');
+      return _db.collection('users').doc(uid).collection('budgets');
     }
-    return _firestore.collection('budgets');
+    return _db.collection('budgets');
   }
 
   fs.CollectionReference<Map<String, dynamic>> _summariesRef() {
     final uid = _userId;
     if (uid != null && uid.isNotEmpty) {
-      return _firestore.collection('users').doc(uid).collection('monthlySummaries');
+      return _db.collection('users').doc(uid).collection('monthlySummaries');
     }
-    return _firestore.collection('monthlySummaries');
+    return _db.collection('monthlySummaries');
   }
 
   List<Transaction> getTransactions() => _txBox.values.toList();

@@ -7,22 +7,25 @@ import 'package:arc/features/settings/models/settings_model.dart';
 class SettingsRepository {
   final String? _userId;
   final Box _settingsBox;
-  final fs.FirebaseFirestore _firestore = fs.FirebaseFirestore.instance;
+  final fs.FirebaseFirestore? _firestore;
 
   static const String settingsHiveKey = 'app_settings';
 
-  SettingsRepository({String? userId})
+  SettingsRepository({String? userId, fs.FirebaseFirestore? firestore})
       : _userId = userId,
-        _settingsBox = HiveService().getUserBox(HiveService.settingsBoxName, userId);
+        _settingsBox = HiveService().getUserBox(HiveService.settingsBoxName, userId),
+        _firestore = firestore;
+
+  fs.FirebaseFirestore get _db => _firestore ?? fs.FirebaseFirestore.instance;
 
   String? get userId => _userId;
 
   fs.DocumentReference<Map<String, dynamic>> _settingsDocRef() {
     final uid = _userId;
     if (uid != null && uid.isNotEmpty) {
-      return _firestore.collection('users').doc(uid).collection('settings').doc('profile');
+      return _db.collection('users').doc(uid).collection('settings').doc('profile');
     }
-    return _firestore.collection('settings').doc('global');
+    return _db.collection('settings').doc('global');
   }
 
   SettingsModel getSettings() {

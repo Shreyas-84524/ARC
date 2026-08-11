@@ -8,21 +8,24 @@ class TaskRepository {
   final String? _userId;
   final Box<Task> _taskBox;
   final Box _queueBox;
-  final fs.FirebaseFirestore _firestore = fs.FirebaseFirestore.instance;
+  final fs.FirebaseFirestore? _firestore;
 
-  TaskRepository({String? userId})
+  TaskRepository({String? userId, fs.FirebaseFirestore? firestore})
       : _userId = userId,
         _taskBox = HiveService().getUserBox<Task>(HiveService.tasksBoxName, userId),
-        _queueBox = HiveService().getUserBox(HiveService.tasksSyncQueueBoxName, userId);
+        _queueBox = HiveService().getUserBox(HiveService.tasksSyncQueueBoxName, userId),
+        _firestore = firestore;
+
+  fs.FirebaseFirestore get _db => _firestore ?? fs.FirebaseFirestore.instance;
 
   String? get userId => _userId;
 
   fs.CollectionReference<Map<String, dynamic>> _tasksRef() {
     final uid = _userId;
     if (uid != null && uid.isNotEmpty) {
-      return _firestore.collection('users').doc(uid).collection('tasks');
+      return _db.collection('users').doc(uid).collection('tasks');
     }
-    return _firestore.collection('tasks');
+    return _db.collection('tasks');
   }
 
   List<Task> getTasks() {

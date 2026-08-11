@@ -12,6 +12,7 @@ import 'package:arc/core/utilities/responsive_layout.dart';
 import 'package:arc/core/widgets/top_bar.dart';
 import 'package:arc/features/money_tracker/models/transaction_model.dart';
 import 'package:arc/features/money_tracker/widgets/transaction_editor_sheet.dart';
+import 'package:arc/features/money_tracker/widgets/transaction_details_sheet.dart';
 import 'package:arc/core/widgets/empty_state.dart';
 import 'package:arc/core/widgets/premium_segmented_control.dart';
 import 'package:arc/providers/global_providers.dart';
@@ -51,12 +52,21 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
     super.dispose();
   }
 
-  void _showTransactionEditor(BuildContext context, [Transaction? tx]) {
+  void _showTransactionEditor(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
-      builder: (context) => TransactionEditorSheet(transactionToEdit: tx),
+      builder: (context) => const TransactionEditorSheet(),
+    );
+  }
+
+  void _showTransactionDetails(BuildContext context, Transaction tx) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
+      builder: (context) => TransactionDetailsSheet(transaction: tx),
     );
   }
 
@@ -173,7 +183,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
     }
 
     final double savings = totalIncome - totalExpenses;
-    final double remainingBudget = monthlyBudget + totalIncome - totalExpenses;
+    final double remainingBudget = monthlyBudget - totalExpenses;
     
     // Savings Progress calculations
     final double savingsRate = totalIncome > 0 ? (savings / totalIncome).clamp(0.0, 1.0) : 0.0;
@@ -964,7 +974,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
       ),
       child: Card(
         child: InkWell(
-          onTap: () => _showTransactionEditor(context, tx),
+          onTap: () => _showTransactionDetails(context, tx),
           borderRadius: BorderRadius.circular(AppTheme.radiusCard),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),

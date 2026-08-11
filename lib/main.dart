@@ -9,6 +9,7 @@ import 'package:arc/routes/app_router.dart';
 import 'package:arc/core/services/hive_service.dart';
 import 'package:arc/core/notifications/notification_service.dart';
 import 'package:arc/providers/global_providers.dart';
+import 'package:arc/features/user_management/providers/user_context_provider.dart';
 
 void main() async {
   runZonedGuarded<Future<void>>(() async {
@@ -71,8 +72,6 @@ class SyncInitializer extends ConsumerStatefulWidget {
 }
 
 class _SyncInitializerState extends ConsumerState<SyncInitializer> {
-  bool _isFirstInstallSyncing = false;
-
   @override
   void initState() {
     super.initState();
@@ -80,69 +79,40 @@ class _SyncInitializerState extends ConsumerState<SyncInitializer> {
   }
 
   Future<void> _startSyncProcess() async {
-    final syncService = ref.read(syncServiceProvider);
-
-    void refreshAllNotifiers() {
-      if (!mounted) return;
-      ref.read(tasksProvider.notifier).refresh();
-      ref.read(habitsProvider.notifier).refresh();
-      ref.read(habitEntriesProvider.notifier).refresh();
-      ref.read(moneyProvider.notifier).refresh();
-      ref.read(monthlyBudgetProvider.notifier).refresh();
-      ref.read(appSettingsProvider.notifier).refresh();
+    final userContext = ref.read(userContextProvider);
+    // Unauthenticated sessions must NOT perform Firestore background sync
+    if (!userContext.isAuthenticated || userContext.userId == null) {
+      return;
     }
 
-    if (syncService.isFirstInstallAndEmpty()) {
-      setState(() {
-        _isFirstInstallSyncing = true;
-      });
-      await syncService.pullInitialDataFromFirestore(onRefreshState: refreshAllNotifiers);
-      syncService.startRealTimeSync(onRefreshState: refreshAllNotifiers);
-      if (mounted) {
-        setState(() {
-          _isFirstInstallSyncing = false;
-        });
+    try {
+      await HiveService().ensureUserBoxesOpened(userContext.userId);
+
+      final syncService = ref.read(syncServiceProvider);
+      final syncManager = ref.read(syncManagerProvider);
+
+      void refreshAllNotifiers() {
+        if (!mounted) return;
+        ref.read(tasksProvider.notifier).refresh();
+        ref.read(habitsProvider.notifier).refresh();
+        ref.read(habitEntriesProvider.notifier).refresh();
+        ref.read(moneyProvider.notifier).refresh();
+        ref.read(monthlyBudgetProvider.notifier).refresh();
+        ref.read(appSettingsProvider.notifier).refresh();
       }
-    } else {
-      syncService.pullInitialDataFromFirestore(onRefreshState: refreshAllNotifiers);
+
+      await syncManager.performFullSync(
+        syncService: syncService,
+        onRefreshState: refreshAllNotifiers,
+      );
       syncService.startRealTimeSync(onRefreshState: refreshAllNotifiers);
+    } catch (e) {
+      debugPrint('SyncInitializer background sync notice: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isFirstInstallSyncing) {
-      final isDark = Theme.of(context).brightness == Brightness.dark;
-      return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        home: Scaffold(
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    isDark ? AppColors.accent : AppColors.accentPressed,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Syncing your data...',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
     return widget.child;
   }
 }

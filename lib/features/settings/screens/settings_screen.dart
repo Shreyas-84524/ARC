@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:arc/core/theme/app_theme.dart';
 import 'package:arc/providers/global_providers.dart';
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
 import 'package:arc/features/user_management/services/auth_service.dart';
+import 'package:arc/core/services/hive_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -95,60 +97,217 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _handleLogout() async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout Confirmation'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white70
-                    : AppColors.textSecondaryLight,
+      builder: (context) {
+        final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
+
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+          ),
+          backgroundColor: isDark ? AppColors.darkModal : AppColors.lightModal,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icon Badge
+                Container(
+                  height: 56,
+                  width: 56,
+                  decoration: BoxDecoration(
+                    color: AppColors.danger.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    LucideIcons.logOut,
+                    size: 26,
+                    color: AppColors.danger,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Title
+                Text(
+                  'Log out?',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Concise explanation
+                Text(
+                  'Are you sure you want to log out of your account?',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Buttons Row
+                Row(
+                  children: [
+                    // Cancel Action (Visually Secondary)
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 46),
+                          foregroundColor: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          side: BorderSide(
+                            color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                          ),
+                        ),
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          Navigator.of(context).pop(false);
+                        },
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // Primary / Destructive Logout Action
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 46),
+                          backgroundColor: AppColors.danger,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                          ),
+                        ),
+                        onPressed: () {
+                          HapticFeedback.mediumImpact();
+                          Navigator.of(context).pop(true);
+                        },
+                        child: const Text(
+                          'Log Out',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ).animate().scale(duration: 200.ms, curve: Curves.easeOutBack).fade(duration: 150.ms);
+      },
+    );
+
+    if (confirm != true || !mounted) return;
+
+    // Show non-dismissible loading indicator feedback
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Expanded(
+                child: Text('Saving your latest changes...'),
               ),
-            ),
+            ],
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              HapticFeedback.mediumImpact();
-              Navigator.of(context).pop(true);
-            },
-            child: const Text('Logout'),
-          ),
-        ],
+        ),
       ),
     );
 
-    if (confirm == true && mounted) {
-      // 1. Sign out from Firebase Auth
-      await _authService.logout();
+    try {
+      final userContext = ref.read(userContextProvider);
+      final userId = userContext.userId;
 
-      // 2. Reset active user context to legacy / unauthenticated
+      // 1. Flush pending changes before logout
+      final syncService = ref.read(syncServiceProvider);
+      final syncManager = ref.read(syncManagerProvider);
+      await syncManager.flushPendingChanges(syncService);
+
+      // 2. Check if unsynced items still remain in queues (e.g. if network failed)
+      bool hasUnsyncedItems = false;
+      if (userId != null && userId.isNotEmpty) {
+        final taskQ = HiveService().getUserBox(HiveService.tasksSyncQueueBoxName, userId);
+        final habitQ = HiveService().getUserBox(HiveService.habitsSyncQueueBoxName, userId);
+        final moneyQ = HiveService().getUserBox(HiveService.moneySyncQueueBoxName, userId);
+        hasUnsyncedItems = taskQ.isNotEmpty || habitQ.isNotEmpty || moneyQ.isNotEmpty;
+      }
+
+      if (hasUnsyncedItems) {
+        if (mounted) Navigator.of(context).pop(); // Dismiss loading
+
+        if (mounted) {
+          final retry = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Logout Paused'),
+              content: const Text(
+                'Some changes could not be saved to cloud storage due to network issues. Please check your internet connection and try again.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel Logout'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                  ),
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Retry Logout'),
+                ),
+              ],
+            ),
+          );
+
+          if (retry == true) {
+            _handleLogout();
+          }
+        }
+        return;
+      }
+
+      // 3. Stop real-time listeners for current user
+      syncService.stopRealTimeSync();
+
+      // 4. Safely close current user's Hive boxes
+      await HiveService().closeUserBoxes(userId);
+
+      // 5. Reset user context state
       ref.read(userContextProvider.notifier).resetToLegacy();
 
-      // 3. Navigate to Login screen
+      // 6. Sign out from Firebase Auth
+      await _authService.logout();
+
+      if (mounted) Navigator.of(context).pop(); // Dismiss loading
+
+      // 7. Navigate to Login screen
       if (mounted) {
         context.go('/login');
       }
-    }
-  }
-
-  Future<void> _manualSync() async {
-    HapticFeedback.mediumImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Synchronizing with Cloud Firestore...')),
-    );
-    await ref.read(syncServiceProvider).syncAllPending();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Synchronization complete!')),
-      );
+    } catch (e) {
+      if (mounted) Navigator.of(context).pop();
+      debugPrint('Error during logout process: $e');
     }
   }
 
@@ -264,45 +423,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: theme.colorScheme.primaryContainer,
-                        child: Icon(LucideIcons.user, color: theme.colorScheme.primary),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              currentUsername,
-                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              '${currentUsername.toLowerCase()}@arc.app',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-                              ),
-                            ),
-                          ],
+                  Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: theme.colorScheme.primaryContainer,
+                          child: Icon(LucideIcons.user, color: theme.colorScheme.primary, size: 24),
                         ),
-                      ),
-                      TextButton.icon(
-                        onPressed: () {
-                          setState(() {
-                            _isPasswordSectionExpanded = !_isPasswordSectionExpanded;
-                          });
-                        },
-                        icon: Icon(
-                          _isPasswordSectionExpanded ? LucideIcons.chevronUp : LucideIcons.key,
-                          size: 16,
+                        const SizedBox(height: 8),
+                        Text(
+                          currentUsername,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                         ),
-                        label: Text(_isPasswordSectionExpanded ? 'Close' : 'Change Password'),
-                      ),
-                    ],
+                        const SizedBox(height: 10),
+                        TextButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _isPasswordSectionExpanded = !_isPasswordSectionExpanded;
+                            });
+                          },
+                          icon: Icon(
+                            _isPasswordSectionExpanded ? LucideIcons.chevronUp : LucideIcons.key,
+                            size: 16,
+                          ),
+                          label: Text(_isPasswordSectionExpanded ? 'Close' : 'Change Password'),
+                        ),
+                      ],
+                    ),
                   ),
 
                   if (_isPasswordSectionExpanded) ...[
@@ -479,49 +631,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const SizedBox(height: 20),
 
-          // 4. Data & Storage Diagnostics
-          Text('Data & Storage Diagnostics', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(LucideIcons.cloudLightning, color: AppColors.success),
-                  title: const Text('Cloud Firestore Synchronization', style: TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: const Text('Background queue active • Project Arc'),
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.success.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'Online',
-                      style: TextStyle(
-                        color: AppColors.success,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ),
-                const Divider(height: 1, indent: 56),
-                ListTile(
-                  leading: const Icon(LucideIcons.database, color: AppColors.warning),
-                  title: const Text('Hive Storage Engine', style: TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: const Text('User Isolated Hive Boxes Operational'),
-                  trailing: TextButton.icon(
-                    onPressed: _manualSync,
-                    icon: const Icon(LucideIcons.refreshCw, size: 14),
-                    label: const Text('Sync Now'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
           // 5. Backup & Maintenance
           Text('Backup & Maintenance', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
@@ -578,30 +687,72 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const SizedBox(height: 24),
 
-          // ==========================================
-          // 7. LOGOUT BUTTON (END OF SETTINGS)
-          // ==========================================
-          SizedBox(
-            height: 50,
-            child: OutlinedButton.icon(
-              onPressed: _handleLogout,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.danger,
-                side: const BorderSide(color: AppColors.danger, width: 1.5),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+          Card(
+            color: isDark ? AppColors.darkCard : AppColors.lightCard,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+              side: BorderSide(
+                color: AppColors.danger.withValues(alpha: 0.25),
+                width: 1.2,
               ),
-              icon: const Icon(LucideIcons.logOut, size: 20),
-              label: const Text(
-                'Logout',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+            ),
+            child: InkWell(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                _handleLogout();
+              },
+              borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Row(
+                  children: [
+                    Container(
+                      height: 44,
+                      width: 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.danger.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        LucideIcons.logOut,
+                        color: AppColors.danger,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Log Out',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.danger,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Sign out of account and sync session',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      LucideIcons.chevronRight,
+                      size: 18,
+                      color: AppColors.danger.withValues(alpha: 0.6),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ),
+          ).animate().fade(duration: 200.ms).slideY(begin: 0.05),
           const SizedBox(height: 24),
         ],
       ),

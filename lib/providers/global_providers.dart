@@ -13,6 +13,7 @@ import 'package:arc/features/settings/models/settings_model.dart';
 import 'package:arc/features/settings/repository/settings_repository.dart';
 import 'package:arc/features/dashboard/repository/dashboard_repository.dart';
 import 'package:arc/core/services/sync_service.dart';
+import 'package:arc/core/services/sync_manager.dart';
 import 'package:arc/core/services/task_cleanup_service.dart';
 import 'package:arc/core/notifications/notification_service.dart';
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
@@ -164,7 +165,7 @@ final taskCategoryFilterProvider = StateProvider<String?>((ref) => null);
 final taskPriorityFilterProvider = StateProvider<String?>((ref) => null);
 
 // Filter Status Provider ('All', 'Pending', 'Completed')
-final taskStatusFilterProvider = StateProvider<String>((ref) => 'All');
+final taskStatusFilterProvider = StateProvider<String>((ref) => 'Pending');
 
 // Filter Date Provider ('All', 'Today', 'Upcoming')
 final taskDateFilterProvider = StateProvider<String>((ref) => 'All');
@@ -768,6 +769,12 @@ final syncServiceProvider = Provider<SyncService>((ref) {
     moneyRepository: moneyRepo,
     settingsRepository: settingsRepo,
   );
+});
+
+// Sync Manager Provider
+final syncManagerProvider = Provider<SyncManager>((ref) {
+  final userContext = ref.watch(userContextProvider);
+  return SyncManager(userId: userContext.userId);
 });
 
 // Dashboard Repository Provider

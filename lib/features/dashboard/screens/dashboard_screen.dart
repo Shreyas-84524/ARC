@@ -12,7 +12,6 @@ import 'package:arc/features/task_manager/models/task_model.dart';
 import 'package:arc/features/task_manager/widgets/task_editor_sheet.dart';
 import 'package:arc/features/habit_tracker/models/habit_model.dart';
 import 'package:arc/features/habit_tracker/widgets/habit_editor_sheet.dart';
-import 'package:arc/features/money_tracker/models/transaction_model.dart';
 import 'package:arc/features/money_tracker/widgets/transaction_editor_sheet.dart';
 import 'package:arc/providers/global_providers.dart';
 
@@ -37,12 +36,12 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  void _showTransactionEditor(BuildContext context, [Transaction? tx]) {
+  void _showTransactionEditor(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
-      builder: (context) => TransactionEditorSheet(transactionToEdit: tx),
+      builder: (context) => const TransactionEditorSheet(),
     );
   }
 
