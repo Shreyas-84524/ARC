@@ -88,8 +88,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           final rawMsg = e.toString();
           if (rawMsg.contains('Invalid username')) {
             _errorMessage = 'Invalid username';
+          } else if (rawMsg.contains('Invalid password')) {
+            _errorMessage = 'Invalid password';
           } else {
-            _errorMessage = rawMsg.replaceAll('Exception:', '').replaceAll('ArgumentError:', '').trim();
+            _errorMessage = rawMsg.replaceAll('Exception:', '').replaceAll('ArgumentError:', '').replaceAll('StateError:', '').trim();
           }
         });
       }

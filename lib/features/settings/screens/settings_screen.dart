@@ -7,6 +7,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:arc/core/theme/app_theme.dart';
 import 'package:arc/providers/global_providers.dart';
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
+import 'package:arc/features/user_management/models/user_profile.dart';
 import 'package:arc/features/user_management/services/auth_service.dart';
 import 'package:arc/core/services/hive_service.dart';
 
@@ -425,40 +426,79 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircleAvatar(
-                          radius: 24,
-                          backgroundColor: theme.colorScheme.primaryContainer,
-                          child: Icon(LucideIcons.user, color: theme.colorScheme.primary, size: 24),
+                  Row(
+                    children: [
+                      // Profile Avatar (Black background, App Accent Green User Icon)
+                      const CircleAvatar(
+                        radius: 22,
+                        backgroundColor: Colors.black,
+                        child: Icon(
+                          LucideIcons.user,
+                          color: AppColors.accent,
+                          size: 22,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          currentUsername,
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(width: 14),
+                      // User Details (Username & Email)
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              currentUsername,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              userContext.profile?.email ?? UserProfile.emailForUsername(currentUsername),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 10),
-                        TextButton.icon(
-                          onPressed: () {
-                            setState(() {
-                              _isPasswordSectionExpanded = !_isPasswordSectionExpanded;
-                            });
-                          },
-                          icon: Icon(
-                            _isPasswordSectionExpanded ? LucideIcons.chevronUp : LucideIcons.key,
-                            size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      // Change Password Action Button (Red color)
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _isPasswordSectionExpanded = !_isPasswordSectionExpanded;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _isPasswordSectionExpanded ? LucideIcons.chevronUp : LucideIcons.key,
+                                size: 16,
+                                color: AppColors.danger,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _isPasswordSectionExpanded ? 'Close' : 'Change Password',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.danger,
+                                ),
+                              ),
+                            ],
                           ),
-                          label: Text(_isPasswordSectionExpanded ? 'Close' : 'Change Password'),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
 
                   if (_isPasswordSectionExpanded) ...[
-                    const Divider(height: 24),
+                    const Divider(height: 28),
                     Form(
                       key: _changePasswordFormKey,
                       child: Column(
@@ -466,37 +506,60 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         children: [
                           Text(
                             'Change Password',
-                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.danger,
+                            ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 14),
                           TextFormField(
                             controller: _currentPasswordController,
                             obscureText: _obscureCurrentPassword,
                             enabled: !_isChangingPassword,
+                            style: TextStyle(
+                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                            ),
                             decoration: InputDecoration(
                               labelText: 'Current Password',
-                              prefixIcon: const Icon(LucideIcons.lock),
-                              border: const OutlineInputBorder(),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              labelStyle: TextStyle(
+                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              ),
+                              prefixIcon: Icon(
+                                LucideIcons.lock,
+                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              ),
                               suffixIcon: IconButton(
-                                icon: Icon(_obscureCurrentPassword ? LucideIcons.eyeOff : LucideIcons.eye),
+                                icon: Icon(
+                                  _obscureCurrentPassword ? LucideIcons.eyeOff : LucideIcons.eye,
+                                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                ),
                                 onPressed: () => setState(() => _obscureCurrentPassword = !_obscureCurrentPassword),
                               ),
                             ),
                             validator: (v) => (v == null || v.isEmpty) ? 'Please enter your current password' : null,
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 14),
                           TextFormField(
                             controller: _newPasswordController,
                             obscureText: _obscureNewPassword,
                             enabled: !_isChangingPassword,
+                            style: TextStyle(
+                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                            ),
                             decoration: InputDecoration(
                               labelText: 'New Password',
-                              prefixIcon: const Icon(LucideIcons.keyRound),
-                              border: const OutlineInputBorder(),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              labelStyle: TextStyle(
+                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              ),
+                              prefixIcon: Icon(
+                                LucideIcons.keyRound,
+                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              ),
                               suffixIcon: IconButton(
-                                icon: Icon(_obscureNewPassword ? LucideIcons.eyeOff : LucideIcons.eye),
+                                icon: Icon(
+                                  _obscureNewPassword ? LucideIcons.eyeOff : LucideIcons.eye,
+                                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                ),
                                 onPressed: () => setState(() => _obscureNewPassword = !_obscureNewPassword),
                               ),
                             ),
@@ -506,18 +569,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 14),
                           TextFormField(
                             controller: _confirmPasswordController,
                             obscureText: _obscureConfirmPassword,
                             enabled: !_isChangingPassword,
+                            style: TextStyle(
+                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                            ),
                             decoration: InputDecoration(
                               labelText: 'Confirm New Password',
-                              prefixIcon: const Icon(LucideIcons.checkCheck),
-                              border: const OutlineInputBorder(),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              labelStyle: TextStyle(
+                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              ),
+                              prefixIcon: Icon(
+                                LucideIcons.checkCheck,
+                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              ),
                               suffixIcon: IconButton(
-                                icon: Icon(_obscureConfirmPassword ? LucideIcons.eyeOff : LucideIcons.eye),
+                                icon: Icon(
+                                  _obscureConfirmPassword ? LucideIcons.eyeOff : LucideIcons.eye,
+                                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                ),
                                 onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
                               ),
                             ),
@@ -526,21 +599,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: _isChangingPassword ? null : _handleChangePassword,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: theme.colorScheme.primary,
-                              foregroundColor: theme.colorScheme.onPrimary,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                          const SizedBox(height: 18),
+                          SizedBox(
+                            height: 48,
+                            child: ElevatedButton(
+                              onPressed: _isChangingPassword ? null : _handleChangePassword,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.accent,
+                                foregroundColor: Colors.black,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: _isChangingPassword
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        color: Colors.black,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'Update Password',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black,
+                                      ),
+                                    ),
                             ),
-                            child: _isChangingPassword
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                  )
-                                : const Text('Update Password', style: TextStyle(fontWeight: FontWeight.bold)),
                           ),
                         ],
                       ),
@@ -654,39 +743,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
 
-          const SizedBox(height: 24),
-
-          // 6. About & App Version Info
-          Center(
-            child: Column(
-              children: [
-                Text(
-                  'Project Arc',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Version 1.0.0 • Build 2026.08',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Multi-User Isolated Cloud & Local Architecture',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
           Card(
             color: isDark ? AppColors.darkCard : AppColors.lightCard,
             elevation: 0,
@@ -753,7 +809,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
           ).animate().fade(duration: 200.ms).slideY(begin: 0.05),
-          const SizedBox(height: 24),
+
+          const SizedBox(height: 32),
+
+          // 6. About & App Version Info (At the very bottom)
+          Center(
+            child: Column(
+              children: [
+                Text(
+                  'Project Arc',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Version 1.3.5 • Build 2026.08',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Made with love in India',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
         ],
       ),
     );

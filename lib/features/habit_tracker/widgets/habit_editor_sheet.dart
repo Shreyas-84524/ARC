@@ -32,7 +32,7 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
     0xffef4444, // Red
     0xfff97316, // Orange
     0xffeab308, // Yellow
-    0xff22c55e, // Green
+    0xffD7FF2F, // Default Green (Neon Lime)
     0xff3b82f6, // Blue
     0xffa855f7, // Purple
     0xffccff00, // Lime (Accent)

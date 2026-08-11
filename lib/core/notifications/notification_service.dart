@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:intl/intl.dart';
+import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:arc/features/task_manager/models/task_model.dart';
 import 'package:arc/routes/app_router.dart';
@@ -17,6 +18,28 @@ class NotificationService {
 
   bool _initialized = false;
   bool get isInitialized => _initialized;
+
+  tz.Location _ensureLocalTimezone() {
+    tz.initializeTimeZones();
+    try {
+      final location = tz.getLocation('Asia/Kolkata');
+      tz.setLocalLocation(location);
+      return location;
+    } catch (e) {
+      try {
+        final utc = tz.getLocation('UTC');
+        tz.setLocalLocation(utc);
+        return utc;
+      } catch (_) {
+        return tz.UTC;
+      }
+    }
+  }
+
+  Future<void> _configureLocalTimezone() async {
+    final location = _ensureLocalTimezone();
+    debugPrint('NotificationService: Local timezone verified as ${location.name}.');
+  }
 
   Future<void> init() async {
     if (_initialized) return;
@@ -38,19 +61,14 @@ class NotificationService {
     );
 
     try {
-      try {
-        final String timeZoneName = DateTime.now().timeZoneName;
-        tz.setLocalLocation(tz.getLocation(timeZoneName));
-      } catch (_) {
-        // Fallback to default local timezone from tz.initializeTimeZones()
-      }
+      await _configureLocalTimezone();
 
       await _localNotificationsPlugin.initialize(
         initSettings,
         onDidReceiveNotificationResponse: _onNotificationTapped,
       );
 
-      // Create Android Notification Channel
+      // Create Android Notification Channels
       if (Platform.isAndroid) {
         final androidImplementation =
             _localNotificationsPlugin.resolvePlatformSpecificImplementation<
@@ -79,36 +97,47 @@ class NotificationService {
       }
 
       _initialized = true;
-      debugPrint('NotificationService: successfully initialized with high-importance channels.');
-      await scheduleDailyMoneyReminders();
+      debugPrint('NotificationService: Core plugin & high-importance channels successfully initialized.');
+
+      // Non-blocking initial reminder scheduling in isolated try-catch
+      try {
+        await scheduleDailyMoneyReminders();
+      } catch (e) {
+        debugPrint('NotificationService: Non-blocking warning during initial money reminder schedule: $e');
+      }
     } catch (e) {
-      debugPrint('NotificationService initialization failed: $e');
+      debugPrint('NotificationService: Engine initialization notice (app will continue): $e');
+      _initialized = true;
     }
   }
 
   Future<bool> requestPermissions() async {
-    if (Platform.isAndroid) {
-      final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
-          _localNotificationsPlugin.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
-      final notificationGranted =
-          await androidImplementation?.requestNotificationsPermission() ?? false;
-      final exactAlarmGranted =
-          await androidImplementation?.requestExactAlarmsPermission() ?? false;
-      debugPrint(
-          'NotificationService permissions: Notifications=$notificationGranted, ExactAlarms=$exactAlarmGranted');
-      return notificationGranted;
-    } else if (Platform.isIOS) {
-      final iosImplementation =
-          _localNotificationsPlugin.resolvePlatformSpecificImplementation<
-              IOSFlutterLocalNotificationsPlugin>();
-      final granted = await iosImplementation?.requestPermissions(
-            alert: true,
-            badge: true,
-            sound: true,
-          ) ??
-          false;
-      return granted;
+    try {
+      if (Platform.isAndroid) {
+        final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+            _localNotificationsPlugin.resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+        final notificationGranted =
+            await androidImplementation?.requestNotificationsPermission() ?? false;
+        final exactAlarmGranted =
+            await androidImplementation?.requestExactAlarmsPermission() ?? false;
+        debugPrint(
+            'NotificationService permissions: Notifications=$notificationGranted, ExactAlarms=$exactAlarmGranted');
+        return notificationGranted;
+      } else if (Platform.isIOS) {
+        final iosImplementation =
+            _localNotificationsPlugin.resolvePlatformSpecificImplementation<
+                IOSFlutterLocalNotificationsPlugin>();
+        final granted = await iosImplementation?.requestPermissions(
+              alert: true,
+              badge: true,
+              sound: true,
+            ) ??
+            false;
+        return granted;
+      }
+    } catch (e) {
+      debugPrint('NotificationService: Permission request warning: $e');
     }
     return true;
   }
@@ -198,6 +227,79 @@ class NotificationService {
     }
   }
 
+  // Safe zoned schedule wrapper handling exact alarm availability and fallback
+  Future<void> _safeZonedSchedule(
+    int id,
+    String? title,
+    String? body,
+    tz.TZDateTime scheduledDate,
+    NotificationDetails notificationDetails, {
+    required UILocalNotificationDateInterpretation uiLocalNotificationDateInterpretation,
+    String? payload,
+    DateTimeComponents? matchDateTimeComponents,
+  }) async {
+    bool canScheduleExact = true;
+    if (Platform.isAndroid) {
+      try {
+        final androidImplementation =
+            _localNotificationsPlugin.resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+        final exactPermission =
+            await androidImplementation?.canScheduleExactNotifications();
+        if (exactPermission != null && !exactPermission) {
+          canScheduleExact = false;
+        }
+      } catch (e) {
+        debugPrint('NotificationService: Exact alarm check warning: $e');
+      }
+    }
+
+    final primaryMode = canScheduleExact
+        ? AndroidScheduleMode.exactAllowWhileIdle
+        : AndroidScheduleMode.inexactAllowWhileIdle;
+
+    try {
+      await _localNotificationsPlugin.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduledDate,
+        notificationDetails,
+        androidScheduleMode: primaryMode,
+        uiLocalNotificationDateInterpretation: uiLocalNotificationDateInterpretation,
+        payload: payload,
+        matchDateTimeComponents: matchDateTimeComponents,
+      );
+      debugPrint(
+        'NotificationService: Scheduled notification ID $id for $scheduledDate (mode: $primaryMode)',
+      );
+    } catch (e) {
+      debugPrint(
+        'NotificationService: Primary scheduling ($primaryMode) failed for ID $id ($e). Attempting inexact fallback...',
+      );
+      try {
+        await _localNotificationsPlugin.zonedSchedule(
+          id,
+          title,
+          body,
+          scheduledDate,
+          notificationDetails,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation: uiLocalNotificationDateInterpretation,
+          payload: payload,
+          matchDateTimeComponents: matchDateTimeComponents,
+        );
+        debugPrint(
+          'NotificationService: Inexact fallback scheduling succeeded for ID $id at $scheduledDate',
+        );
+      } catch (fallbackError) {
+        debugPrint(
+          'NotificationService: Both exact and inexact scheduling failed for ID $id: $fallbackError',
+        );
+      }
+    }
+  }
+
   Future<void> scheduleTaskReminders(Task task) async {
     if (task.completed || task.dueDate == null || task.dueTime == null) {
       await cancelTaskReminders(task.id);
@@ -243,20 +345,21 @@ class NotificationService {
     // Cancel existing scheduled notifications to prevent duplicates
     await cancelTaskReminders(task.id);
 
+    final currentZone = _ensureLocalTimezone();
+
     // 1. Notification 1: 5 Minutes Before Deadline
     final time5m = dueDateTime.subtract(const Duration(minutes: 5));
     final id5m = (baseId * 2) + 0;
     if (time5m.isAfter(now)) {
       final String body5m =
           "Only 5 minutes left!\n\nTask: ${task.title}\nPriority: $priorityBadge\nDeadline: $formattedTime";
-      await _localNotificationsPlugin.zonedSchedule(
+      await _safeZonedSchedule(
         id5m,
         '⏰ Task Reminder',
         body5m,
-        tz.TZDateTime.from(time5m, tz.local),
+        tz.TZDateTime.from(time5m, currentZone),
         details,
         payload: payload,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );
@@ -270,14 +373,13 @@ class NotificationService {
     if (dueDateTime.isAfter(now)) {
       final String bodyDeadline =
           "The deadline has been reached.\nPlease complete this task as soon as possible.\n\nTask: ${task.title}\nPriority: $priorityBadge";
-      await _localNotificationsPlugin.zonedSchedule(
+      await _safeZonedSchedule(
         idDeadline,
         '🚨 Task Deadline Reached',
         bodyDeadline,
-        tz.TZDateTime.from(dueDateTime, tz.local),
+        tz.TZDateTime.from(dueDateTime, currentZone),
         details,
         payload: payload,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );
@@ -288,13 +390,17 @@ class NotificationService {
   }
 
   Future<void> cancelTaskReminders(String taskId) async {
-    final baseId = getStableHash(taskId);
-    await _localNotificationsPlugin.cancel((baseId * 2) + 0);
-    await _localNotificationsPlugin.cancel((baseId * 2) + 1);
-    await _localNotificationsPlugin.cancel((baseId * 3) + 0);
-    await _localNotificationsPlugin.cancel((baseId * 3) + 1);
-    await _localNotificationsPlugin.cancel((baseId * 3) + 2);
-    debugPrint('NotificationService: Canceled all system reminders for Task ID: $taskId');
+    try {
+      final baseId = getStableHash(taskId);
+      await _localNotificationsPlugin.cancel((baseId * 2) + 0);
+      await _localNotificationsPlugin.cancel((baseId * 2) + 1);
+      await _localNotificationsPlugin.cancel((baseId * 3) + 0);
+      await _localNotificationsPlugin.cancel((baseId * 3) + 1);
+      await _localNotificationsPlugin.cancel((baseId * 3) + 2);
+      debugPrint('NotificationService: Canceled all system reminders for Task ID: $taskId');
+    } catch (e) {
+      debugPrint('NotificationService cancelTaskReminders notice: $e');
+    }
   }
 
   Future<void> scheduleEveningReminder(int incompleteCount) async {
@@ -327,15 +433,15 @@ class NotificationService {
     );
 
     final payload = jsonEncode({'type': 'habit', 'id': 'evening_habit'});
+    final currentZone = _ensureLocalTimezone();
 
-    await _localNotificationsPlugin.zonedSchedule(
+    await _safeZonedSchedule(
       999999,
       '🌱 Habit Reminder',
       "Don't forget today's habit.\n\nYou have $incompleteCount incomplete habits left for today.",
-      tz.TZDateTime.from(scheduledTime, tz.local),
+      tz.TZDateTime.from(scheduledTime, currentZone),
       details,
       payload: payload,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
     );
@@ -343,13 +449,18 @@ class NotificationService {
   }
 
   Future<void> cancelEveningReminder() async {
-    await _localNotificationsPlugin.cancel(999999);
-    debugPrint('NotificationService: Canceled evening habit reminder.');
+    try {
+      await _localNotificationsPlugin.cancel(999999);
+      debugPrint('NotificationService: Canceled evening habit reminder.');
+    } catch (e) {
+      debugPrint('NotificationService cancelEveningReminder notice: $e');
+    }
   }
 
   Future<void> scheduleDailyMoneyReminders({bool hasTodayTx = false}) async {
     try {
       final now = DateTime.now();
+      final currentZone = _ensureLocalTimezone();
 
       // 8 PM Daily Reminder
       var time8pm = DateTime(now.year, now.month, now.day, 20, 0);
@@ -372,20 +483,21 @@ class NotificationService {
       );
 
       // Schedule 8 PM Daily
-      await _localNotificationsPlugin.zonedSchedule(
+      await _safeZonedSchedule(
         888888,
         "Money Tracker",
         "Have you recorded today's transactions?",
-        tz.TZDateTime.from(time8pm, tz.local),
+        tz.TZDateTime.from(time8pm, currentZone),
         details,
         matchDateTimeComponents: DateTimeComponents.time,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );
 
       if (hasTodayTx) {
-        await _localNotificationsPlugin.cancel(101010);
+        try {
+          await _localNotificationsPlugin.cancel(101010);
+        } catch (_) {}
         debugPrint('NotificationService: Transactions recorded for today. Canceled 10 PM money reminder.');
       } else {
         // 10 PM Daily Reminder
@@ -394,14 +506,13 @@ class NotificationService {
           time10pm = time10pm.add(const Duration(days: 1));
         }
 
-        await _localNotificationsPlugin.zonedSchedule(
+        await _safeZonedSchedule(
           101010,
           "Money Tracker - Final Reminder",
           "Don't forget to log your daily expenses to keep your balance up to date!",
-          tz.TZDateTime.from(time10pm, tz.local),
+          tz.TZDateTime.from(time10pm, currentZone),
           details,
           matchDateTimeComponents: DateTimeComponents.time,
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
         );
@@ -432,6 +543,10 @@ class NotificationService {
       iOS: iosDetails,
     );
 
-    await _localNotificationsPlugin.show(id, title, body, details, payload: payload);
+    try {
+      await _localNotificationsPlugin.show(id, title, body, details, payload: payload);
+    } catch (e) {
+      debugPrint('NotificationService showInstantNotification notice: $e');
+    }
   }
 }

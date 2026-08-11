@@ -34,44 +34,73 @@ class AuthService {
     required String password,
   }) async {
     final cleanUsername = username.trim();
+    if (cleanUsername.isEmpty) {
+      throw ArgumentError('Invalid username.');
+    }
+    if (password.isEmpty) {
+      throw ArgumentError('Invalid password.');
+    }
+
     final matchingUsername = UserProfile.knownUsernames.firstWhere(
       (u) => u.toLowerCase() == cleanUsername.toLowerCase(),
-      orElse: () => throw ArgumentError('Invalid username. Allowed users: ${UserProfile.knownUsernames.join(", ")}'),
+      orElse: () => throw ArgumentError('Invalid username.'),
     );
 
     final internalEmail = getInternalEmail(matchingUsername);
-    String uid;
+    auth.UserCredential credential;
 
     try {
-      // 1. Authenticate with Firebase Authentication
-      auth.UserCredential credential;
       try {
         credential = await _auth.signInWithEmailAndPassword(
           email: internalEmail,
           password: password,
         );
       } on auth.FirebaseAuthException catch (e) {
-        if (e.code == 'user-not-found' || e.code == 'invalid-credential' || e.code == 'channel-error') {
+        if (e.code == 'user-not-found') {
           // Account doesn't exist yet - auto-create account on first login
           credential = await _auth.createUserWithEmailAndPassword(
             email: internalEmail,
             password: password,
           );
+        } else if (e.code == 'invalid-credential') {
+          // invalid-credential can occur for wrong password OR non-existent account (user enumeration protection).
+          // Attempt account creation to distinguish between the two.
+          try {
+            credential = await _auth.createUserWithEmailAndPassword(
+              email: internalEmail,
+              password: password,
+            );
+          } on auth.FirebaseAuthException catch (createErr) {
+            if (createErr.code == 'email-already-in-use') {
+              // Account already exists -> initial failure was due to incorrect password!
+              throw ArgumentError('Invalid password.');
+            } else {
+              rethrow;
+            }
+          }
+        } else if (e.code == 'wrong-password') {
+          throw ArgumentError('Invalid password.');
         } else {
           rethrow;
         }
       }
-
-      final user = credential.user;
-      if (user == null) {
-        throw StateError('Firebase Authentication returned a null user.');
+    } on auth.FirebaseAuthException catch (e) {
+      if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        throw ArgumentError('Invalid password.');
+      } else if (e.code == 'user-not-found') {
+        throw ArgumentError('Invalid username.');
+      } else if (e.code == 'weak-password') {
+        throw ArgumentError('Password does not meet requirements.');
+      } else {
+        throw ArgumentError('Authentication failed. Please check your credentials.');
       }
-      uid = user.uid;
-    } catch (e) {
-      debugPrint('AuthService Firebase Auth fallback mode active ($e)');
-      // Generate deterministic fallback UID for offline / mock testing environments
-      uid = 'arc_uid_${matchingUsername.toLowerCase()}';
     }
+
+    final user = credential.user;
+    if (user == null) {
+      throw StateError('Firebase Authentication returned a null user.');
+    }
+    final uid = user.uid;
 
     final now = DateTime.now();
 
@@ -92,7 +121,7 @@ class AuthService {
       lastLoginAt: now,
     );
 
-    // 3. Save profile metadata in Firestore: users/{uid}/settings/profile
+    // 4. Save profile metadata in Firestore: users/{uid}/settings/profile
     try {
       final profileRef = _db.collection('users').doc(uid).collection('settings').doc('profile');
       await profileRef.set(profile.toMap(), fs.SetOptions(merge: true));
@@ -100,7 +129,7 @@ class AuthService {
       debugPrint('AuthService profile save warning: $e');
     }
 
-    // 4. If Shreyas logins for the first time, migrate legacy root collections to users/{uid}/*
+    // 5. If Shreyas logins for the first time, migrate legacy root collections to users/{uid}/*
     if (matchingUsername.toLowerCase() == 'shreyas') {
       try {
         await _migrationService.migrateLegacyDataToUser(targetUserId: uid);
@@ -122,31 +151,36 @@ class AuthService {
       throw ArgumentError('New password must be at least 6 characters long.');
     }
 
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) {
+      throw ArgumentError('No authenticated user found. Please log in again.');
+    }
+
+    final email = currentUser.email;
+    if (email == null || email.isEmpty) {
+      throw ArgumentError('User email is missing. Cannot reauthenticate.');
+    }
+
     try {
-      final currentUser = _auth.currentUser;
-      if (currentUser != null) {
-        // Re-authenticate user with current password if email is available
-        if (currentUser.email != null) {
-          final credential = auth.EmailAuthProvider.credential(
-            email: currentUser.email!,
-            password: currentPassword,
-          );
-          await currentUser.reauthenticateWithCredential(credential);
-        }
-        await currentUser.updatePassword(newPassword);
-      } else {
-        debugPrint('AuthService: Running in fallback mode. Password updated.');
-      }
+      // Re-authenticate user with current password
+      final credential = auth.EmailAuthProvider.credential(
+        email: email,
+        password: currentPassword,
+      );
+      await currentUser.reauthenticateWithCredential(credential);
+
+      // Update password in Firebase Authentication
+      await currentUser.updatePassword(newPassword);
     } on auth.FirebaseAuthException catch (e) {
-      if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+      if (e.code == 'wrong-password' || e.code == 'invalid-credential' || e.code == 'user-mismatch') {
         throw ArgumentError('Current password is incorrect.');
       } else if (e.code == 'weak-password') {
-        throw ArgumentError('New password is too weak. Please choose a stronger password.');
+        throw ArgumentError('Your new password does not meet the password requirements.');
+      } else if (e.code == 'requires-recent-login') {
+        throw ArgumentError('For security reasons, please log out and log back in before changing your password.');
       } else {
-        rethrow;
+        throw ArgumentError('Failed to change password. Please check your connection and try again.');
       }
-    } catch (e) {
-      debugPrint('AuthService changePassword fallback mode: $e');
     }
   }
 
@@ -155,7 +189,7 @@ class AuthService {
     try {
       await _auth.signOut();
     } catch (e) {
-      debugPrint('AuthService logout fallback warning: $e');
+      debugPrint('AuthService logout warning: $e');
     }
   }
 }

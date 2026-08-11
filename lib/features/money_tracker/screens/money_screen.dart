@@ -560,7 +560,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
                                 radius: 44,
                                 titleStyle: const TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                                  color: Colors.black,
                                   fontSize: 11,
                                 ),
                               ),
@@ -577,7 +577,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
                                   radius: 44,
                                   titleStyle: const TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                                    color: Colors.black,
                                     fontSize: 11,
                                   ),
                                 ),

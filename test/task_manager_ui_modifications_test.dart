@@ -97,10 +97,10 @@ void main() {
     expect(find.text('Overdue'), findsNWidgets(2)); // Stats badge + Filter chip
     expect(find.text('Completed'), findsOneWidget);
 
-    // 5. Verify Sort By and Category dropdowns have vertical padding 3.5 (+3px total height)
+    // 5. Verify Sort By and Category dropdowns have vertical padding 10.0 (total 20.0px)
     final dropdown1 = tester.widget<DropdownButtonFormField<String>>(find.byType(DropdownButtonFormField<String>));
     final dropdown2 = tester.widget<DropdownButtonFormField<String?>>(find.byType(DropdownButtonFormField<String?>));
-    expect((dropdown1.decoration.contentPadding as EdgeInsets).vertical, 7.0); // 3.5 * 2 = 7.0 (vs original 2.0 * 2 = 4.0, +3px increase)
-    expect((dropdown2.decoration.contentPadding as EdgeInsets).vertical, 7.0);
+    expect((dropdown1.decoration.contentPadding as EdgeInsets).vertical, 20.0);
+    expect((dropdown2.decoration.contentPadding as EdgeInsets).vertical, 20.0);
   });
 }

@@ -31,11 +31,11 @@ class AppColors {
   static const Color priorityLow = Color(0xffFFC857);
 
   // Status
-  static const Color success = Color(0xff52C41A);
+  static const Color success = Color(0xffD7FF2F);
   static const Color info = Color(0xff1890FF);
   static const Color warning = Color(0xffFAAD14);
   static const Color danger = Color(0xffFF4D4F);
-  static const Color income = Color(0xff52C41A);
+  static const Color income = Color(0xffD7FF2F);
 
   // Text
   static const Color textPrimaryDark = Color(0xffFFFFFF);

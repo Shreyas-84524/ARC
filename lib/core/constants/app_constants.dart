@@ -108,7 +108,7 @@ class AppConstants {
     Color(0xffFF9F43), // Orange
     Color(0xffFFD93D), // Yellow
     Color(0xff5AA9FF), // Blue
-    Color(0xff7DFF72), // Green
+    Color(0xffD7FF2F), // Default Green (Neon Lime)
     Color(0xffD6D6D6), // Silver
   ];
 }

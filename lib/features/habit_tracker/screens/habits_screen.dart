@@ -449,7 +449,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
                                                 radius: 46,
                                                 titleStyle: const TextStyle(
                                                   fontWeight: FontWeight.bold,
-                                                  color: Colors.white,
+                                                  color: Colors.black,
                                                   fontSize: 14,
                                                 ),
                                               ),

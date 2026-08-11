@@ -71,6 +71,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     // Subscriptions
     final filteredTasks = ref.watch(filteredTasksProvider);
     final activeStatus = ref.watch(taskStatusFilterProvider);
@@ -144,18 +145,46 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     isExpanded: true,
-                    menuMaxHeight: 220.0,
-                    iconSize: 18,
+                    menuMaxHeight: 280.0,
+                    iconSize: 20,
                     initialValue: activeSort,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      fontSize: 13,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                     ),
-                    decoration: const InputDecoration(
-                      isDense: true,
+                    decoration: InputDecoration(
+                      isDense: false,
                       labelText: 'Sort By',
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 3.5,
+                      labelStyle: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      filled: true,
+                      fillColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: AppColors.accent,
+                          width: 1.5,
+                        ),
                       ),
                     ),
                     items: const [
@@ -183,23 +212,51 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                     },
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 // Category Dropdown
                 Expanded(
                   child: DropdownButtonFormField<String?>(
                     isExpanded: true,
-                    menuMaxHeight: 220.0,
-                    iconSize: 18,
+                    menuMaxHeight: 280.0,
+                    iconSize: 20,
                     initialValue: activeCategory,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      fontSize: 13,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                     ),
-                    decoration: const InputDecoration(
-                      isDense: true,
+                    decoration: InputDecoration(
+                      isDense: false,
                       labelText: 'Category',
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 3.5,
+                      labelStyle: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      filled: true,
+                      fillColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: AppColors.accent,
+                          width: 1.5,
+                        ),
                       ),
                     ),
                     items: [
@@ -215,8 +272,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                       }),
                     ],
                     onChanged: (val) {
-                      ref.read(taskCategoryFilterProvider.notifier).state =
-                          val;
+                      ref.read(taskCategoryFilterProvider.notifier).state = val;
                     },
                   ),
                 ),
@@ -354,10 +410,12 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
 
     return Slidable(
       key: ValueKey(task.id),
-      // Left side swipe (complete/undo)
+      // Left side swipe (complete/undo in a single swipe gesture)
       startActionPane: ActionPane(
-        motion: const DrawerMotion(),
+        motion: const StretchMotion(),
+        extentRatio: 0.25,
         dismissible: DismissiblePane(
+          dismissThreshold: 0.15,
           onDismissed: () async {
             HapticFeedback.mediumImpact();
             final wasCompleted = task.completed;
@@ -398,7 +456,6 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
             }
           },
         ),
-        extentRatio: 0.25,
         children: [
           SlidableAction(
             onPressed: (context) async {

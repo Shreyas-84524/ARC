@@ -99,8 +99,8 @@ void main() {
     // 1. Verify username is visible
     expect(find.text('Shreyas'), findsOneWidget);
 
-    // 2. Verify email address is completely removed
-    expect(find.text('shreyas@arc.app'), findsNothing);
+    // 2. Verify email address is displayed in profile card
+    expect(find.text('shreyas@arc.app'), findsOneWidget);
 
     // 3. Verify Change Password option is present
     expect(find.text('Change Password'), findsOneWidget);

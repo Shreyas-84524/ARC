@@ -7,17 +7,20 @@ import 'package:arc/core/theme/app_theme.dart';
 class CustomTopBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final bool showActions;
+  final bool? showDate;
 
   const CustomTopBar({
     super.key,
     required this.title,
     this.showActions = true,
+    this.showDate,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final shouldShowDate = showDate ?? (title == 'Dashboard');
     
     final hour = DateTime.now().hour;
     String greeting = "Hello";
@@ -51,13 +54,15 @@ class CustomTopBar extends StatelessWidget implements PreferredSizeWidget {
                 color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              formattedDate,
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+            if (shouldShowDate) ...[
+              const SizedBox(height: 2),
+              Text(
+                formattedDate,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
