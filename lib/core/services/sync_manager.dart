@@ -4,6 +4,7 @@ import 'package:arc/core/services/hive_service.dart';
 import 'package:arc/core/services/sync_service.dart';
 
 enum SyncStatus { idle, syncing, success, failed }
+enum LogoutSyncStatus { idle, syncing, success, failed }
 
 class SyncManager {
   final String? _userId;
@@ -12,6 +13,7 @@ class SyncManager {
   static const String recentSyncTimestampsKey = 'recent_successful_sync_timestamps';
   static const String syncStatusKey = 'sync_status';
   static const String syncLastErrorKey = 'sync_last_error';
+  static const String logoutStatusKey = 'logout_sync_status';
 
   SyncManager({String? userId}) : _userId = userId;
 
@@ -92,13 +94,44 @@ class SyncManager {
     }
   }
 
+  LogoutSyncStatus getLogoutSyncStatus() {
+    final uid = _userId ?? 'default';
+    final box = _getSettingsBox();
+    final statusStr = box.get('${logoutStatusKey}_$uid', defaultValue: 'idle') as String;
+    switch (statusStr) {
+      case 'syncing':
+        return LogoutSyncStatus.syncing;
+      case 'success':
+        return LogoutSyncStatus.success;
+      case 'failed':
+        return LogoutSyncStatus.failed;
+      default:
+        return LogoutSyncStatus.idle;
+    }
+  }
+
+  void _setLogoutStatus(LogoutSyncStatus status) {
+    final uid = _userId ?? 'default';
+    final box = _getSettingsBox();
+    box.put('${logoutStatusKey}_$uid', status.name);
+  }
+
   /// Flushes pending change queues (tasks, habits, money, settings).
   /// Pending change uploads are NOT full syncs and do not update or check 12h cooldown.
-  Future<void> flushPendingChanges(SyncService syncService) async {
+  Future<bool> flushPendingChanges(SyncService syncService) async {
+    _setLogoutStatus(LogoutSyncStatus.syncing);
     try {
-      await syncService.syncAllPending();
+      final success = await syncService.syncAllPending();
+      if (success) {
+        _setLogoutStatus(LogoutSyncStatus.success);
+      } else {
+        _setLogoutStatus(LogoutSyncStatus.failed);
+      }
+      return success;
     } catch (e) {
       debugPrint('SyncManager notice during pending flush: $e');
+      _setLogoutStatus(LogoutSyncStatus.failed);
+      return false;
     }
   }
 

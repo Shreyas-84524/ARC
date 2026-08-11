@@ -49,7 +49,7 @@ class FakeTaskRepository implements TaskRepository {
   }
 
   @override
-  Future<void> syncPending() async {}
+  Future<bool> syncPending() async => true;
 
   @override
   Future<int> performEndOfDayCleanup({String? overrideDateStr}) async {
@@ -91,7 +91,7 @@ class FakeHabitRepository implements HabitRepository {
   }
 
   @override
-  Future<void> syncPending() async {}
+  Future<bool> syncPending() async => true;
 }
 
 class FakeMoneyRepository implements MoneyRepository {
@@ -128,7 +128,7 @@ class FakeMoneyRepository implements MoneyRepository {
   Future<void> saveMonthlySummary(MonthlySummary summary) async {}
 
   @override
-  Future<void> syncPending() async {}
+  Future<bool> syncPending() async => true;
 }
 
 class FakeSettingsRepository implements SettingsRepository {
@@ -145,7 +145,7 @@ class FakeSettingsRepository implements SettingsRepository {
   }
 
   @override
-  Future<void> syncPending() async {}
+  Future<bool> syncPending() async => true;
 }
 
 void main() {

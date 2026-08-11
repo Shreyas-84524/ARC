@@ -119,52 +119,72 @@ class HabitRepository {
     }
   }
 
-  Future<void> syncPending() async {
-    if (_queueBox.isEmpty) return;
+  Future<bool> syncPending() async {
+    if (_queueBox.isEmpty) return true;
 
+    debugPrint('[HabitRepository.syncPending] Found ${_queueBox.length} pending habit sync items for UID: $_userId');
     final keys = List.from(_queueBox.keys);
+    bool allSuccess = true;
+
     for (final key in keys) {
       final item = _queueBox.get(key);
-      if (item == null) continue;
+      if (item == null) {
+        await _queueBox.delete(key);
+        continue;
+      }
 
       final id = item['id'] as String?;
       final type = item['type'] as String?;
       final action = item['action'] as String?;
 
       if (id == null || type == null || action == null) {
+        debugPrint('[HabitRepository.syncPending] Removing malformed habit queue item with key: $key');
         await _queueBox.delete(key);
         continue;
       }
 
       try {
         if (type == 'habit') {
+          final docPath = _habitsRef().doc(id).path;
+          debugPrint('[HabitRepository.syncPending] Attempting $action for habit ID: $id on path: $docPath');
           if (action == 'upsert') {
             final habit = _habitBox.get(id);
             final payload =
                 habit?.toMap() ?? (item['data'] as Map<String, dynamic>?);
             if (payload != null) {
-              await _habitsRef().doc(id).set(payload);
+              await _habitsRef().doc(id).set(payload).timeout(const Duration(seconds: 8));
+            } else {
+              await _queueBox.delete(key);
+              continue;
             }
           } else if (action == 'delete') {
-            await _habitsRef().doc(id).delete();
+            await _habitsRef().doc(id).delete().timeout(const Duration(seconds: 8));
           }
         } else if (type == 'entry') {
+          final docPath = _entriesRef().doc(id).path;
+          debugPrint('[HabitRepository.syncPending] Attempting $action for entry ID: $id on path: $docPath');
           if (action == 'upsert') {
             final entry = _entryBox.get(id);
             final payload =
                 entry?.toMap() ?? (item['data'] as Map<String, dynamic>?);
             if (payload != null) {
-              await _entriesRef().doc(id).set(payload);
+              await _entriesRef().doc(id).set(payload).timeout(const Duration(seconds: 8));
+            } else {
+              await _queueBox.delete(key);
+              continue;
             }
           } else if (action == 'delete') {
-            await _entriesRef().doc(id).delete();
+            await _entriesRef().doc(id).delete().timeout(const Duration(seconds: 8));
           }
         }
         await _queueBox.delete(key);
+        debugPrint('[HabitRepository.syncPending] SUCCESS: $action for habit/entry ID: $id completed. Queue item removed.');
       } catch (e) {
-        debugPrint('Failed to sync habit queue item $key: $e');
+        debugPrint('[HabitRepository.syncPending] FAILURE: Sync failed for habit queue item $key. Error: $e');
+        allSuccess = false;
         break; // Stop and retry later if network fails again
       }
     }
+    return allSuccess && _queueBox.isEmpty;
   }
 }

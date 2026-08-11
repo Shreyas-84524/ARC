@@ -242,9 +242,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       // 1. Flush pending changes before logout
       final syncService = ref.read(syncServiceProvider);
       final syncManager = ref.read(syncManagerProvider);
-      await syncManager.flushPendingChanges(syncService);
+      final flushSuccess = await syncManager.flushPendingChanges(syncService);
 
-      // 2. Check if unsynced items still remain in queues (e.g. if network failed)
+      // 2. Check if unsynced items still remain in queues (e.g. if network or sync failed)
       bool hasUnsyncedItems = false;
       if (userId != null && userId.isNotEmpty) {
         final taskQ = HiveService().getUserBox(HiveService.tasksSyncQueueBoxName, userId);
@@ -253,7 +253,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         hasUnsyncedItems = taskQ.isNotEmpty || habitQ.isNotEmpty || moneyQ.isNotEmpty;
       }
 
-      if (hasUnsyncedItems) {
+      if (!flushSuccess || hasUnsyncedItems) {
         if (mounted) Navigator.of(context).pop(); // Dismiss loading
 
         if (mounted) {
@@ -262,7 +262,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             builder: (context) => AlertDialog(
               title: const Text('Logout Paused'),
               content: const Text(
-                'Some changes could not be saved to cloud storage due to network issues. Please check your internet connection and try again.',
+                'Some changes could not be saved to cloud storage due to network issues or sync errors. Please check your internet connection and try again.',
               ),
               actions: [
                 TextButton(

@@ -19,12 +19,34 @@ class SyncService {
   final MoneyRepository _moneyRepository;
   final SettingsRepository _settingsRepository;
 
-  final fs.FirebaseFirestore _firestore = fs.FirebaseFirestore.instance;
+  final fs.FirebaseFirestore? _firestore;
   late final Box _settingsBox;
   final List<StreamSubscription> _subscriptions = [];
 
   bool _isSyncing = false;
   bool get isSyncing => _isSyncing;
+
+  Future<void>? _activeSyncFuture;
+
+  /// Mutex lock to serialize sync operations so background sync, pull-to-refresh,
+  /// and logout queue flushes never mutate queues or Firestore concurrently.
+  Future<T> _synchronized<T>(Future<T> Function() computation) async {
+    while (_activeSyncFuture != null) {
+      try {
+        await _activeSyncFuture;
+      } catch (_) {}
+    }
+
+    final completer = Completer<void>();
+    _activeSyncFuture = completer.future;
+
+    try {
+      return await computation();
+    } finally {
+      completer.complete();
+      _activeSyncFuture = null;
+    }
+  }
 
   SyncService({
     String? userId,
@@ -32,30 +54,34 @@ class SyncService {
     required HabitRepository habitRepository,
     required MoneyRepository moneyRepository,
     required SettingsRepository settingsRepository,
+    fs.FirebaseFirestore? firestore,
   })  : _userId = userId,
         _taskRepository = taskRepository,
         _habitRepository = habitRepository,
         _moneyRepository = moneyRepository,
-        _settingsRepository = settingsRepository {
+        _settingsRepository = settingsRepository,
+        _firestore = firestore {
     _settingsBox = HiveService().getUserBox(HiveService.settingsBoxName, _userId);
   }
 
   String? get userId => _userId;
 
   fs.CollectionReference<Map<String, dynamic>> _collectionRef(String colName) {
+    final firestore = _firestore ?? fs.FirebaseFirestore.instance;
     final uid = _userId;
     if (uid != null && uid.isNotEmpty) {
-      return _firestore.collection('users').doc(uid).collection(colName);
+      return firestore.collection('users').doc(uid).collection(colName);
     }
-    return _firestore.collection(colName);
+    return firestore.collection(colName);
   }
 
   fs.DocumentReference<Map<String, dynamic>> _settingsDocRef() {
+    final firestore = _firestore ?? fs.FirebaseFirestore.instance;
     final uid = _userId;
     if (uid != null && uid.isNotEmpty) {
-      return _firestore.collection('users').doc(uid).collection('settings').doc('profile');
+      return firestore.collection('users').doc(uid).collection('settings').doc('profile');
     }
-    return _firestore.collection('settings').doc('global');
+    return firestore.collection('settings').doc('global');
   }
 
   bool isInitialSyncCompleted() {
@@ -71,22 +97,31 @@ class SyncService {
     return taskBox.isEmpty && habitBox.isEmpty && moneyBox.isEmpty;
   }
 
-  Future<void> syncAllPending() async {
-    if (_isSyncing) return;
-    _isSyncing = true;
+  Future<bool> syncAllPending() async {
+    return _synchronized<bool>(() async {
+      _isSyncing = true;
 
-    try {
-      debugPrint('SyncService: Starting background synchronization of pending queues...');
-      await _taskRepository.syncPending();
-      await _habitRepository.syncPending();
-      await _moneyRepository.syncPending();
-      await _settingsRepository.syncPending();
-      debugPrint('SyncService: Background synchronization complete.');
-    } catch (e) {
-      debugPrint('SyncService warning during background sync: $e');
-    } finally {
-      _isSyncing = false;
-    }
+      try {
+        debugPrint('[SyncService.syncAllPending] Starting synchronized pending queue flush for UID: $_userId');
+        final taskOk = await _taskRepository.syncPending();
+        final habitOk = await _habitRepository.syncPending();
+        final moneyOk = await _moneyRepository.syncPending();
+        final settingsOk = await _settingsRepository.syncPending();
+
+        final allOk = taskOk && habitOk && moneyOk && settingsOk;
+        if (allOk) {
+          debugPrint('[SyncService.syncAllPending] All pending queues flushed successfully.');
+        } else {
+          debugPrint('[SyncService.syncAllPending] Pending synchronization incomplete due to unsynced items.');
+        }
+        return allOk;
+      } catch (e) {
+        debugPrint('[SyncService.syncAllPending] Error during background sync: $e');
+        return false;
+      } finally {
+        _isSyncing = false;
+      }
+    });
   }
 
   Future<void> pullInitialDataFromFirestore({VoidCallback? onRefreshState}) async {
@@ -95,117 +130,125 @@ class SyncService {
       return;
     }
 
-    try {
-      debugPrint('SyncService: Parallel downloading Cloud Firestore data to local database...');
+    return _synchronized<void>(() async {
+      _isSyncing = true;
+      try {
+        debugPrint('SyncService: Parallel downloading Cloud Firestore data to local database...');
 
-      final taskBox = HiveService().getUserBox<Task>(HiveService.tasksBoxName, _userId);
-      final taskQueue = HiveService().getUserBox(HiveService.tasksSyncQueueBoxName, _userId);
-      final habitBox = HiveService().getUserBox<Habit>(HiveService.habitsBoxName, _userId);
-      final habitQueue = HiveService().getUserBox(HiveService.habitsSyncQueueBoxName, _userId);
-      final entryBox = HiveService().getUserBox<HabitEntry>(HiveService.habitEntriesBoxName, _userId);
-      final txBox = HiveService().getUserBox<Transaction>(HiveService.moneyBoxName, _userId);
-      final moneyQueue = HiveService().getUserBox(HiveService.moneySyncQueueBoxName, _userId);
+        final taskBox = HiveService().getUserBox<Task>(HiveService.tasksBoxName, _userId);
+        final taskQueue = HiveService().getUserBox(HiveService.tasksSyncQueueBoxName, _userId);
+        final habitBox = HiveService().getUserBox<Habit>(HiveService.habitsBoxName, _userId);
+        final habitQueue = HiveService().getUserBox(HiveService.habitsSyncQueueBoxName, _userId);
+        final entryBox = HiveService().getUserBox<HabitEntry>(HiveService.habitEntriesBoxName, _userId);
+        final txBox = HiveService().getUserBox<Transaction>(HiveService.moneyBoxName, _userId);
+        final moneyQueue = HiveService().getUserBox(HiveService.moneySyncQueueBoxName, _userId);
 
-      // Execute all 7 Cloud Firestore queries concurrently in parallel
-      final results = await Future.wait([
-        _collectionRef('tasks').get().timeout(const Duration(seconds: 10)),
-        _collectionRef('habits').get().timeout(const Duration(seconds: 10)),
-        _collectionRef('habitEntries').get().timeout(const Duration(seconds: 10)),
-        _collectionRef('transactions').get().timeout(const Duration(seconds: 10)),
-        _collectionRef('budgets').get().timeout(const Duration(seconds: 10)),
-        _collectionRef('monthlySummaries').get().timeout(const Duration(seconds: 10)),
-        _settingsDocRef().get().timeout(const Duration(seconds: 10)),
-      ]);
+        // Execute all 7 Cloud Firestore queries concurrently in parallel
+        final results = await Future.wait([
+          _collectionRef('tasks').get().timeout(const Duration(seconds: 10)),
+          _collectionRef('habits').get().timeout(const Duration(seconds: 10)),
+          _collectionRef('habitEntries').get().timeout(const Duration(seconds: 10)),
+          _collectionRef('transactions').get().timeout(const Duration(seconds: 10)),
+          _collectionRef('budgets').get().timeout(const Duration(seconds: 10)),
+          _collectionRef('monthlySummaries').get().timeout(const Duration(seconds: 10)),
+          _settingsDocRef().get().timeout(const Duration(seconds: 10)),
+        ]);
 
-      final taskDocs = results[0] as fs.QuerySnapshot<Map<String, dynamic>>;
-      final habitDocs = results[1] as fs.QuerySnapshot<Map<String, dynamic>>;
-      final entryDocs = results[2] as fs.QuerySnapshot<Map<String, dynamic>>;
-      final txDocs = results[3] as fs.QuerySnapshot<Map<String, dynamic>>;
-      final budgetDocs = results[4] as fs.QuerySnapshot<Map<String, dynamic>>;
-      final summaryDocs = results[5] as fs.QuerySnapshot<Map<String, dynamic>>;
-      final settingsDoc = results[6] as fs.DocumentSnapshot<Map<String, dynamic>>;
+        final taskDocs = results[0] as fs.QuerySnapshot<Map<String, dynamic>>;
+        final habitDocs = results[1] as fs.QuerySnapshot<Map<String, dynamic>>;
+        final entryDocs = results[2] as fs.QuerySnapshot<Map<String, dynamic>>;
+        final txDocs = results[3] as fs.QuerySnapshot<Map<String, dynamic>>;
+        final budgetDocs = results[4] as fs.QuerySnapshot<Map<String, dynamic>>;
+        final summaryDocs = results[5] as fs.QuerySnapshot<Map<String, dynamic>>;
+        final settingsDoc = results[6] as fs.DocumentSnapshot<Map<String, dynamic>>;
 
-      // 1. Process tasks collection
-      for (final doc in taskDocs.docs) {
-        final data = doc.data();
-        final remoteTask = Task.fromMap(data);
-        final localTask = taskBox.get(remoteTask.id);
-        if (taskQueue.containsKey(remoteTask.id)) continue;
+        // 1. Process tasks collection
+        for (final doc in taskDocs.docs) {
+          final data = doc.data();
+          final remoteTask = Task.fromMap(data);
+          final localTask = taskBox.get(remoteTask.id);
+          if (taskQueue.containsKey(remoteTask.id)) continue;
 
-        if (localTask == null || remoteTask.updatedAt.isAfter(localTask.updatedAt) || remoteTask.updatedAt.isAtSameMomentAs(localTask.updatedAt)) {
-          await taskBox.put(remoteTask.id, remoteTask);
+          if (localTask == null || remoteTask.updatedAt.isAfter(localTask.updatedAt) || remoteTask.updatedAt.isAtSameMomentAs(localTask.updatedAt)) {
+            await taskBox.put(remoteTask.id, remoteTask);
+          }
         }
-      }
 
-      // 2. Process habits collection
-      for (final doc in habitDocs.docs) {
-        final data = doc.data();
-        final remoteHabit = Habit.fromMap(data);
-        final localHabit = habitBox.get(remoteHabit.id);
-        if (habitQueue.containsKey('habit_${remoteHabit.id}')) continue;
+        // 2. Process habits collection
+        for (final doc in habitDocs.docs) {
+          final data = doc.data();
+          final remoteHabit = Habit.fromMap(data);
+          final localHabit = habitBox.get(remoteHabit.id);
+          if (habitQueue.containsKey('habit_${remoteHabit.id}')) continue;
 
-        if (localHabit == null || remoteHabit.updatedAt.isAfter(localHabit.updatedAt) || remoteHabit.updatedAt.isAtSameMomentAs(localHabit.updatedAt)) {
-          await habitBox.put(remoteHabit.id, remoteHabit);
+          if (localHabit == null || remoteHabit.updatedAt.isAfter(localHabit.updatedAt) || remoteHabit.updatedAt.isAtSameMomentAs(localHabit.updatedAt)) {
+            await habitBox.put(remoteHabit.id, remoteHabit);
+          }
         }
-      }
 
-      // 3. Process habit entries collection
-      for (final doc in entryDocs.docs) {
-        final data = doc.data();
-        final entry = HabitEntry.fromMap(data);
-        if (habitQueue.containsKey('entry_${entry.id}')) continue;
-        await entryBox.put(entry.id, entry);
-      }
-
-      // 4. Process transactions collection
-      for (final doc in txDocs.docs) {
-        final data = doc.data();
-        final remoteTx = Transaction.fromMap(data);
-        if (moneyQueue.containsKey('tx_${remoteTx.id}')) continue;
-        await txBox.put(remoteTx.id, remoteTx);
-      }
-
-      // 5. Process monthly budgets collection
-      for (final doc in budgetDocs.docs) {
-        final data = doc.data();
-        final month = doc.id;
-        final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
-        if (!moneyQueue.containsKey('budget_$month')) {
-          await _settingsBox.put('budget_$month', amount);
+        // 3. Process habit entries collection
+        for (final doc in entryDocs.docs) {
+          final data = doc.data();
+          final entry = HabitEntry.fromMap(data);
+          if (habitQueue.containsKey('entry_${entry.id}')) continue;
+          await entryBox.put(entry.id, entry);
         }
-      }
 
-      // 6. Process monthly summaries collection
-      for (final doc in summaryDocs.docs) {
-        final data = doc.data();
-        final month = doc.id;
-        if (!moneyQueue.containsKey('summary_$month')) {
-          await _settingsBox.put('summary_$month', data);
+        // 4. Process transactions collection
+        for (final doc in txDocs.docs) {
+          final data = doc.data();
+          final remoteTx = Transaction.fromMap(data);
+          if (moneyQueue.containsKey('tx_${remoteTx.id}')) continue;
+          await txBox.put(remoteTx.id, remoteTx);
         }
-      }
 
-      // 7. Process settings document
-      if (settingsDoc.exists && settingsDoc.data() != null) {
-        final data = settingsDoc.data()!;
-        final isQueued = _settingsBox.get('settings_sync_queued', defaultValue: false) as bool;
-        if (!isQueued) {
-          await _settingsBox.put(SettingsRepository.settingsHiveKey, data);
+        // 5. Process monthly budgets collection
+        for (final doc in budgetDocs.docs) {
+          final data = doc.data();
+          final month = doc.id;
+          final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
+          if (!moneyQueue.containsKey('budget_$month')) {
+            await _settingsBox.put('budget_$month', amount);
+          }
         }
+
+        // 6. Process monthly summaries collection
+        for (final doc in summaryDocs.docs) {
+          final data = doc.data();
+          final month = doc.id;
+          if (!moneyQueue.containsKey('summary_$month')) {
+            await _settingsBox.put('summary_$month', data);
+          }
+        }
+
+        // 7. Process settings document
+        if (settingsDoc.exists && settingsDoc.data() != null) {
+          final data = settingsDoc.data()!;
+          final isQueued = _settingsBox.get('settings_sync_queued', defaultValue: false) as bool;
+          if (!isQueued) {
+            await _settingsBox.put(SettingsRepository.settingsHiveKey, data);
+          }
+        }
+
+        // 8. Process any remaining local pending changes to push upstream
+        await _taskRepository.syncPending();
+        await _habitRepository.syncPending();
+        await _moneyRepository.syncPending();
+        await _settingsRepository.syncPending();
+
+        await _settingsBox.put('initial_sync_completed', true);
+        debugPrint('SyncService: Parallel download from Firestore completed successfully.');
+
+        if (onRefreshState != null) {
+          onRefreshState();
+        }
+      } catch (e) {
+        debugPrint("SyncService notice: Offline or sync warning: $e");
+        rethrow;
+      } finally {
+        _isSyncing = false;
       }
-
-      // 8. Process any remaining local pending changes to push upstream
-      await syncAllPending();
-
-      await _settingsBox.put('initial_sync_completed', true);
-      debugPrint('SyncService: Parallel download from Firestore completed successfully.');
-
-      if (onRefreshState != null) {
-        onRefreshState();
-      }
-    } catch (e) {
-      debugPrint("SyncService notice: Offline or sync warning: $e");
-      rethrow;
-    }
+    });
   }
 
   void startRealTimeSync({VoidCallback? onRefreshState}) {

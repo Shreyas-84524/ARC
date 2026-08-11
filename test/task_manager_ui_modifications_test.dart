@@ -32,7 +32,7 @@ class InMemoryTaskRepository implements TaskRepository {
   }
 
   @override
-  Future<void> syncPending() async {}
+  Future<bool> syncPending() async => true;
 
   @override
   Future<int> performEndOfDayCleanup({String? overrideDateStr}) async => 0;

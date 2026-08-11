@@ -48,7 +48,7 @@ class InMemoryMoneyRepository implements MoneyRepository {
   Future<void> saveMonthlySummary(MonthlySummary summary) async {}
 
   @override
-  Future<void> syncPending() async {}
+  Future<bool> syncPending() async => true;
 }
 
 void main() {

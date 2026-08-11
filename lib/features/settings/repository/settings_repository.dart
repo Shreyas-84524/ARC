@@ -53,17 +53,22 @@ class SettingsRepository {
     }
   }
 
-  Future<void> syncPending() async {
+  Future<bool> syncPending() async {
     final bool isQueued =
         _settingsBox.get('settings_sync_queued', defaultValue: false) as bool;
-    if (!isQueued) return;
+    if (!isQueued) return true;
 
     try {
+      final docPath = _settingsDocRef().path;
+      debugPrint('[SettingsRepository.syncPending] Attempting settings set on path: $docPath for UID: $_userId');
       final settings = getSettings();
-      await _settingsDocRef().set(settings.toMap());
+      await _settingsDocRef().set(settings.toMap()).timeout(const Duration(seconds: 8));
       await _settingsBox.delete('settings_sync_queued');
+      debugPrint('[SettingsRepository.syncPending] SUCCESS: settings sync completed.');
+      return true;
     } catch (e) {
-      debugPrint('SettingsRepository syncPending failed: $e');
+      debugPrint('[SettingsRepository.syncPending] FAILURE: settings sync failed: $e');
+      return false;
     }
   }
 }

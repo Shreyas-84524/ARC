@@ -71,41 +71,57 @@ class TaskRepository {
     }
   }
 
-  Future<void> syncPending() async {
-    if (_queueBox.isEmpty) return;
+  Future<bool> syncPending() async {
+    if (_queueBox.isEmpty) return true;
 
-    debugPrint('TaskRepository: found ${_queueBox.length} pending sync actions.');
+    debugPrint('[TaskRepository.syncPending] Found ${_queueBox.length} pending task sync items for UID: $_userId');
     final keys = List.from(_queueBox.keys);
+    bool allSuccess = true;
 
     for (final key in keys) {
       final item = _queueBox.get(key);
-      if (item == null) continue;
+      if (item == null) {
+        await _queueBox.delete(key);
+        continue;
+      }
 
       final id = item['id'] as String?;
       final action = item['action'] as String?;
 
       if (id == null || action == null) {
+        debugPrint('[TaskRepository.syncPending] Removing malformed queue item with key: $key');
         await _queueBox.delete(key);
         continue;
       }
+
+      final docPath = _tasksRef().doc(id).path;
+      debugPrint('[TaskRepository.syncPending] Attempting $action for task ID: $id on path: $docPath');
 
       try {
         if (action == 'upsert') {
           final task = _taskBox.get(id);
           final payload = task?.toMap() ?? (item['data'] as Map<String, dynamic>?);
           if (payload != null) {
-            await _tasksRef().doc(id).set(payload);
+            await _tasksRef().doc(id).set(payload).timeout(const Duration(seconds: 8));
+          } else {
+            debugPrint('[TaskRepository.syncPending] Missing payload for task ID: $id; removing queue entry.');
+            await _queueBox.delete(key);
+            continue;
           }
         } else if (action == 'delete') {
-          await _tasksRef().doc(id).delete();
+          await _tasksRef().doc(id).delete().timeout(const Duration(seconds: 8));
         }
+
         await _queueBox.delete(key);
-        debugPrint('Successfully synced pending action ($action) for task $id.');
+        debugPrint('[TaskRepository.syncPending] SUCCESS: $action for task ID: $id completed. Queue item removed.');
       } catch (e) {
-        debugPrint('Failed to sync pending action for task $id: $e');
-        break; // Stop and retry later if network unavailable
+        allSuccess = false;
+        debugPrint('[TaskRepository.syncPending] FAILURE: Sync failed for task ID: $id. Error: $e');
+        debugPrint('[TaskRepository.syncPending] Item $key remains in queue box.');
+        break; // Stop loop and return false to preserve remaining items
       }
     }
+    return allSuccess && _queueBox.isEmpty;
   }
 
   Future<int> performEndOfDayCleanup({String? overrideDateStr}) async {

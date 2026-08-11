@@ -19,7 +19,7 @@ class MockTaskRepository implements TaskRepository {
   @override
   Future<void> deleteTask(String id) async {}
   @override
-  Future<void> syncPending() async {}
+  Future<bool> syncPending() async => true;
   @override
   Future<int> performEndOfDayCleanup({String? overrideDateStr}) async => 0;
 }
@@ -38,7 +38,7 @@ class MockHabitRepository implements HabitRepository {
   @override
   Future<void> toggleEntry(String habitId, String dateStr, bool completed) async {}
   @override
-  Future<void> syncPending() async {}
+  Future<bool> syncPending() async => true;
 }
 
 class InMemoryMoneyRepository implements MoneyRepository {
@@ -78,7 +78,7 @@ class InMemoryMoneyRepository implements MoneyRepository {
   Future<void> saveMonthlySummary(MonthlySummary summary) async {}
 
   @override
-  Future<void> syncPending() async {}
+  Future<bool> syncPending() async => true;
 }
 
 void main() {

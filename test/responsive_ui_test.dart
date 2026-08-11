@@ -27,7 +27,7 @@ class TestTaskRepository implements TaskRepository {
   @override
   Future<void> deleteTask(String id) async {}
   @override
-  Future<void> syncPending() async {}
+  Future<bool> syncPending() async => true;
   @override
   Future<int> performEndOfDayCleanup({String? overrideDateStr}) async => 0;
 }
@@ -46,7 +46,7 @@ class TestHabitRepository implements HabitRepository {
   @override
   Future<void> toggleEntry(String habitId, String dateStr, bool completed) async {}
   @override
-  Future<void> syncPending() async {}
+  Future<bool> syncPending() async => true;
 }
 
 class TestMoneyRepository implements MoneyRepository {
@@ -65,7 +65,7 @@ class TestMoneyRepository implements MoneyRepository {
   @override
   Future<void> saveMonthlySummary(MonthlySummary summary) async {}
   @override
-  Future<void> syncPending() async {}
+  Future<bool> syncPending() async => true;
 }
 
 class TestSettingsRepository implements SettingsRepository {
@@ -76,7 +76,7 @@ class TestSettingsRepository implements SettingsRepository {
   @override
   Future<void> saveSettings(SettingsModel settings) async {}
   @override
-  Future<void> syncPending() async {}
+  Future<bool> syncPending() async => true;
 }
 
 void main() {

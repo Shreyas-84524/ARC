@@ -121,50 +121,72 @@ class MoneyRepository {
     }
   }
 
-  Future<void> syncPending() async {
-    if (_queueBox.isEmpty) return;
+  Future<bool> syncPending() async {
+    if (_queueBox.isEmpty) return true;
 
+    debugPrint('[MoneyRepository.syncPending] Found ${_queueBox.length} pending money sync items for UID: $_userId');
     final keys = List.from(_queueBox.keys);
+    bool allSuccess = true;
+
     for (final key in keys) {
       final item = _queueBox.get(key);
-      if (item == null) continue;
+      if (item == null) {
+        await _queueBox.delete(key);
+        continue;
+      }
 
       final id = item['id'] as String?;
       final type = item['type'] as String?;
       final action = item['action'] as String?;
 
       if (id == null || type == null || action == null) {
+        debugPrint('[MoneyRepository.syncPending] Removing malformed money queue item with key: $key');
         await _queueBox.delete(key);
         continue;
       }
 
       try {
         if (type == 'budget') {
+          final docPath = _budgetsRef().doc(id).path;
           final val = (item['value'] as num).toDouble();
+          debugPrint('[MoneyRepository.syncPending] Attempting budget set for month: $id on path: $docPath');
           await _budgetsRef()
               .doc(id)
-              .set({'amount': val, 'month': id});
+              .set({'amount': val, 'month': id}).timeout(const Duration(seconds: 8));
         } else if (type == 'tx') {
+          final docPath = _txRef().doc(id).path;
+          debugPrint('[MoneyRepository.syncPending] Attempting $action for transaction ID: $id on path: $docPath');
           if (action == 'upsert') {
             final tx = _txBox.get(id);
             final payload = tx?.toMap() ?? (item['data'] as Map<String, dynamic>?);
             if (payload != null) {
-              await _txRef().doc(id).set(payload);
+              await _txRef().doc(id).set(payload).timeout(const Duration(seconds: 8));
+            } else {
+              await _queueBox.delete(key);
+              continue;
             }
           } else if (action == 'delete') {
-            await _txRef().doc(id).delete();
+            await _txRef().doc(id).delete().timeout(const Duration(seconds: 8));
           }
         } else if (type == 'summary') {
+          final docPath = _summariesRef().doc(id).path;
           final payload = item['data'] as Map<String, dynamic>?;
+          debugPrint('[MoneyRepository.syncPending] Attempting summary set for month: $id on path: $docPath');
           if (payload != null) {
-            await _summariesRef().doc(id).set(payload);
+            await _summariesRef().doc(id).set(payload).timeout(const Duration(seconds: 8));
+          } else {
+            await _queueBox.delete(key);
+            continue;
           }
         }
         await _queueBox.delete(key);
+        debugPrint('[MoneyRepository.syncPending] SUCCESS: $action for money item $key completed. Queue item removed.');
       } catch (e) {
-        debugPrint('Failed to sync money queue item $key: $e');
+        debugPrint('[MoneyRepository.syncPending] FAILURE: Sync failed for money queue item $key. Error: $e');
+        allSuccess = false;
         break; // Stop and retry later if network remains unavailable
       }
     }
+    return allSuccess && _queueBox.isEmpty;
   }
 }
