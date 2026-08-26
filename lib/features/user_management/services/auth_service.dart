@@ -41,7 +41,8 @@ class AuthService {
       throw ArgumentError('Invalid password.');
     }
 
-    final matchingUsername = UserProfile.knownUsernames.firstWhere(
+    final allUsernames = [...UserProfile.knownUsernames, 'ADMIN'];
+    final matchingUsername = allUsernames.firstWhere(
       (u) => u.toLowerCase() == cleanUsername.toLowerCase(),
       orElse: () => throw ArgumentError('Invalid username.'),
     );
@@ -111,12 +112,15 @@ class AuthService {
       debugPrint('AuthService Hive box scoping warning: $e');
     }
 
+    final role = matchingUsername.toLowerCase() == 'admin' ? 'admin' : 'user';
+
     // 3. Build non-sensitive UserProfile
     final profile = UserProfile(
       id: uid,
       username: matchingUsername,
       displayName: matchingUsername,
       email: internalEmail,
+      role: role,
       createdAt: now,
       lastLoginAt: now,
     );

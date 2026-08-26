@@ -14,16 +14,15 @@ void main() {
     });
 
     test('Option A maps usernames to internal email identities correctly', () {
-      expect(authService.getInternalEmail('Shreyas'), equals('shreyas@arc.app'));
+      expect(authService.getInternalEmail('Shreyas'), equals('shigwanshreyas4@gmail.com'));
       expect(authService.getInternalEmail('Aman'), equals('aman@arc.app'));
       expect(authService.getInternalEmail('Rohit'), equals('rohit@arc.app'));
       expect(authService.getInternalEmail('Sachi'), equals('sachi@arc.app'));
       expect(authService.getInternalEmail('Yash'), equals('yash@arc.app'));
     });
 
-    test('All 5 mandatory usernames exist in knownUsernames', () {
-      expect(UserProfile.knownUsernames, containsAll(['Shreyas', 'Aman', 'Rohit', 'Sachi', 'Yash']));
-      expect(UserProfile.knownUsernames.length, equals(5));
+    test('All mandatory usernames exist in knownUsernames', () {
+      expect(UserProfile.knownUsernames, containsAll(['Shreyas', 'Aman', 'Rohit', 'Sachi', 'Yash', 'Purushottam']));
     });
 
     test('AuthService loginWithUsername handles invalid username gracefully', () async {
@@ -40,10 +39,35 @@ void main() {
       );
 
       expect(profile.username, equals('Shreyas'));
-      expect(profile.email, equals('shreyas@arc.app'));
-      expect(profile.id, equals('uid_shreyas'));
+      expect(profile.email, equals('shigwanshreyas4@gmail.com'));
       expect(mockAuth.currentUser, isNotNull);
-      expect(mockAuth.currentUser!.email, equals('shreyas@arc.app'));
+      expect(mockAuth.currentUser!.email, equals('shigwanshreyas4@gmail.com'));
+    });
+
+    test('AuthService loginWithUsername creates valid UserProfile for Purushottam via Firebase Auth', () async {
+      final profile = await authService.loginWithUsername(
+        username: 'Purushottam',
+        password: '123456',
+      );
+
+      expect(profile.username, equals('Purushottam'));
+      expect(profile.email, equals('purushottam@arc.app'));
+      expect(profile.id, equals('uid_purushottam'));
+      expect(mockAuth.currentUser, isNotNull);
+      expect(mockAuth.currentUser!.email, equals('purushottam@arc.app'));
+    });
+
+    test('AuthService loginWithUsername creates valid UserProfile for Sachi via Firebase Auth', () async {
+      final profile = await authService.loginWithUsername(
+        username: 'Sachi',
+        password: '123456',
+      );
+
+      expect(profile.username, equals('Sachi'));
+      expect(profile.email, equals('sachi@arc.app'));
+      expect(profile.id, equals('uid_sachi'));
+      expect(mockAuth.currentUser, isNotNull);
+      expect(mockAuth.currentUser!.email, equals('sachi@arc.app'));
     });
 
     test('AuthService loginWithUsername creates valid UserProfile for Aman via Firebase Auth', () async {

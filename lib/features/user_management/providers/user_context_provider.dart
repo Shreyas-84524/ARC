@@ -48,11 +48,27 @@ class UserContextNotifier extends StateNotifier<UserContext> {
   Future<void> _setFromFirebaseUser(auth.User user) async {
     final email = user.email ?? '';
     final username = _usernameFromEmail(email);
+
+    String role = 'user';
+    try {
+      final tokenResult = await user.getIdTokenResult();
+      if (tokenResult.claims?['role'] == 'admin') {
+        role = 'admin';
+      }
+    } catch (_) {
+      // Ignore token fetch errors in testing environments
+    }
+
+    if (username.toUpperCase() == 'ADMIN' || email.toLowerCase() == 'admin@arc.app') {
+      role = 'admin';
+    }
+
     final profile = UserProfile(
       id: user.uid,
       username: username,
       displayName: username,
       email: email,
+      role: role,
       createdAt: user.metadata.creationTime ?? DateTime.now(),
       lastLoginAt: user.metadata.lastSignInTime,
     );
@@ -67,6 +83,9 @@ class UserContextNotifier extends StateNotifier<UserContext> {
   static String _usernameFromEmail(String email) {
     if (email.contains('@')) {
       final prefix = email.split('@').first;
+      if (prefix.toLowerCase() == 'admin') {
+        return 'ADMIN';
+      }
       if (prefix.isNotEmpty) {
         return prefix[0].toUpperCase() + prefix.substring(1).toLowerCase();
       }

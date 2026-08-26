@@ -11,6 +11,7 @@ import 'package:arc/features/search/screens/global_search_screen.dart';
 import 'package:arc/features/notifications/screens/notification_center_screen.dart';
 import 'package:arc/features/user_management/views/login_screen.dart';
 import 'package:arc/features/user_management/views/splash_screen.dart';
+import 'package:arc/features/admin/screens/admin_dashboard_screen.dart';
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
 import 'package:arc/features/user_management/models/user_context.dart';
 
@@ -33,9 +34,10 @@ class RouterNotifier extends ChangeNotifier {
     final location = state.uri.path;
     final isLoggingIn = location == '/login';
     final isSplash = location == '/splash';
+    final isAdminRoute = location == '/admin';
 
     debugPrint(
-        '[RouterNotifier.redirect] path: $location, isInitializing: ${userContext.isInitializing}, isAuthenticated: ${userContext.isAuthenticated}');
+        '[RouterNotifier.redirect] path: $location, isInitializing: ${userContext.isInitializing}, isAuthenticated: ${userContext.isAuthenticated}, isAdmin: ${userContext.isAdmin}');
 
     // 1. While auth state is initializing from Firebase Auth persistent storage
     if (userContext.isInitializing) {
@@ -47,7 +49,17 @@ class RouterNotifier extends ChangeNotifier {
       return isLoggingIn ? null : '/login';
     }
 
-    // 3. If user IS authenticated and on splash or login screen
+    // 3. If user IS authenticated as Administrator
+    if (userContext.isAdmin) {
+      return isAdminRoute ? null : '/admin';
+    }
+
+    // 4. If normal user attempts to access /admin
+    if (isAdminRoute) {
+      return '/';
+    }
+
+    // 5. If user IS authenticated normal user on splash or login screen
     if (isLoggingIn || isSplash) {
       return '/';
     }
@@ -85,9 +97,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (BuildContext context, GoRouterState state) {
           return LoginScreen(
             onLoginSuccess: () {
-              GoRouter.of(context).go('/');
+              final userContext = ref.read(userContextProvider);
+              if (userContext.isAdmin) {
+                GoRouter.of(context).go('/admin');
+              } else {
+                GoRouter.of(context).go('/');
+              }
             },
           );
+        },
+      ),
+      GoRoute(
+        path: '/admin',
+        builder: (BuildContext context, GoRouterState state) {
+          return const AdminDashboardScreen();
         },
       ),
       ShellRoute(

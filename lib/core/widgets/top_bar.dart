@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:go_router/go_router.dart';
 import 'package:arc/core/theme/app_theme.dart';
+import 'package:arc/core/utils/greeting_utils.dart';
+import 'package:arc/features/user_management/providers/user_context_provider.dart';
 
-class CustomTopBar extends StatelessWidget implements PreferredSizeWidget {
+class CustomTopBar extends ConsumerWidget implements PreferredSizeWidget {
   final String title;
   final bool showActions;
   final bool? showDate;
@@ -17,20 +20,18 @@ class CustomTopBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final shouldShowDate = showDate ?? (title == 'Dashboard');
-    
-    final hour = DateTime.now().hour;
-    String greeting = "Hello";
-    if (hour < 12) {
-      greeting = "Good Morning";
-    } else if (hour < 17) {
-      greeting = "Good Afternoon";
-    } else {
-      greeting = "Good Evening";
-    }
+
+    final userContext = ref.watch(userContextProvider);
+    final username = userContext.profile?.displayName ?? userContext.profile?.username;
+
+    final displayTitle = GreetingUtils.getGreetingTitle(
+      title: title,
+      username: username,
+    );
 
     final formattedDate = DateFormat('EEE, MMM d').format(DateTime.now());
 
@@ -48,7 +49,7 @@ class CustomTopBar extends StatelessWidget implements PreferredSizeWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              title == 'Dashboard' ? '$greeting, Shreyas' : title,
+              displayTitle,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,

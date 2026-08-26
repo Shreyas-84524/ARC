@@ -24,6 +24,8 @@ class UserContext {
   bool get isAuthenticated =>
       userId != null && userId!.isNotEmpty && !isInitializing;
 
+  bool get isAdmin => isAuthenticated && (profile?.isAdmin ?? false);
+
   bool get isLegacy => !isAuthenticated && !isInitializing;
 
   String get userNamespace =>

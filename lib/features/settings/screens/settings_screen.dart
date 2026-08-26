@@ -401,7 +401,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     final themeMode = ref.watch(themeModeProvider);
     final userContext = ref.watch(userContextProvider);
-    final currentUsername = userContext.profile?.username ?? 'Shreyas';
+    final currentUsername = userContext.profile?.displayName ?? userContext.profile?.username ?? 'User';
 
     return Scaffold(
       appBar: AppBar(
