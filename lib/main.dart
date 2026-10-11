@@ -107,6 +107,12 @@ class _SyncInitializerState extends ConsumerState<SyncInitializer> {
         onRefreshState: refreshAllNotifiers,
       );
       syncService.startRealTimeSync(onRefreshState: refreshAllNotifiers);
+
+      // Reconcile scheduled notifications for the authenticated user
+      await NotificationService().reconcileScheduledNotifications(
+        tasks: ref.read(tasksProvider),
+        habits: ref.read(habitsProvider),
+      );
     } catch (e) {
       debugPrint('SyncInitializer background sync notice: $e');
     }

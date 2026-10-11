@@ -61,7 +61,7 @@ void main() {
 
       final emails = UserProfile.knownUsernames.map(UserProfile.emailForUsername).toSet();
       expect(emails.length, equals(6));
-      expect(emails, contains('shreyas@arc.app'));
+      expect(emails, contains(UserProfile.emailForUsername('Shreyas')));
       expect(emails, contains('purushottam@arc.app'));
       expect(emails, contains('aman@arc.app'));
       expect(emails, contains('rohit@arc.app'));

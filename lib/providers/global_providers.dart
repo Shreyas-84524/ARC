@@ -415,30 +415,48 @@ class HabitsNotifier extends StateNotifier<List<Habit>> {
 
   void _loadHabits() {
     state = _repository.getHabits();
+    _rescheduleActiveHabitReminders();
     _updateReminder();
     syncHabits();
+  }
+
+  Future<void> _rescheduleActiveHabitReminders() async {
+    for (final habit in state) {
+      if (habit.reminderTime != null && habit.reminderTime!.trim().isNotEmpty) {
+        await NotificationService().scheduleHabitReminder(habit);
+      }
+    }
   }
 
   Future<void> syncHabits() async {
     await _repository.syncPending();
     state = _repository.getHabits();
+    await _rescheduleActiveHabitReminders();
     _updateReminder();
   }
 
   Future<void> addHabit(Habit habit) async {
     await _repository.saveHabit(habit);
+    if (habit.reminderTime != null && habit.reminderTime!.trim().isNotEmpty) {
+      await NotificationService().scheduleHabitReminder(habit);
+    }
     state = _repository.getHabits();
     _updateReminder();
   }
 
   Future<void> updateHabit(Habit habit) async {
     await _repository.saveHabit(habit);
+    await NotificationService().cancelHabitReminder(habit.id);
+    if (habit.reminderTime != null && habit.reminderTime!.trim().isNotEmpty) {
+      await NotificationService().scheduleHabitReminder(habit);
+    }
     state = _repository.getHabits();
     _updateReminder();
   }
 
   Future<void> deleteHabit(String id) async {
     await _repository.deleteHabit(id);
+    await NotificationService().cancelHabitReminder(id);
     state = _repository.getHabits();
     _updateReminder();
   }
@@ -468,6 +486,7 @@ class HabitsNotifier extends StateNotifier<List<Habit>> {
 
   void refresh() {
     state = _repository.getHabits();
+    _rescheduleActiveHabitReminders();
     _updateReminder();
   }
 }

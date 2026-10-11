@@ -11,6 +11,8 @@ import 'package:arc/features/money_tracker/models/transaction_model.dart';
 import 'package:arc/features/money_tracker/repository/money_repository.dart';
 import 'package:arc/features/settings/models/settings_model.dart';
 import 'package:arc/features/settings/repository/settings_repository.dart';
+import 'package:arc/features/user_management/models/user_profile.dart';
+import 'package:arc/features/user_management/providers/user_context_provider.dart';
 import 'package:arc/providers/global_providers.dart';
 
 class MockTaskRepo implements TaskRepository {
@@ -85,6 +87,20 @@ void main() {
         moneyRepositoryProvider.overrideWithValue(MockMoneyRepo()),
         settingsRepositoryProvider.overrideWithValue(mockSettingsRepo),
         appSettingsProvider.overrideWith((ref) => SettingsNotifier(mockSettingsRepo)),
+        userContextProvider.overrideWith((ref) {
+          final notifier = UserContextNotifier();
+          notifier.setActiveUser(
+            userId: 'uid_shreyas',
+            profile: UserProfile(
+              id: 'uid_shreyas',
+              username: 'Shreyas',
+              displayName: 'Shreyas',
+              email: 'shreyas@arc.app',
+              createdAt: DateTime.now(),
+            ),
+          );
+          return notifier;
+        }),
       ],
       child: const MaterialApp(
         home: SettingsScreen(),

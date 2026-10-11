@@ -10,6 +10,8 @@ import 'package:arc/features/settings/screens/settings_screen.dart';
 import 'package:arc/features/search/screens/global_search_screen.dart';
 import 'package:arc/features/notifications/screens/notification_center_screen.dart';
 import 'package:arc/features/user_management/views/login_screen.dart';
+import 'package:arc/features/user_management/views/signup_screen.dart';
+import 'package:arc/features/user_management/views/forgot_password_screen.dart';
 import 'package:arc/features/user_management/views/splash_screen.dart';
 import 'package:arc/features/admin/screens/admin_dashboard_screen.dart';
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
@@ -33,8 +35,12 @@ class RouterNotifier extends ChangeNotifier {
     final userContext = _ref.read(userContextProvider);
     final location = state.uri.path;
     final isLoggingIn = location == '/login';
+    final isSignUp = location == '/signup';
+    final isForgotPassword = location == '/forgot-password';
     final isSplash = location == '/splash';
     final isAdminRoute = location == '/admin';
+    final isPublicAuthRoute =
+        isLoggingIn || isSignUp || isForgotPassword;
 
     debugPrint(
         '[RouterNotifier.redirect] path: $location, isInitializing: ${userContext.isInitializing}, isAuthenticated: ${userContext.isAuthenticated}, isAdmin: ${userContext.isAdmin}');
@@ -46,7 +52,7 @@ class RouterNotifier extends ChangeNotifier {
 
     // 2. If user is NOT authenticated
     if (!userContext.isAuthenticated) {
-      return isLoggingIn ? null : '/login';
+      return isPublicAuthRoute ? null : '/login';
     }
 
     // 3. If user IS authenticated as Administrator
@@ -59,8 +65,8 @@ class RouterNotifier extends ChangeNotifier {
       return '/';
     }
 
-    // 5. If user IS authenticated normal user on splash or login screen
-    if (isLoggingIn || isSplash) {
+    // 5. If user IS authenticated normal user on splash or public auth screen
+    if (isPublicAuthRoute || isSplash) {
       return '/';
     }
 
@@ -105,6 +111,27 @@ final routerProvider = Provider<GoRouter>((ref) {
               }
             },
           );
+        },
+      ),
+      GoRoute(
+        path: '/signup',
+        builder: (BuildContext context, GoRouterState state) {
+          return SignUpScreen(
+            onSignUpSuccess: () {
+              final userContext = ref.read(userContextProvider);
+              if (userContext.isAdmin) {
+                GoRouter.of(context).go('/admin');
+              } else {
+                GoRouter.of(context).go('/');
+              }
+            },
+          );
+        },
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (BuildContext context, GoRouterState state) {
+          return const ForgotPasswordScreen();
         },
       ),
       GoRoute(
@@ -173,6 +200,14 @@ GoRouter createAppRouter({String initialLocation = '/login'}) {
       GoRoute(
         path: '/login',
         builder: (context, state) => LoginScreen(onLoginSuccess: () {}),
+      ),
+      GoRoute(
+        path: '/signup',
+        builder: (context, state) => SignUpScreen(onSignUpSuccess: () {}),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
       ),
       GoRoute(
         path: '/',

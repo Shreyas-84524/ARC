@@ -9,17 +9,25 @@ import 'package:arc/providers/global_providers.dart';
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
 import 'package:arc/features/user_management/models/user_profile.dart';
 import 'package:arc/features/user_management/services/auth_service.dart';
+import 'package:arc/features/user_management/models/auth_exception.dart';
+import 'package:arc/features/user_management/views/widgets/google_logo.dart';
 import 'package:arc/core/services/hive_service.dart';
+import 'package:arc/core/notifications/notification_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
-  const SettingsScreen({super.key});
+  final AuthService? authService;
+
+  const SettingsScreen({
+    super.key,
+    this.authService,
+  });
 
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  final AuthService _authService = AuthService();
+  late final AuthService _authService = widget.authService ?? AuthService();
 
   bool _masterNotifications = true;
   bool _taskReminders = true;
@@ -44,6 +52,202 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _showAddPasswordDialog(String email) async {
+    final formKey = GlobalKey<FormState>();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    bool obscureNew = true;
+    bool obscureConfirm = true;
+    bool isSubmitting = false;
+    String? localError;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: !isSubmitting,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (sbContext, setDialogState) {
+            final theme = Theme.of(sbContext);
+            final isDark = theme.brightness == Brightness.dark;
+
+            return AlertDialog(
+              backgroundColor: isDark ? AppColors.darkModal : AppColors.lightModal,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+              ),
+              title: Row(
+                children: [
+                  const Icon(LucideIcons.keyRound, color: AppColors.accent, size: 22),
+                  const SizedBox(width: 10),
+                  const Text('Add ARC Password'),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: SizedBox(
+                  width: 400,
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Adding an ARC password gives you another way to sign in. Your Google Sign-In will continue working normally.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        if (localError != null) ...[
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.errorContainer,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              localError!,
+                              style: TextStyle(
+                                color: theme.colorScheme.onErrorContainer,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        // Verified Google Email (Read-Only)
+                        TextFormField(
+                          initialValue: email,
+                          enabled: false,
+                          style: TextStyle(
+                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Verified Email',
+                            labelStyle: TextStyle(
+                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                            ),
+                            prefixIcon: const Icon(LucideIcons.mail),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        // New Password
+                        TextFormField(
+                          controller: newPasswordController,
+                          obscureText: obscureNew,
+                          enabled: !isSubmitting,
+                          style: TextStyle(
+                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'New Password',
+                            labelStyle: TextStyle(
+                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                            ),
+                            prefixIcon: const Icon(LucideIcons.lock),
+                            suffixIcon: IconButton(
+                              icon: Icon(obscureNew ? LucideIcons.eyeOff : LucideIcons.eye),
+                              onPressed: () => setDialogState(() => obscureNew = !obscureNew),
+                            ),
+                          ),
+                          validator: (v) {
+                            if (v == null || v.isEmpty) return 'Please enter a password';
+                            if (v.length < 6) return 'Password must be at least 6 characters';
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        // Confirm Password
+                        TextFormField(
+                          controller: confirmPasswordController,
+                          obscureText: obscureConfirm,
+                          enabled: !isSubmitting,
+                          style: TextStyle(
+                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Confirm Password',
+                            labelStyle: TextStyle(
+                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                            ),
+                            prefixIcon: const Icon(LucideIcons.checkCheck),
+                            suffixIcon: IconButton(
+                              icon: Icon(obscureConfirm ? LucideIcons.eyeOff : LucideIcons.eye),
+                              onPressed: () => setDialogState(() => obscureConfirm = !obscureConfirm),
+                            ),
+                          ),
+                          validator: (v) {
+                            if (v != newPasswordController.text) return 'Passwords do not match';
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting ? null : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: Colors.black,
+                  ),
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          if (!formKey.currentState!.validate()) return;
+                          setDialogState(() {
+                            isSubmitting = true;
+                            localError = null;
+                          });
+
+                          try {
+                            await _authService.linkPassword(newPassword: newPasswordController.text);
+                            if (dialogContext.mounted) {
+                              Navigator.of(dialogContext).pop();
+                            }
+                            if (mounted) {
+                              setState(() {});
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text(
+                                    'ARC Password added successfully! You can now log in with either Google or your email and password.',
+                                  ),
+                                  backgroundColor: Theme.of(context).colorScheme.primary,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setDialogState(() {
+                              isSubmitting = false;
+                              localError = e is AuthException ? e.message : e.toString();
+                            });
+                          }
+                        },
+                  child: isSubmitting
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                        )
+                      : const Text('Add Password', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    newPasswordController.dispose();
+    confirmPasswordController.dispose();
   }
 
   Future<void> _handleChangePassword() async {
@@ -291,13 +495,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       // 3. Stop real-time listeners for current user
       syncService.stopRealTimeSync();
 
+      // Cancel all scheduled notifications for the outgoing user
+      await NotificationService().cancelAllUserNotifications();
+
       // 4. Safely close current user's Hive boxes
       await HiveService().closeUserBoxes(userId);
 
-      // 5. Reset user context state
+      // 5. Invalidate user-scoped providers and caches
+      ref.invalidate(tasksProvider);
+      ref.invalidate(habitsProvider);
+      ref.invalidate(habitEntriesProvider);
+      ref.invalidate(moneyProvider);
+      ref.invalidate(monthlyBudgetProvider);
+      ref.invalidate(appSettingsProvider);
+      ref.invalidate(taskRepositoryProvider);
+      ref.invalidate(habitRepositoryProvider);
+      ref.invalidate(moneyRepositoryProvider);
+      ref.invalidate(settingsRepositoryProvider);
+
+      // 6. Reset user context state
       ref.read(userContextProvider.notifier).resetToLegacy();
 
-      // 6. Sign out from Firebase Auth
+      // 7. Sign out from Firebase Auth
       await _authService.logout();
 
       if (mounted) Navigator.of(context).pop(); // Dismiss loading
@@ -403,6 +622,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final userContext = ref.watch(userContextProvider);
     final currentUsername = userContext.profile?.displayName ?? userContext.profile?.username ?? 'User';
 
+    final linkedProviders = _authService.getLinkedProviders();
+    final hasGoogle = linkedProviders.isNotEmpty
+        ? linkedProviders.contains('google.com')
+        : (userContext.profile?.authProvider.contains('google') ?? false);
+    final hasPassword = linkedProviders.isNotEmpty
+        ? linkedProviders.contains('password')
+        : (userContext.profile?.authProvider.contains('password') ?? true);
+    final userEmail = userContext.profile?.email ?? UserProfile.emailForUsername(currentUsername);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -454,7 +682,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              userContext.profile?.email ?? UserProfile.emailForUsername(currentUsername),
+                              userEmail,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
                               ),
@@ -463,39 +691,151 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Change Password Action Button (Red color)
-                      InkWell(
-                        onTap: () {
-                          setState(() {
-                            _isPasswordSectionExpanded = !_isPasswordSectionExpanded;
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _isPasswordSectionExpanded ? LucideIcons.chevronUp : LucideIcons.key,
-                                size: 16,
-                                color: AppColors.danger,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                _isPasswordSectionExpanded ? 'Close' : 'Change Password',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
+                      // Change Password Action Button (Only shown if password provider exists)
+                      if (hasPassword)
+                        InkWell(
+                          onTap: () {
+                            setState(() {
+                              _isPasswordSectionExpanded = !_isPasswordSectionExpanded;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _isPasswordSectionExpanded ? LucideIcons.chevronUp : LucideIcons.key,
+                                  size: 16,
                                   color: AppColors.danger,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 6),
+                                Text(
+                                  _isPasswordSectionExpanded ? 'Close' : 'Change Password',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.danger,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+
+                  const Divider(height: 28),
+
+                  // Sign-in Methods Section (Requirement 4 & 24)
+                  Text(
+                    'Sign-in Methods',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Google Row
+                  Row(
+                    children: [
+                      const GoogleLogo(size: 18),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Google',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: hasGoogle
+                              ? AppColors.accent.withValues(alpha: 0.15)
+                              : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          hasGoogle ? 'Connected' : 'Not configured',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: hasGoogle
+                                ? AppColors.accent
+                                : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
                           ),
                         ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 10),
+
+                  // Email & Password Row
+                  Row(
+                    children: [
+                      Icon(
+                        LucideIcons.mail,
+                        size: 18,
+                        color: hasPassword ? AppColors.accent : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Email & Password',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: hasPassword
+                              ? AppColors.accent.withValues(alpha: 0.15)
+                              : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          hasPassword ? 'Connected' : 'Not configured',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: hasPassword
+                                ? AppColors.accent
+                                : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Optional Add ARC Password button (Requirement 4 & 5)
+                  if (!hasPassword) ...[
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      height: 42,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _showAddPasswordDialog(userEmail),
+                        icon: const Icon(LucideIcons.plusCircle, size: 16),
+                        label: const Text(
+                          'Add ARC Password',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.accent,
+                          side: const BorderSide(color: AppColors.accent),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
 
                   if (_isPasswordSectionExpanded) ...[
                     const Divider(height: 28),
@@ -673,7 +1013,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 SwitchListTile(
                   secondary: const Icon(LucideIcons.bell, color: AppColors.accent),
                   title: const Text('Master Notifications', style: TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: const Text('Enable or disable all local alerts'),
+                  subtitle: Text(_masterNotifications ? 'Notifications: Enabled' : 'Notifications: Disabled'),
                   value: _masterNotifications,
                   activeThumbColor: AppColors.accent,
                   onChanged: (val) {
@@ -683,6 +1023,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       _habitReminders = val;
                       _moneyReminders = val;
                     });
+                    if (!val) {
+                      NotificationService().cancelAllUserNotifications();
+                    } else {
+                      NotificationService().reconcileScheduledNotifications(
+                        tasks: ref.read(tasksProvider),
+                        habits: ref.read(habitsProvider),
+                      );
+                    }
                   },
                 ),
                 if (_masterNotifications) ...[
@@ -690,19 +1038,47 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   SwitchListTile(
                     secondary: const Icon(LucideIcons.checkSquare, color: AppColors.info),
                     title: const Text('Task Reminders'),
-                    subtitle: const Text('Alerts 1h, 30m, and due time'),
+                    subtitle: const Text('Alerts 5m before deadline and at due time'),
                     value: _taskReminders,
                     activeThumbColor: AppColors.accent,
-                    onChanged: (val) => setState(() => _taskReminders = val),
+                    onChanged: (val) {
+                      setState(() => _taskReminders = val);
+                      if (!val) {
+                        for (final task in ref.read(tasksProvider)) {
+                          NotificationService().cancelTaskReminders(task.id);
+                        }
+                      } else {
+                        for (final task in ref.read(tasksProvider)) {
+                          if (!task.completed && task.dueDate != null && task.dueTime != null) {
+                            NotificationService().scheduleTaskReminders(task);
+                          }
+                        }
+                      }
+                    },
                   ),
                   const Divider(height: 1, indent: 56),
                   SwitchListTile(
                     secondary: const Icon(LucideIcons.zap, color: AppColors.accent),
                     title: const Text('Habit Reminders'),
-                    subtitle: const Text('Evening check-in alert at 8:00 PM'),
+                    subtitle: const Text('Daily habit reminders & evening 8:00 PM alert'),
                     value: _habitReminders,
                     activeThumbColor: AppColors.accent,
-                    onChanged: (val) => setState(() => _habitReminders = val),
+                    onChanged: (val) {
+                      setState(() => _habitReminders = val);
+                      if (!val) {
+                        for (final habit in ref.read(habitsProvider)) {
+                          NotificationService().cancelHabitReminder(habit.id);
+                        }
+                        NotificationService().cancelEveningReminder();
+                      } else {
+                        for (final habit in ref.read(habitsProvider)) {
+                          if (habit.reminderTime != null && habit.reminderTime!.trim().isNotEmpty) {
+                            NotificationService().scheduleHabitReminder(habit);
+                          }
+                        }
+                        ref.read(habitsProvider.notifier).refresh();
+                      }
+                    },
                   ),
                   const Divider(height: 1, indent: 56),
                   SwitchListTile(
@@ -711,7 +1087,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     subtitle: const Text('Daily transaction alerts at 8 PM & 10 PM'),
                     value: _moneyReminders,
                     activeThumbColor: AppColors.accent,
-                    onChanged: (val) => setState(() => _moneyReminders = val),
+                    onChanged: (val) {
+                      setState(() => _moneyReminders = val);
+                      if (!val) {
+                        NotificationService().cancelMoneyReminders();
+                      } else {
+                        NotificationService().scheduleDailyMoneyReminders();
+                      }
+                    },
                   ),
                 ],
               ],

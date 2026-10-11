@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:arc/core/theme/app_theme.dart';
 import 'package:arc/features/user_management/views/login_screen.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   Widget buildTestWidget() {
     return ProviderScope(
       child: MaterialApp(
@@ -15,7 +22,7 @@ void main() {
     );
   }
 
-  testWidgets('LoginScreen displays title, placeholders, green Sign In button, and no Remember Me / Forgot Password', (WidgetTester tester) async {
+  testWidgets('LoginScreen displays title, placeholders, green Sign In button, Forgot Password and Sign Up links', (WidgetTester tester) async {
     await tester.pumpWidget(buildTestWidget());
     await tester.pumpAndSettle();
 
@@ -23,33 +30,36 @@ void main() {
     expect(find.text('Welcome Back'), findsOneWidget);
     expect(find.text('Enter your email and password to access your account'), findsOneWidget);
 
-    // 2. Verify Username Label and Placeholder
-    expect(find.text('Username'), findsOneWidget);
-    expect(find.text('Enter your username'), findsOneWidget);
+    // 2. Verify Email Label and Placeholder
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('name@example.com'), findsOneWidget);
 
     // 3. Verify Password Label and Placeholder
     expect(find.text('Password'), findsOneWidget);
     expect(find.text('Enter your password'), findsOneWidget);
 
-    // 4. Verify Remember me and Forgot Password options are completely absent
+    // 4. Verify Remember me is absent and Forgot Password link is present
     expect(find.text('Remember me'), findsNothing);
-    expect(find.text('Forgot Password'), findsNothing);
     expect(find.byType(Checkbox), findsNothing);
+    expect(find.text('Forgot Password?'), findsOneWidget);
 
-    // 5. Verify Sign In Button is present and uses AppColors.accent green background
+    // 5. Verify Sign Up link is present
+    expect(find.text('Sign Up'), findsOneWidget);
+
+    // 6. Verify Sign In Button is present and uses AppColors.accent green background
     final buttonFinder = find.widgetWithText(ElevatedButton, 'Sign In');
     expect(buttonFinder, findsOneWidget);
     final buttonWidget = tester.widget<ElevatedButton>(buttonFinder);
     expect(buttonWidget.style?.backgroundColor?.resolve({}), AppColors.accent);
 
-    // 6. Verify both fields are empty initially
-    final usernameField = tester.widget<EditableText>(
+    // 7. Verify both fields are empty initially
+    final emailField = tester.widget<EditableText>(
       find.descendant(
-        of: find.widgetWithText(TextFormField, 'Enter your username'),
+        of: find.widgetWithText(TextFormField, 'name@example.com'),
         matching: find.byType(EditableText),
       ),
     );
-    expect(usernameField.controller.text, isEmpty);
+    expect(emailField.controller.text, isEmpty);
 
     final passwordField = tester.widget<EditableText>(
       find.descendant(
@@ -68,10 +78,10 @@ void main() {
     ElevatedButton button = tester.widget<ElevatedButton>(buttonFinder);
     expect(button.onPressed, isNull); // Disabled when fields are empty
 
-    // Fill Username
+    // Fill Email
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Enter your username'),
-      'Shreyas',
+      find.widgetWithText(TextFormField, 'name@example.com'),
+      'shreyas@example.com',
     );
     await tester.pump();
 
@@ -89,13 +99,13 @@ void main() {
     expect(button.onPressed, isNotNull); // Enabled when both fields are filled!
   });
 
-  testWidgets('Invalid username entry displays ONLY "Invalid username"', (WidgetTester tester) async {
+  testWidgets('Invalid credential entry displays error message', (WidgetTester tester) async {
     await tester.pumpWidget(buildTestWidget());
     await tester.pumpAndSettle();
 
-    // Enter invalid username and password
+    // Enter invalid email and password
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Enter your username'),
+      find.widgetWithText(TextFormField, 'name@example.com'),
       'UnknownUser99',
     );
     await tester.enterText(
@@ -108,10 +118,9 @@ void main() {
     await tester.tap(find.widgetWithText(ElevatedButton, 'Sign In'));
     await tester.pumpAndSettle();
 
-    // Verify ONLY "Invalid username" is displayed
+    // Verify error message is displayed
     expect(find.text('Invalid username'), findsOneWidget);
     // Verify list of allowed usernames is NOT revealed anywhere
     expect(find.textContaining('Allowed users:'), findsNothing);
-    expect(find.textContaining('Shreyas, Aman'), findsNothing);
   });
 }

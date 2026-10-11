@@ -339,7 +339,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           subtitle: Text(
-                            user.email,
+                            (user.email != null && user.email!.isNotEmpty)
+                                ? user.email!
+                                : 'No email',
                             style: TextStyle(
                               fontSize: 12,
                               color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,

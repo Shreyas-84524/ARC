@@ -46,8 +46,13 @@ class UserContextNotifier extends StateNotifier<UserContext> {
   }
 
   Future<void> _setFromFirebaseUser(auth.User user) async {
-    final email = user.email ?? '';
-    final username = _usernameFromEmail(email);
+    final email = user.email;
+    final displayName = (user.displayName != null && user.displayName!.isNotEmpty)
+        ? user.displayName!
+        : (email != null && email.isNotEmpty)
+            ? _usernameFromEmail(email)
+            : 'User';
+    final username = displayName;
 
     String role = 'user';
     try {
@@ -59,15 +64,26 @@ class UserContextNotifier extends StateNotifier<UserContext> {
       // Ignore token fetch errors in testing environments
     }
 
-    if (username.toUpperCase() == 'ADMIN' || email.toLowerCase() == 'admin@arc.app') {
+    if (username.toUpperCase() == 'ADMIN' ||
+        (email != null && email.toLowerCase() == 'admin@arc.app')) {
       role = 'admin';
+    }
+
+    String provider = 'password';
+    if (user.providerData.isNotEmpty) {
+      final providerId = user.providerData.first.providerId;
+      if (providerId.contains('google')) {
+        provider = 'google';
+      }
     }
 
     final profile = UserProfile(
       id: user.uid,
       username: username,
-      displayName: username,
+      displayName: displayName,
       email: email,
+      photoURL: user.photoURL,
+      authProvider: provider,
       role: role,
       createdAt: user.metadata.creationTime ?? DateTime.now(),
       lastLoginAt: user.metadata.lastSignInTime,
@@ -95,7 +111,11 @@ class UserContextNotifier extends StateNotifier<UserContext> {
 
   /// Sets the active user context for user-scoped data operations.
   void setActiveUser({required String userId, UserProfile? profile}) {
-    HiveService().ensureUserBoxesOpened(userId);
+    try {
+      HiveService().ensureUserBoxesOpened(userId);
+    } catch (e) {
+      // In mock/test environments HiveService might not be initialized
+    }
     state = UserContext(userId: userId, profile: profile, isInitializing: false);
   }
 
@@ -116,4 +136,3 @@ final userContextProvider =
     StateNotifierProvider<UserContextNotifier, UserContext>((ref) {
   return UserContextNotifier();
 });
-

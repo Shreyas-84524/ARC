@@ -7,6 +7,7 @@ import 'package:arc/features/money_tracker/repository/money_repository.dart';
 import 'package:arc/features/task_manager/models/task_model.dart';
 import 'package:arc/features/habit_tracker/models/habit_model.dart';
 import 'package:arc/features/habit_tracker/models/habit_entry_model.dart';
+import 'package:intl/intl.dart';
 import 'package:arc/features/money_tracker/models/monthly_summary_model.dart';
 
 class MockTaskRepository implements TaskRepository {
@@ -84,8 +85,8 @@ class InMemoryMoneyRepository implements MoneyRepository {
 void main() {
   late InMemoryMoneyRepository moneyRepo;
   late DashboardRepository dashboardRepo;
-  final currentMonthStr = '2026-08';
   final now = DateTime.now();
+  final currentMonthStr = DateFormat('yyyy-MM').format(now);
 
   setUp(() {
     moneyRepo = InMemoryMoneyRepository();

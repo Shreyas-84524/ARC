@@ -21,7 +21,7 @@ void main() {
 
       expect(profile1.username, equals('Shreyas'));
       expect(mockAuth.currentUser, isNotNull);
-      expect(mockAuth.currentUser!.uid, equals('uid_shreyas'));
+      expect(mockAuth.currentUser!.uid, equals(profile1.id));
 
       // Logout and re-login with correct password
       await authService.logout();
@@ -33,7 +33,7 @@ void main() {
       );
       expect(profile2.username, equals('Shreyas'));
       expect(mockAuth.currentUser, isNotNull);
-      expect(mockAuth.currentUser!.uid, equals('uid_shreyas'));
+      expect(mockAuth.currentUser!.uid, equals(profile2.id));
     });
 
     test('TEST 2 — Correct Username + Wrong Password fails authentication', () async {
@@ -116,7 +116,7 @@ void main() {
 
       // Verify current user is still authenticated
       expect(mockAuth.currentUser, isNotNull);
-      expect(mockAuth.userPasswords['shreyas@arc.app'], equals('new_secure_password_456'));
+      expect(mockAuth.userPasswords[authService.getInternalEmail('Shreyas')], equals('new_secure_password_456'));
     });
 
     test('TEST 8 — Wrong Current Password fails password change', () async {
@@ -131,7 +131,7 @@ void main() {
       );
 
       // Password remains unchanged
-      expect(mockAuth.userPasswords['shreyas@arc.app'], equals('old_password_123'));
+      expect(mockAuth.userPasswords[authService.getInternalEmail('Shreyas')], equals('old_password_123'));
     });
 
     test('TEST 9 — New Password Validation fails if password < 6 characters', () async {
@@ -166,7 +166,7 @@ void main() {
       final profile = await authService.loginWithUsername(username: 'Shreyas', password: 'updated_pass_99');
       expect(profile.username, equals('Shreyas'));
       expect(mockAuth.currentUser, isNotNull);
-      expect(mockAuth.currentUser!.uid, equals('uid_shreyas'));
+      expect(mockAuth.currentUser!.uid, equals(profile.id));
     });
 
     test('TEST 12 — Password Change Does Not Break Session', () async {
@@ -218,7 +218,7 @@ void main() {
       await authService.logout();
       final shreyasProfile = await authService.loginWithUsername(username: 'Shreyas', password: 'shreyas_pass_2');
       expect(shreyasProfile.username, equals('Shreyas'));
-      expect(mockAuth.currentUser!.uid, equals('uid_shreyas'));
+      expect(mockAuth.currentUser!.uid, equals(shreyasProfile.id));
     });
   });
 }

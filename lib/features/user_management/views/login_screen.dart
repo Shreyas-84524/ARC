@@ -1,15 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:arc/core/theme/app_theme.dart';
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
 import 'package:arc/features/user_management/services/auth_service.dart';
+import 'package:arc/features/user_management/services/login_rate_limiter.dart';
+import 'package:arc/features/user_management/models/auth_exception.dart';
+import 'package:arc/features/user_management/models/user_profile.dart';
+import 'package:arc/features/user_management/views/widgets/google_logo.dart';
 
-/// Redesigned Login Screen for Project Arc following strict design guidelines.
+/// Professional Login Screen for Project Arc supporting Email/Password and
+/// Google Authentication with ARC-level 10-attempt rate limiting.
 class LoginScreen extends ConsumerStatefulWidget {
   final VoidCallback? onLoginSuccess;
+  final AuthService? authService;
+  final LoginRateLimiter? rateLimiter;
 
-  const LoginScreen({super.key, this.onLoginSuccess});
+  const LoginScreen({
+    super.key,
+    this.onLoginSuccess,
+    this.authService,
+    this.rateLimiter,
+  });
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -17,19 +30,23 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final AuthService _authService = AuthService();
+  late final AuthService _authService;
+  late final LoginRateLimiter _rateLimiter;
 
-  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
   bool _obscurePassword = true;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _usernameController.addListener(_onFieldChanged);
+    _authService = widget.authService ?? AuthService();
+    _rateLimiter = widget.rateLimiter ?? LoginRateLimiter();
+    _emailController.addListener(_onFieldChanged);
     _passwordController.addListener(_onFieldChanged);
   }
 
@@ -39,59 +56,90 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   void dispose() {
-    _usernameController.removeListener(_onFieldChanged);
+    _emailController.removeListener(_onFieldChanged);
     _passwordController.removeListener(_onFieldChanged);
-    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   bool get _isFormValid =>
-      _usernameController.text.trim().isNotEmpty &&
+      _emailController.text.trim().isNotEmpty &&
       _passwordController.text.trim().isNotEmpty;
 
   Future<void> _handleLogin() async {
+    // 1. Form validation — if invalid, do NOT increment attempt counter
     if (!_formKey.currentState!.validate()) return;
+
+    // 2. Check if password login is currently rate-limited
+    if (await _rateLimiter.isLocked()) {
+      final remaining = await _rateLimiter.getRemainingLockDuration();
+      if (mounted) {
+        setState(() {
+          _errorMessage = LoginRateLimiter.getThrottledMessage(remaining);
+          _isLoading = false;
+        });
+      }
+      return;
+    }
 
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
+    final input = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    // 3. Count this actual submitted attempt to Firebase
+    await _rateLimiter.recordAttempt();
+
     try {
-      final profile = await _authService.loginWithUsername(
-        username: _usernameController.text.trim(),
-        password: _passwordController.text,
-      );
+      UserProfile profile;
+      if (input.contains('@')) {
+        // Standard Firebase Email/Password Sign-In
+        profile = await _authService.signInWithEmailAndPassword(
+          email: input,
+          password: password,
+        );
+      } else {
+        // Legacy Username Sign-In fallback
+        profile = await _authService.loginWithUsername(
+          username: input,
+          password: password,
+        );
+      }
+
+      // 4. Successful login resets attempt counter
+      await _rateLimiter.reset();
 
       if (mounted) {
-        ref.read(userContextProvider.notifier).setActiveUser(
-          userId: profile.id,
-          profile: profile,
-        );
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Welcome back, ${profile.displayName}!'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
-
-        if (widget.onLoginSuccess != null) {
-          widget.onLoginSuccess!();
-        }
+        _onAuthSuccess(profile);
       }
     } catch (e) {
       if (mounted) {
+        final isNowLocked = await _rateLimiter.isLocked();
         setState(() {
-          final rawMsg = e.toString();
-          if (rawMsg.contains('Invalid username')) {
-            _errorMessage = 'Invalid username';
-          } else if (rawMsg.contains('Invalid password')) {
-            _errorMessage = 'Invalid password';
+          if (isNowLocked) {
+            _rateLimiter.getRemainingLockDuration().then((rem) {
+              if (mounted) {
+                setState(() {
+                  _errorMessage = LoginRateLimiter.getThrottledMessage(rem);
+                });
+              }
+            });
+            _errorMessage = LoginRateLimiter.getThrottledMessage(const Duration(hours: 6));
           } else {
-            _errorMessage = rawMsg.replaceAll('Exception:', '').replaceAll('ArgumentError:', '').replaceAll('StateError:', '').trim();
+            final rawMsg = e.toString();
+            if (rawMsg.contains('Invalid username')) {
+              _errorMessage = 'Invalid username';
+            } else if (rawMsg.contains('Invalid password')) {
+              _errorMessage = 'Invalid password';
+            } else if (e is AuthException) {
+              _errorMessage = e.message;
+            } else {
+              _errorMessage = AuthException.fromFirebase(e).message;
+            }
           }
         });
       }
@@ -100,6 +148,67 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         setState(() {
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() {
+      _isGoogleLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final profile = await _authService.signInWithGoogle();
+      if (mounted) {
+        _onAuthSuccess(profile);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          if (e is AuthException) {
+            if (e.code == 'cancelled' || e.code == 'popup-closed-by-user') {
+              // Sign-in cancelled by user, no error banner needed
+              _errorMessage = null;
+            } else {
+              _errorMessage = e.message;
+            }
+          } else {
+            _errorMessage = AuthException.fromFirebase(e).message;
+          }
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGoogleLoading = false;
+        });
+      }
+    }
+  }
+
+  void _onAuthSuccess(UserProfile profile) {
+    ref.read(userContextProvider.notifier).setActiveUser(
+      userId: profile.id,
+      profile: profile,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Welcome back, ${profile.displayName}!'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+      ),
+    );
+
+    if (widget.onLoginSuccess != null) {
+      widget.onLoginSuccess!();
+    } else {
+      final userContext = ref.read(userContextProvider);
+      if (userContext.isAdmin) {
+        context.go('/admin');
+      } else {
+        context.go('/');
       }
     }
   }
@@ -113,7 +222,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final primaryTextColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final buttonBgColor = AppColors.accent;
-    final buttonTextColor = Colors.black;
+    const buttonTextColor = Colors.black;
+
+    final anyLoading = _isLoading || _isGoogleLoading;
 
     return Scaffold(
       body: SafeArea(
@@ -146,7 +257,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Title (Large, Bold, Serif-like)
+                      // Header Branding Badge
+                      Center(
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: AppColors.accent.withValues(alpha: 0.12),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.accent.withValues(alpha: 0.3),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: const Icon(
+                            LucideIcons.sparkles,
+                            color: AppColors.accent,
+                            size: 26,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Title (Large, Bold, Serif)
                       Text(
                         'Welcome Back',
                         textAlign: TextAlign.center,
@@ -160,7 +293,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       const SizedBox(height: 10),
 
-                      // Subtitle (Centered, Secondary Text)
+                      // Subtitle
                       Text(
                         'Enter your email and password to access your account',
                         textAlign: TextAlign.center,
@@ -200,9 +333,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 20),
                       ],
 
-                      // Username Label & Field
+                      // Email / Username Label & Field
                       Text(
-                        'Username',
+                        'Email',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -211,41 +344,75 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       const SizedBox(height: 8),
                       TextFormField(
-                        controller: _usernameController,
-                        enabled: !_isLoading,
+                        controller: _emailController,
+                        enabled: !anyLoading,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
                         style: TextStyle(color: primaryTextColor),
                         decoration: InputDecoration(
-                          hintText: 'Enter your username',
+                          hintText: 'name@example.com',
+                          prefixIcon: Icon(
+                            LucideIcons.mail,
+                            size: 20,
+                            color: secondaryTextColor,
+                          ),
                           hintStyle: TextStyle(
                             color: isDark ? AppColors.textPlaceholderDark : AppColors.textPlaceholderLight,
                           ),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Please enter your username';
+                            return 'Please enter your email';
                           }
                           return null;
                         },
                       ),
                       const SizedBox(height: 20),
 
-                      // Password Label & Field
-                      Text(
-                        'Password',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: primaryTextColor,
-                        ),
+                      // Password Label & Forgot Password Row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Password',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: primaryTextColor,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: anyLoading
+                                ? null
+                                : () {
+                                    context.go('/forgot-password');
+                                  },
+                            child: const Text(
+                              'Forgot Password?',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.accent,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
-                        enabled: !_isLoading,
+                        enabled: !anyLoading,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _handleLogin(),
                         style: TextStyle(color: primaryTextColor),
                         decoration: InputDecoration(
                           hintText: 'Enter your password',
+                          prefixIcon: Icon(
+                            LucideIcons.lock,
+                            size: 20,
+                            color: secondaryTextColor,
+                          ),
                           hintStyle: TextStyle(
                             color: isDark ? AppColors.textPlaceholderDark : AppColors.textPlaceholderLight,
                           ),
@@ -274,11 +441,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       const SizedBox(height: 28),
 
-                      // Primary Button (Full Width): "Sign In"
+                      // Primary Button: "Sign In"
                       SizedBox(
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: (_isLoading || !_isFormValid) ? null : _handleLogin,
+                          onPressed: (anyLoading || !_isFormValid) ? null : _handleLogin,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: buttonBgColor,
                             foregroundColor: buttonTextColor,
@@ -290,7 +457,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             elevation: 0,
                           ),
                           child: _isLoading
-                              ? SizedBox(
+                              ? const SizedBox(
                                   height: 24,
                                   width: 24,
                                   child: CircularProgressIndicator(
@@ -308,6 +475,108 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                         ),
                       ),
+                      const SizedBox(height: 20),
+
+                      // OR Divider
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Divider(
+                              color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'OR',
+                              style: TextStyle(
+                                color: secondaryTextColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Divider(
+                              color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Continue with Google Button
+                      SizedBox(
+                        height: 50,
+                        child: OutlinedButton(
+                          onPressed: anyLoading ? null : _handleGoogleSignIn,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: primaryTextColor,
+                            side: BorderSide(
+                              color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                            ),
+                          ),
+                          child: _isGoogleLoading
+                              ? SizedBox(
+                                  height: 22,
+                                  width: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    color: primaryTextColor,
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const GoogleLogo(size: 20),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'Continue with Google',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                        color: primaryTextColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Don't have an account? Sign Up Link
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            "Don't have an account? ",
+                            style: TextStyle(
+                              color: secondaryTextColor,
+                              fontSize: 14,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: anyLoading
+                                ? null
+                                : () {
+                                    context.go('/signup');
+                                  },
+                            child: const Text(
+                              'Sign Up',
+                              style: TextStyle(
+                                color: AppColors.accent,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -319,4 +588,3 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 }
-
