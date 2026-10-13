@@ -481,12 +481,12 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Sign-in Methods section is present
-        expect(find.text('Sign-in Methods'), findsOneWidget);
+        // Sign-in Method section displays only the active sign-in method
+        expect(find.text('Sign-in Method'), findsOneWidget);
         expect(find.text('Google'), findsOneWidget);
-        expect(find.text('Email & Password'), findsOneWidget);
-        expect(find.text('Connected'), findsOneWidget);
-        expect(find.text('Not configured'), findsOneWidget);
+        expect(find.text('Email & Password'), findsNothing);
+        expect(find.text('Connected'), findsNothing);
+        expect(find.text('Not configured'), findsNothing);
         expect(find.text('Add ARC Password'), findsOneWidget);
 
         // Change Password button is hidden for accounts without a password

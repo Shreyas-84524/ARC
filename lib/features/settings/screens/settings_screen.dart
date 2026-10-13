@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:arc/core/theme/app_theme.dart';
 import 'package:arc/providers/global_providers.dart';
@@ -45,6 +46,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _obscureCurrentPassword = true;
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    final settings = ref.read(appSettingsProvider);
+    _masterNotifications = settings.masterNotificationsEnabled;
+    _taskReminders = settings.taskRemindersEnabled;
+    _habitReminders = settings.habitRemindersEnabled;
+    _moneyReminders = settings.moneyRemindersEnabled;
+  }
+
+  String _formatReminderTime(String timeStr) {
+    try {
+      final parts = timeStr.split(':');
+      if (parts.length == 2) {
+        final hour = int.parse(parts[0]);
+        final minute = int.parse(parts[1]);
+        final dt = DateTime(2026, 1, 1, hour, minute);
+        return DateFormat('h:mm a').format(dt);
+      }
+    } catch (_) {}
+    return timeStr;
+  }
 
   @override
   void dispose() {
@@ -619,6 +643,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     final themeMode = ref.watch(themeModeProvider);
+    final appSettings = ref.watch(appSettingsProvider);
     final userContext = ref.watch(userContextProvider);
     final currentUsername = userContext.profile?.displayName ?? userContext.profile?.username ?? 'User';
 
@@ -728,91 +753,56 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
                   const Divider(height: 28),
 
-                  // Sign-in Methods Section (Requirement 4 & 24)
+                  // Sign-in Method Section
                   Text(
-                    'Sign-in Methods',
+                    'Sign-in Method',
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 12),
 
-                  // Google Row
-                  Row(
-                    children: [
-                      const GoogleLogo(size: 18),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Google',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  // Google Row (Only shown if signed in with Google)
+                  if (hasGoogle)
+                    Row(
+                      children: [
+                        const GoogleLogo(size: 18),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Google',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                            ),
                           ),
                         ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: hasGoogle
-                              ? AppColors.accent.withValues(alpha: 0.15)
-                              : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          hasGoogle ? 'Connected' : 'Not configured',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: hasGoogle
-                                ? AppColors.accent
-                                : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
+                      ],
+                    ),
 
-                  // Email & Password Row
-                  Row(
-                    children: [
-                      Icon(
-                        LucideIcons.mail,
-                        size: 18,
-                        color: hasPassword ? AppColors.accent : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Email & Password',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  if (hasGoogle && hasPassword) const SizedBox(height: 10),
+
+                  // Email & Password Row (Only shown if signed in with Email & Password)
+                  if (hasPassword)
+                    Row(
+                      children: [
+                        const Icon(
+                          LucideIcons.mail,
+                          size: 18,
+                          color: AppColors.accent,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Email & Password',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                            ),
                           ),
                         ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: hasPassword
-                              ? AppColors.accent.withValues(alpha: 0.15)
-                              : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          hasPassword ? 'Connected' : 'Not configured',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: hasPassword
-                                ? AppColors.accent
-                                : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
 
                   // Optional Add ARC Password button (Requirement 4 & 5)
                   if (!hasPassword) ...[
@@ -1023,26 +1013,72 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       _habitReminders = val;
                       _moneyReminders = val;
                     });
-                    if (!val) {
-                      NotificationService().cancelAllUserNotifications();
-                    } else {
-                      NotificationService().reconcileScheduledNotifications(
-                        tasks: ref.read(tasksProvider),
-                        habits: ref.read(habitsProvider),
-                      );
-                    }
+                    ref.read(appSettingsProvider.notifier).updateMasterNotifications(val);
                   },
                 ),
                 if (_masterNotifications) ...[
                   const Divider(height: 1, indent: 56),
+                  ListTile(
+                    leading: const Icon(LucideIcons.clock, color: AppColors.accent),
+                    title: const Text('Daily Reminder Time', style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('Pending habits & spending check-in at ${_formatReminderTime(appSettings.remTime)}'),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.accent.withValues(alpha: 0.5)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            appSettings.remTime,
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(LucideIcons.pencil, size: 14, color: AppColors.accent),
+                        ],
+                      ),
+                    ),
+                    onTap: () async {
+                      final parts = appSettings.remTime.split(':');
+                      int initialHour = 21;
+                      int initialMinute = 0;
+                      if (parts.length == 2) {
+                        initialHour = int.tryParse(parts[0]) ?? 21;
+                        initialMinute = int.tryParse(parts[1]) ?? 0;
+                      }
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay(hour: initialHour, minute: initialMinute),
+                      );
+                      if (picked != null) {
+                        final formatted =
+                            '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                        await ref.read(appSettingsProvider.notifier).updateRemTime(formatted);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Daily reminder time updated to $formatted'),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                  const Divider(height: 1, indent: 56),
                   SwitchListTile(
-                    secondary: const Icon(LucideIcons.checkSquare, color: AppColors.info),
+                    secondary: const Icon(LucideIcons.checkSquare, color: AppColors.accent),
                     title: const Text('Task Reminders'),
                     subtitle: const Text('Alerts 5m before deadline and at due time'),
                     value: _taskReminders,
                     activeThumbColor: AppColors.accent,
                     onChanged: (val) {
                       setState(() => _taskReminders = val);
+                      final updated = appSettings.copyWith(taskRemindersEnabled: val);
+                      ref.read(appSettingsProvider.notifier).updateSettings(updated);
                       if (!val) {
                         for (final task in ref.read(tasksProvider)) {
                           NotificationService().cancelTaskReminders(task.id);
@@ -1060,22 +1096,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   SwitchListTile(
                     secondary: const Icon(LucideIcons.zap, color: AppColors.accent),
                     title: const Text('Habit Reminders'),
-                    subtitle: const Text('Daily habit reminders & evening 8:00 PM alert'),
+                    subtitle: Text('Habit deadline alerts & check-in at ${_formatReminderTime(appSettings.remTime)}'),
                     value: _habitReminders,
                     activeThumbColor: AppColors.accent,
                     onChanged: (val) {
                       setState(() => _habitReminders = val);
+                      final updated = appSettings.copyWith(habitRemindersEnabled: val);
+                      ref.read(appSettingsProvider.notifier).updateSettings(updated);
                       if (!val) {
                         for (final habit in ref.read(habitsProvider)) {
-                          NotificationService().cancelHabitReminder(habit.id);
+                          NotificationService().cancelHabitReminders(habit.id);
                         }
                         NotificationService().cancelEveningReminder();
                       } else {
-                        for (final habit in ref.read(habitsProvider)) {
-                          if (habit.reminderTime != null && habit.reminderTime!.trim().isNotEmpty) {
-                            NotificationService().scheduleHabitReminder(habit);
-                          }
-                        }
                         ref.read(habitsProvider.notifier).refresh();
                       }
                     },
@@ -1084,15 +1117,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   SwitchListTile(
                     secondary: const Icon(LucideIcons.wallet, color: AppColors.success),
                     title: const Text('Expense Reminders'),
-                    subtitle: const Text('Daily transaction alerts at 8 PM & 10 PM'),
+                    subtitle: Text('Daily reminder to log spending at ${_formatReminderTime(appSettings.remTime)}'),
                     value: _moneyReminders,
                     activeThumbColor: AppColors.accent,
                     onChanged: (val) {
                       setState(() => _moneyReminders = val);
+                      final updated = appSettings.copyWith(moneyRemindersEnabled: val);
+                      ref.read(appSettingsProvider.notifier).updateSettings(updated);
                       if (!val) {
                         NotificationService().cancelMoneyReminders();
                       } else {
-                        NotificationService().scheduleDailyMoneyReminders();
+                        NotificationService().scheduleDailyMoneyReminder(appSettings.remTime);
                       }
                     },
                   ),
@@ -1110,7 +1145,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Column(
               children: [
                 ListTile(
-                  leading: const Icon(LucideIcons.hardDrive, color: AppColors.info),
+                  leading: const Icon(LucideIcons.hardDrive, color: AppColors.accent),
                   title: const Text('Clear Local Cache', style: TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: const Text('Clean cached temporary indexes'),
                   onTap: _confirmClearCache,

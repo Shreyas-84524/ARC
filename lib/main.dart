@@ -8,9 +8,11 @@ import 'package:arc/core/theme/app_theme.dart';
 import 'package:arc/routes/app_router.dart';
 import 'package:arc/core/services/hive_service.dart';
 import 'package:arc/core/notifications/notification_service.dart';
+import 'package:arc/core/notifications/notification_reconciler.dart';
 import 'package:arc/providers/global_providers.dart';
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
 import 'package:arc/features/user_management/models/user_context.dart';
+import 'package:arc/features/secret_notes/providers/secret_notes_provider.dart';
 
 void main() async {
   runZonedGuarded<Future<void>>(() async {
@@ -109,9 +111,14 @@ class _SyncInitializerState extends ConsumerState<SyncInitializer> {
       syncService.startRealTimeSync(onRefreshState: refreshAllNotifiers);
 
       // Reconcile scheduled notifications for the authenticated user
-      await NotificationService().reconcileScheduledNotifications(
+      final settings = ref.read(appSettingsProvider);
+      await NotificationReconciler().reconcile(
+        userId: userContext.userId,
         tasks: ref.read(tasksProvider),
         habits: ref.read(habitsProvider),
+        habitEntries: ref.read(habitEntriesProvider),
+        remTime: settings.remTime,
+        settings: settings,
       );
     } catch (e) {
       debugPrint('SyncInitializer background sync notice: $e');
@@ -130,11 +137,45 @@ class _SyncInitializerState extends ConsumerState<SyncInitializer> {
   }
 }
 
-class ProjectArcApp extends ConsumerWidget {
+class ProjectArcApp extends ConsumerStatefulWidget {
   const ProjectArcApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProjectArcApp> createState() => _ProjectArcAppState();
+}
+
+class _ProjectArcAppState extends ConsumerState<ProjectArcApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Automatic lock when ARC leaves foreground (inactive, paused, hidden, detached)
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.hidden) {
+      final isUnlocked = ref.read(secretNotesSessionProvider);
+      if (isUnlocked) {
+        ref.read(secretNotesSessionProvider.notifier).lock();
+        debugPrint('ProjectArcApp: app backgrounded (${state.name}). Secret Notes automatically locked.');
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Read the active theme state and reactive router from Riverpod
     final activeThemeMode = ref.watch(themeModeProvider);
     final router = ref.watch(routerProvider);

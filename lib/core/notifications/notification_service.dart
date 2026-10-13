@@ -8,6 +8,7 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:arc/features/task_manager/models/task_model.dart';
 import 'package:arc/features/habit_tracker/models/habit_model.dart';
+import 'package:arc/features/habit_tracker/models/habit_entry_model.dart';
 import 'package:arc/routes/app_router.dart';
 
 class NotificationService {
@@ -161,13 +162,6 @@ class NotificationService {
 
       _initialized = true;
       debugPrint('NotificationService: Core plugin & high-importance channels successfully initialized.');
-
-      // Non-blocking initial reminder scheduling in isolated try-catch
-      try {
-        await scheduleDailyMoneyReminders();
-      } catch (e) {
-        debugPrint('NotificationService: Non-blocking warning during initial money reminder schedule: $e');
-      }
     } catch (e) {
       debugPrint('NotificationService: Engine initialization notice (app will continue): $e');
       _initialized = true;
@@ -261,6 +255,9 @@ class NotificationService {
       } else if (type == 'habit') {
         debugPrint('NotificationService: Direct navigation to Habit Tracker for Habit ID: $id');
         appRouter.go('/habits');
+      } else if (type == 'money') {
+        debugPrint('NotificationService: Direct navigation to Money Manager');
+        appRouter.go('/money');
       }
     } catch (e) {
       debugPrint('NotificationService: Error parsing notification payload: $e');
@@ -284,54 +281,57 @@ class NotificationService {
   }
 
   // Fixed system reminder notification IDs
+  static const int moneyReminderId = 888888;
   static const int eveningHabitReminderId = 999999;
   static const int moneyReminderEarlyId = 888888;
   static const int moneyReminderLateId = 101010;
 
   // Disjoint namespaces to guarantee collision freedom:
-  // Fixed system IDs: < 1,000,000
-  // Task reminders:   [10,000,000, 810,000,000]
-  // Habit reminders:  [1,000,000,000, 1,400,000,000]
-  static const int _taskNamespaceOffset = 10000000;
-  static const int _habitNamespaceOffset = 1000000000;
+  // Task pre-deadline: [10,000,000, 399,999,999]
+  // Task deadline:     [400,000,000, 799,999,999]
+  // Habit deadline:    [800,000,000, 1,099,999,999]
+  // Habit rem_time:    [1,100,000,000, 1,399,999,999]
+  // Money reminder:    Fixed user-safe deterministic ID (888888)
+  static const int taskPreDeadlineMin = 10000000;
+  static const int taskPreDeadlineRange = 390000000;
 
-  // Generate a stable positive 32-bit integer hash from task UUID
+  static const int taskDeadlineMin = 400000000;
+  static const int taskDeadlineRange = 400000000;
+
+  static const int habitDeadlineMin = 800000000;
+  static const int habitDeadlineRange = 300000000;
+
+  static const int habitRemTimeMin = 1100000000;
+  static const int habitRemTimeRange = 300000000;
+
+  // Generate a stable positive 31-bit integer hash from task/habit string key
+  // Does NOT use Dart runtime hashCode
   int getStableHash(String input) {
     int hash = 5381;
     for (int i = 0; i < input.length; i++) {
       hash = ((hash << 5) + hash) + input.codeUnitAt(i);
-      hash = hash & 0xFFFFFFFF; // Restrict to 32-bit
+      hash &= 0x7FFFFFFF; // Restrict to positive 31-bit signed integer
     }
-    return (hash.abs() & 0x1FFFFFFF);
+    return hash;
   }
 
   int getTaskNotificationId5m(String taskId) {
-    final base = (getStableHash('task_$taskId') % 400000000) * 2;
-    return _taskNamespaceOffset + base + 0;
+    return taskPreDeadlineMin + (getStableHash('task_pre_$taskId') % taskPreDeadlineRange);
   }
 
   int getTaskNotificationIdDeadline(String taskId) {
-    final base = (getStableHash('task_$taskId') % 400000000) * 2;
-    return _taskNamespaceOffset + base + 1;
+    return taskDeadlineMin + (getStableHash('task_dead_$taskId') % taskDeadlineRange);
   }
 
-  int getHabitNotificationId(String habitId) {
-    final base = getStableHash('habit_$habitId') % 400000000;
-    return _habitNamespaceOffset + base;
+  int getHabitNotificationIdDeadline(String habitId) {
+    return habitDeadlineMin + (getStableHash('habit_dead_$habitId') % habitDeadlineRange);
   }
 
-  String _getPriorityBadge(String priority) {
-    switch (priority) {
-      case 'High':
-        return '🔴 High Priority';
-      case 'Must':
-      case 'Much':
-        return '🟠 Must Priority';
-      case 'Low':
-      default:
-        return '🟡 Low Priority';
-    }
+  int getHabitNotificationIdRemTime(String habitId) {
+    return habitRemTimeMin + (getStableHash('habit_rem_$habitId') % habitRemTimeRange);
   }
+
+  int getHabitNotificationId(String habitId) => getHabitNotificationIdDeadline(habitId);
 
   // Safe zoned schedule wrapper handling exact alarm availability and fallback
   Future<void> _safeZonedSchedule(
@@ -447,8 +447,6 @@ class NotificationService {
       iOS: iosDetails,
     );
 
-    final formattedTime = DateFormat('h:mm a').format(dueDateTime);
-    final priorityBadge = _getPriorityBadge(task.priority);
     final payload = jsonEncode({'type': 'task', 'id': task.id});
 
     // Cancel existing scheduled notifications to prevent duplicates
@@ -460,11 +458,10 @@ class NotificationService {
     final time5m = dueDateTime.subtract(const Duration(minutes: 5));
     final id5m = getTaskNotificationId5m(task.id);
     if (time5m.isAfter(now)) {
-      final String body5m =
-          "Only 5 minutes left!\n\nTask: ${task.title}\nPriority: $priorityBadge\nDeadline: $formattedTime";
+      final String body5m = "${task.title} is due in 5 minutes.";
       await _safeZonedSchedule(
         id5m,
-        '⏰ Task Reminder',
+        'Task due soon',
         body5m,
         tz.TZDateTime.from(time5m, currentZone),
         details,
@@ -480,11 +477,10 @@ class NotificationService {
     // 2. Notification 2: Deadline Reached
     final idDeadline = getTaskNotificationIdDeadline(task.id);
     if (dueDateTime.isAfter(now)) {
-      final String bodyDeadline =
-          "The deadline has been reached.\nPlease complete this task as soon as possible.\n\nTask: ${task.title}\nPriority: $priorityBadge";
+      final String bodyDeadline = "${task.title} is due now.";
       await _safeZonedSchedule(
         idDeadline,
-        '🚨 Task Deadline Reached',
+        'Task deadline reached',
         bodyDeadline,
         tz.TZDateTime.from(dueDateTime, currentZone),
         details,
@@ -503,7 +499,7 @@ class NotificationService {
       await _localNotificationsPlugin.cancel(getTaskNotificationId5m(taskId));
       await _localNotificationsPlugin.cancel(getTaskNotificationIdDeadline(taskId));
       // Also cancel legacy IDs to prevent orphaned notifications
-      final baseId = getStableHash(taskId);
+      final baseId = getStableHash(taskId) % 300000000;
       await _localNotificationsPlugin.cancel((baseId * 2) + 0);
       await _localNotificationsPlugin.cancel((baseId * 2) + 1);
       await _localNotificationsPlugin.cancel((baseId * 3) + 0);
@@ -515,25 +511,15 @@ class NotificationService {
     }
   }
 
-  Future<void> scheduleHabitReminder(Habit habit) async {
+  Future<void> scheduleHabitReminders({
+    required Habit habit,
+    required bool completedToday,
+    required String remTime,
+  }) async {
     if (kIsWeb) return;
-    if (habit.reminderTime == null || habit.reminderTime!.trim().isEmpty) {
-      await cancelHabitReminder(habit.id);
-      return;
-    }
-
-    final parts = habit.reminderTime!.trim().split(':');
-    if (parts.length != 2) return;
-
-    final hour = int.tryParse(parts[0]);
-    final minute = int.tryParse(parts[1]);
-    if (hour == null || minute == null) return;
 
     final now = DateTime.now();
-    var scheduledTime = DateTime(now.year, now.month, now.day, hour, minute);
-    if (scheduledTime.isBefore(now)) {
-      scheduledTime = scheduledTime.add(const Duration(days: 1));
-    }
+    final currentZone = _ensureLocalTimezone();
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'arc_reminders_channel',
@@ -555,41 +541,92 @@ class NotificationService {
       android: androidDetails,
       iOS: iosDetails,
     );
-
     final payload = jsonEncode({'type': 'habit', 'id': habit.id});
-    final currentZone = _ensureLocalTimezone();
-    final habitNotificationId = getHabitNotificationId(habit.id);
 
-    // Cancel existing scheduled notification for this habit to prevent duplicates
-    await cancelHabitReminder(habit.id);
+    final deadlineId = getHabitNotificationIdDeadline(habit.id);
+    final remTimeId = getHabitNotificationIdRemTime(habit.id);
 
-    await _safeZonedSchedule(
-      habitNotificationId,
-      '🌱 Habit Reminder',
-      'Time for your habit: ${habit.name}',
-      tz.TZDateTime.from(scheduledTime, currentZone),
-      details,
-      payload: payload,
-      matchDateTimeComponents: DateTimeComponents.time,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-    );
-    debugPrint(
-      'NotificationService: Scheduled daily habit reminder (ID: $habitNotificationId, Habit: "${habit.name}") at ${habit.reminderTime}',
-    );
-  }
+    // Cancel existing scheduled notifications for this habit first
+    await cancelHabitReminders(habit.id);
 
-  Future<void> cancelHabitReminder(String habitId) async {
-    try {
-      final habitNotificationId = getHabitNotificationId(habitId);
-      await _localNotificationsPlugin.cancel(habitNotificationId);
-      final legacyBase = getStableHash(habitId);
-      await _localNotificationsPlugin.cancel(legacyBase);
-      debugPrint('NotificationService: Canceled reminder for Habit ID: $habitId (ID: $habitNotificationId)');
-    } catch (e) {
-      debugPrint('NotificationService cancelHabitReminder notice: $e');
+    // 1. Notification 1 — Habit Deadline
+    if (!completedToday && habit.reminderTime != null && habit.reminderTime!.trim().isNotEmpty) {
+      final parts = habit.reminderTime!.trim().split(':');
+      if (parts.length == 2) {
+        final hour = int.tryParse(parts[0]);
+        final minute = int.tryParse(parts[1]);
+        if (hour != null && minute != null) {
+          final deadlineToday = DateTime(now.year, now.month, now.day, hour, minute);
+          if (deadlineToday.isAfter(now)) {
+            await _safeZonedSchedule(
+              deadlineId,
+              'Habit reminder',
+              'Time to complete: ${habit.name}',
+              tz.TZDateTime.from(deadlineToday, currentZone),
+              details,
+              payload: payload,
+              uiLocalNotificationDateInterpretation:
+                  UILocalNotificationDateInterpretation.absoluteTime,
+            );
+            debugPrint(
+              'NotificationService: Scheduled Habit Deadline reminder (ID: $deadlineId, Habit: "${habit.name}") at $deadlineToday',
+            );
+          }
+        }
+      }
+    }
+
+    // 2. Notification 2 — Global rem_time
+    if (!completedToday && remTime.trim().isNotEmpty) {
+      final parts = remTime.trim().split(':');
+      if (parts.length == 2) {
+        final hour = int.tryParse(parts[0]);
+        final minute = int.tryParse(parts[1]);
+        if (hour != null && minute != null) {
+          final remTimeToday = DateTime(now.year, now.month, now.day, hour, minute);
+          if (remTimeToday.isAfter(now)) {
+            await _safeZonedSchedule(
+              remTimeId,
+              'Habit still pending',
+              "You haven't completed ${habit.name} today.",
+              tz.TZDateTime.from(remTimeToday, currentZone),
+              details,
+              payload: payload,
+              uiLocalNotificationDateInterpretation:
+                  UILocalNotificationDateInterpretation.absoluteTime,
+            );
+            debugPrint(
+              'NotificationService: Scheduled Habit rem_time reminder (ID: $remTimeId, Habit: "${habit.name}") at $remTimeToday',
+            );
+          }
+        }
+      }
     }
   }
+
+  Future<void> cancelHabitReminders(String habitId) async {
+    try {
+      final deadlineId = getHabitNotificationIdDeadline(habitId);
+      final remTimeId = getHabitNotificationIdRemTime(habitId);
+      await _localNotificationsPlugin.cancel(deadlineId);
+      await _localNotificationsPlugin.cancel(remTimeId);
+
+      // Legacy IDs cleanup
+      await _localNotificationsPlugin.cancel(getStableHash('habit_$habitId') % 400000000 + 1000000000);
+      await _localNotificationsPlugin.cancel(getStableHash(habitId));
+      debugPrint('NotificationService: Canceled all reminders for Habit ID: $habitId (Deadline ID: $deadlineId, rem_time ID: $remTimeId)');
+    } catch (e) {
+      debugPrint('NotificationService cancelHabitReminders notice: $e');
+    }
+  }
+
+  // Compatibility alias for habit reminder scheduling
+  Future<void> scheduleHabitReminder(Habit habit, {bool completedToday = false, String remTime = '21:00'}) async {
+    await scheduleHabitReminders(habit: habit, completedToday: completedToday, remTime: remTime);
+  }
+
+  // Compatibility alias
+  Future<void> cancelHabitReminder(String habitId) async => cancelHabitReminders(habitId);
 
   Future<void> scheduleEveningReminder(int incompleteCount) async {
     if (kIsWeb) return;
@@ -626,8 +663,8 @@ class NotificationService {
 
     await _safeZonedSchedule(
       eveningHabitReminderId,
-      '🌱 Habit Reminder',
-      "Don't forget today's habit.\n\nYou have $incompleteCount incomplete habits left for today.",
+      'Habit reminder',
+      "Don't forget today's habits. You have $incompleteCount incomplete habits left for today.",
       tz.TZDateTime.from(scheduledTime, currentZone),
       details,
       payload: payload,
@@ -646,16 +683,23 @@ class NotificationService {
     }
   }
 
-  Future<void> scheduleDailyMoneyReminders({bool hasTodayTx = false}) async {
+  /// Schedules daily Money Manager reminder at `rem_time`.
+  /// Only one Money Manager reminder exists per day.
+  Future<void> scheduleDailyMoneyReminder(String remTime) async {
     if (kIsWeb) return;
     try {
       final now = DateTime.now();
       final currentZone = _ensureLocalTimezone();
 
-      // 8 PM Daily Reminder
-      var time8pm = DateTime(now.year, now.month, now.day, 20, 0);
-      if (time8pm.isBefore(now)) {
-        time8pm = time8pm.add(const Duration(days: 1));
+      final parts = remTime.trim().split(':');
+      if (parts.length != 2) return;
+      final hour = int.tryParse(parts[0]);
+      final minute = int.tryParse(parts[1]);
+      if (hour == null || minute == null) return;
+
+      var scheduledTime = DateTime(now.year, now.month, now.day, hour, minute);
+      if (scheduledTime.isBefore(now)) {
+        scheduledTime = scheduledTime.add(const Duration(days: 1));
       }
 
       const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
@@ -672,49 +716,36 @@ class NotificationService {
         iOS: iosDetails,
       );
 
-      // Schedule 8 PM Daily
+      // Cancel any old money reminders to ensure exactly one exists
+      await cancelMoneyReminders();
+
+      final payload = jsonEncode({'type': 'money', 'id': 'daily_money'});
+
       await _safeZonedSchedule(
-        moneyReminderEarlyId,
-        "Money Tracker",
-        "Have you recorded today's transactions?",
-        tz.TZDateTime.from(time8pm, currentZone),
+        moneyReminderId,
+        "Update today's spending",
+        "Don't forget to add today's expenses to ARC.",
+        tz.TZDateTime.from(scheduledTime, currentZone),
         details,
+        payload: payload,
         matchDateTimeComponents: DateTimeComponents.time,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );
-
-      if (hasTodayTx) {
-        try {
-          await _localNotificationsPlugin.cancel(moneyReminderLateId);
-        } catch (_) {}
-        debugPrint('NotificationService: Transactions recorded for today. Canceled 10 PM money reminder.');
-      } else {
-        // 10 PM Daily Reminder
-        var time10pm = DateTime(now.year, now.month, now.day, 22, 0);
-        if (time10pm.isBefore(now)) {
-          time10pm = time10pm.add(const Duration(days: 1));
-        }
-
-        await _safeZonedSchedule(
-          moneyReminderLateId,
-          "Money Tracker - Final Reminder",
-          "Don't forget to log your daily expenses to keep your balance up to date!",
-          tz.TZDateTime.from(time10pm, currentZone),
-          details,
-          matchDateTimeComponents: DateTimeComponents.time,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
-        );
-        debugPrint('NotificationService: Scheduled 10 PM final money reminder.');
-      }
+      debugPrint('NotificationService: Scheduled daily money reminder (ID: $moneyReminderId) at $scheduledTime');
     } catch (e) {
-      debugPrint('NotificationService: scheduleDailyMoneyReminders exception: $e');
+      debugPrint('NotificationService: scheduleDailyMoneyReminder exception: $e');
     }
+  }
+
+  // Compatibility method
+  Future<void> scheduleDailyMoneyReminders({bool hasTodayTx = false, String remTime = '21:00'}) async {
+    await scheduleDailyMoneyReminder(remTime);
   }
 
   Future<void> cancelMoneyReminders() async {
     try {
+      await _localNotificationsPlugin.cancel(moneyReminderId);
       await _localNotificationsPlugin.cancel(moneyReminderEarlyId);
       await _localNotificationsPlugin.cancel(moneyReminderLateId);
       debugPrint('NotificationService: Canceled money reminders.');
@@ -735,7 +766,9 @@ class NotificationService {
   Future<void> reconcileScheduledNotifications({
     List<Task>? tasks,
     List<Habit>? habits,
+    List<HabitEntry>? habitEntries,
     bool? hasTodayTx,
+    String remTime = '21:00',
   }) async {
     if (kIsWeb) return;
     try {
@@ -773,17 +806,22 @@ class NotificationService {
 
       // 2. Reconcile Habits
       if (habits != null) {
+        final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
         for (final habit in habits) {
-          if (habit.reminderTime == null || habit.reminderTime!.trim().isEmpty) {
-            await cancelHabitReminder(habit.id);
-          } else {
-            await scheduleHabitReminder(habit);
-          }
+          final completedToday = habitEntries?.any(
+                (e) => e.habitId == habit.id && e.dateStr == todayStr && e.completed,
+              ) ??
+              false;
+          await scheduleHabitReminders(
+            habit: habit,
+            completedToday: completedToday,
+            remTime: remTime,
+          );
         }
       }
 
       // 3. Reconcile Money Reminders
-      await scheduleDailyMoneyReminders(hasTodayTx: hasTodayTx ?? false);
+      await scheduleDailyMoneyReminder(remTime);
 
       debugPrint('NotificationService: Reconciliation completed successfully.');
     } catch (e) {

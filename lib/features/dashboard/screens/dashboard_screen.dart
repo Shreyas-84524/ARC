@@ -45,6 +45,51 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
+  void _showTaskToggleSnackBar(
+    BuildContext context,
+    WidgetRef ref,
+    String taskId,
+    bool wasCompleted,
+  ) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        dismissDirection: DismissDirection.down,
+        duration: const Duration(seconds: 5),
+        persist: false,
+        backgroundColor:
+            wasCompleted ? AppColors.accentPressed : AppColors.success,
+        content: Row(
+          children: [
+            Icon(
+              wasCompleted ? LucideIcons.rotateCcw : LucideIcons.checkCircle2,
+              color: Colors.black,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              wasCompleted ? 'Task Marked Incomplete' : 'Task Completed',
+              style: const TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        action: SnackBarAction(
+          label: 'Undo',
+          textColor: Colors.black,
+          disabledTextColor: Colors.black54,
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            ref.read(tasksProvider.notifier).toggleTask(taskId);
+          },
+        ),
+      ),
+    );
+  }
+
   Future<void> _showSetBudgetDialog(BuildContext context, WidgetRef ref, double currentBudget) async {
     final controller = TextEditingController(
         text: currentBudget > 0 ? currentBudget.toString() : '');
@@ -521,9 +566,13 @@ class DashboardScreen extends ConsumerWidget {
                         child: ListTile(
                           onTap: () => _showTaskEditor(context, task),
                           leading: InkWell(
-                            onTap: () {
+                            onTap: () async {
                               HapticFeedback.lightImpact();
-                              ref.read(tasksProvider.notifier).toggleTask(task.id);
+                              final wasCompleted = task.completed;
+                              await ref.read(tasksProvider.notifier).toggleTask(task.id);
+                              if (context.mounted) {
+                                _showTaskToggleSnackBar(context, ref, task.id, wasCompleted);
+                              }
                             },
                             borderRadius: BorderRadius.circular(100),
                             child: AnimatedContainer(

@@ -257,38 +257,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Header Branding Badge
+                      // Header Branding Logo (App Logo on transparent background)
                       Center(
-                        child: Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: AppColors.accent.withValues(alpha: 0.12),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.accent.withValues(alpha: 0.3),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: const Icon(
-                            LucideIcons.sparkles,
-                            color: AppColors.accent,
-                            size: 26,
-                          ),
+                        child: Image.asset(
+                          'assets/icon/app_icon.png',
+                          height: 48,
+                          fit: BoxFit.contain,
                         ),
                       ),
                       const SizedBox(height: 16),
 
-                      // Title (Large, Bold, Serif)
-                      Text(
-                        'Welcome Back',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'serif',
-                          fontSize: 34,
-                          fontWeight: FontWeight.bold,
-                          color: primaryTextColor,
-                          height: 1.2,
+                      // Title (Single line)
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Welcome Back',
+                          maxLines: 1,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'serif',
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: primaryTextColor,
+                            height: 1.2,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 10),

@@ -16,7 +16,13 @@ import 'package:arc/core/services/sync_service.dart';
 import 'package:arc/core/services/sync_manager.dart';
 import 'package:arc/core/services/task_cleanup_service.dart';
 import 'package:arc/core/notifications/notification_service.dart';
+import 'package:arc/core/notifications/notification_reconciler.dart';
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
+
+// Notification Reconciler Provider
+final notificationReconcilerProvider = Provider<NotificationReconciler>((ref) {
+  return NotificationReconciler();
+});
 
 // Settings Repository Provider
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
@@ -45,6 +51,31 @@ class SettingsNotifier extends StateNotifier<SettingsModel> {
     final updated = state.copyWith(isDarkMode: isDarkMode);
     state = updated;
     await _repository.saveSettings(updated);
+  }
+
+  Future<void> updateRemTime(String newRemTime) async {
+    final updated = state.copyWith(remTime: newRemTime);
+    state = updated;
+    await _repository.saveSettings(updated);
+    await NotificationReconciler().onRemTimeChanged(
+      newRemTime: newRemTime,
+      userId: _repository.userId,
+      settings: updated,
+    );
+  }
+
+  Future<void> updateMasterNotifications(bool enabled) async {
+    final updated = state.copyWith(masterNotificationsEnabled: enabled);
+    state = updated;
+    await _repository.saveSettings(updated);
+    if (!enabled) {
+      await NotificationService().cancelAllUserNotifications();
+    } else {
+      await NotificationReconciler().reconcile(
+        userId: _repository.userId,
+        settings: updated,
+      );
+    }
   }
 
   void refresh() {
@@ -421,10 +452,18 @@ class HabitsNotifier extends StateNotifier<List<Habit>> {
   }
 
   Future<void> _rescheduleActiveHabitReminders() async {
+    final entries = _repository.getEntries();
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final remTime = SettingsRepository(userId: _repository.userId).getSettings().remTime;
     for (final habit in state) {
-      if (habit.reminderTime != null && habit.reminderTime!.trim().isNotEmpty) {
-        await NotificationService().scheduleHabitReminder(habit);
-      }
+      final completedToday = entries.any(
+        (e) => e.habitId == habit.id && e.dateStr == todayStr && e.completed,
+      );
+      await NotificationService().scheduleHabitReminders(
+        habit: habit,
+        completedToday: completedToday,
+        remTime: remTime,
+      );
     }
   }
 
@@ -437,26 +476,37 @@ class HabitsNotifier extends StateNotifier<List<Habit>> {
 
   Future<void> addHabit(Habit habit) async {
     await _repository.saveHabit(habit);
-    if (habit.reminderTime != null && habit.reminderTime!.trim().isNotEmpty) {
-      await NotificationService().scheduleHabitReminder(habit);
-    }
+    final remTime = SettingsRepository(userId: _repository.userId).getSettings().remTime;
+    await NotificationService().scheduleHabitReminders(
+      habit: habit,
+      completedToday: false,
+      remTime: remTime,
+    );
     state = _repository.getHabits();
     _updateReminder();
   }
 
   Future<void> updateHabit(Habit habit) async {
     await _repository.saveHabit(habit);
-    await NotificationService().cancelHabitReminder(habit.id);
-    if (habit.reminderTime != null && habit.reminderTime!.trim().isNotEmpty) {
-      await NotificationService().scheduleHabitReminder(habit);
-    }
+    await NotificationService().cancelHabitReminders(habit.id);
+    final entries = _repository.getEntries();
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final completedToday = entries.any(
+      (e) => e.habitId == habit.id && e.dateStr == todayStr && e.completed,
+    );
+    final remTime = SettingsRepository(userId: _repository.userId).getSettings().remTime;
+    await NotificationService().scheduleHabitReminders(
+      habit: habit,
+      completedToday: completedToday,
+      remTime: remTime,
+    );
     state = _repository.getHabits();
     _updateReminder();
   }
 
   Future<void> deleteHabit(String id) async {
     await _repository.deleteHabit(id);
-    await NotificationService().cancelHabitReminder(id);
+    await NotificationService().cancelHabitReminders(id);
     state = _repository.getHabits();
     _updateReminder();
   }
@@ -512,6 +562,23 @@ class HabitEntriesNotifier extends StateNotifier<List<HabitEntry>> {
 
   Future<void> toggleEntry(String habitId, String dateStr, bool completed) async {
     await _repository.toggleEntry(habitId, dateStr, completed);
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    if (dateStr == todayStr) {
+      final remTime = SettingsRepository(userId: _repository.userId).getSettings().remTime;
+      if (completed) {
+        await NotificationService().cancelHabitReminders(habitId);
+      } else {
+        final habits = _repository.getHabits();
+        final matches = habits.where((h) => h.id == habitId);
+        if (matches.isNotEmpty) {
+          await NotificationService().scheduleHabitReminders(
+            habit: matches.first,
+            completedToday: false,
+            remTime: remTime,
+          );
+        }
+      }
+    }
     state = _repository.getEntries();
     _updateReminder();
   }

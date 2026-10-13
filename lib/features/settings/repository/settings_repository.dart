@@ -6,15 +6,24 @@ import 'package:arc/features/settings/models/settings_model.dart';
 
 class SettingsRepository {
   final String? _userId;
-  final Box _settingsBox;
+  final Box? _settingsBox;
   final fs.FirebaseFirestore? _firestore;
 
   static const String settingsHiveKey = 'app_settings';
 
-  SettingsRepository({String? userId, fs.FirebaseFirestore? firestore})
+  SettingsRepository({String? userId, fs.FirebaseFirestore? firestore, Box? settingsBox})
       : _userId = userId,
-        _settingsBox = HiveService().getUserBox(HiveService.settingsBoxName, userId),
+        _settingsBox = settingsBox ?? _safeGetBox(userId),
         _firestore = firestore;
+
+  static Box? _safeGetBox(String? userId) {
+    try {
+      return HiveService().getUserBox(HiveService.settingsBoxName, userId);
+    } catch (e) {
+      debugPrint('SettingsRepository: Hive box not available: $e');
+      return null;
+    }
+  }
 
   fs.FirebaseFirestore get _db => _firestore ?? fs.FirebaseFirestore.instance;
 
@@ -30,9 +39,11 @@ class SettingsRepository {
 
   SettingsModel getSettings() {
     try {
-      final data = _settingsBox.get(settingsHiveKey);
-      if (data != null && data is Map) {
-        return SettingsModel.fromMap(Map<String, dynamic>.from(data));
+      if (_settingsBox != null) {
+        final data = _settingsBox.get(settingsHiveKey);
+        if (data != null && data is Map) {
+          return SettingsModel.fromMap(Map<String, dynamic>.from(data));
+        }
       }
     } catch (e) {
       debugPrint('SettingsRepository getSettings warning: $e');
@@ -42,18 +53,25 @@ class SettingsRepository {
 
   Future<void> saveSettings(SettingsModel settings) async {
     final map = settings.toMap();
-    await _settingsBox.put(settingsHiveKey, map);
+    if (_settingsBox != null) {
+      await _settingsBox.put(settingsHiveKey, map);
+    }
 
     try {
       await _settingsDocRef().set(map);
-      await _settingsBox.delete('settings_sync_queued');
+      if (_settingsBox != null) {
+        await _settingsBox.delete('settings_sync_queued');
+      }
     } catch (e) {
       debugPrint('SettingsRepository sync queued: $e');
-      await _settingsBox.put('settings_sync_queued', true);
+      if (_settingsBox != null) {
+        await _settingsBox.put('settings_sync_queued', true);
+      }
     }
   }
 
   Future<bool> syncPending() async {
+    if (_settingsBox == null) return true;
     final bool isQueued =
         _settingsBox.get('settings_sync_queued', defaultValue: false) as bool;
     if (!isQueued) return true;

@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:arc/core/notifications/notification_service.dart';
+import 'package:arc/core/notifications/notification_reconciler.dart';
 import 'package:arc/features/task_manager/models/task_model.dart';
 import 'package:arc/features/habit_tracker/models/habit_model.dart';
+import 'package:arc/features/settings/models/settings_model.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -43,10 +46,12 @@ void main() {
     channelCalls.clear();
   });
 
-  group('Step 7 — Deterministic Notification IDs & Collision Immunity', () {
+  group('Section 8 — Deterministic Notification IDs & Collision Immunity', () {
     final service = NotificationService();
 
     test('Fixed system IDs are strictly in fixed range < 1,000,000', () {
+      expect(NotificationService.moneyReminderId, equals(888888));
+      expect(NotificationService.moneyReminderId, lessThan(1000000));
       expect(NotificationService.eveningHabitReminderId, lessThan(1000000));
       expect(NotificationService.moneyReminderEarlyId, lessThan(1000000));
       expect(NotificationService.moneyReminderLateId, lessThan(1000000));
@@ -58,26 +63,34 @@ void main() {
       for (final id in sampleIds) {
         final task5m = service.getTaskNotificationId5m(id);
         final taskDeadline = service.getTaskNotificationIdDeadline(id);
-        final habitId = service.getHabitNotificationId(id);
+        final habitDeadline = service.getHabitNotificationIdDeadline(id);
+        final habitRemTime = service.getHabitNotificationIdRemTime(id);
 
-        // Task IDs reside in [10,000,000, 810,000,000]
+        // Task pre-deadline IDs reside in [10,000,000, 399,999,999]
         expect(task5m, greaterThanOrEqualTo(10000000));
-        expect(task5m, lessThan(900000000));
-        expect(taskDeadline, greaterThanOrEqualTo(10000000));
-        expect(taskDeadline, lessThan(900000000));
+        expect(task5m, lessThanOrEqualTo(399999999));
 
-        // Habit IDs reside in [1,000,000,000, 1,400,000,000]
-        expect(habitId, greaterThanOrEqualTo(1000000000));
-        expect(habitId, lessThan(1500000000));
+        // Task deadline IDs reside in [400,000,000, 799,999,999]
+        expect(taskDeadline, greaterThanOrEqualTo(400000000));
+        expect(taskDeadline, lessThanOrEqualTo(799999999));
+
+        // Habit deadline IDs reside in [800,000,000, 1,099,999,999]
+        expect(habitDeadline, greaterThanOrEqualTo(800000000));
+        expect(habitDeadline, lessThanOrEqualTo(1099999999));
+
+        // Habit rem_time IDs reside in [1,100,000,000, 1,399,999,999]
+        expect(habitRemTime, greaterThanOrEqualTo(1100000000));
+        expect(habitRemTime, lessThanOrEqualTo(1399999999));
 
         // Zero collision between task notifications and habit notifications
-        expect(task5m, isNot(equals(habitId)));
-        expect(taskDeadline, isNot(equals(habitId)));
+        expect(task5m, isNot(equals(habitDeadline)));
+        expect(taskDeadline, isNot(equals(habitDeadline)));
         expect(task5m, isNot(equals(taskDeadline)));
+        expect(habitDeadline, isNot(equals(habitRemTime)));
 
         // Zero collision with fixed system reminder IDs
-        expect(task5m, isNot(equals(NotificationService.eveningHabitReminderId)));
-        expect(habitId, isNot(equals(NotificationService.eveningHabitReminderId)));
+        expect(task5m, isNot(equals(NotificationService.moneyReminderId)));
+        expect(habitDeadline, isNot(equals(NotificationService.moneyReminderId)));
       }
     });
 
@@ -85,11 +98,12 @@ void main() {
       const key = 'test_item_unique_key';
       expect(service.getTaskNotificationId5m(key), equals(service.getTaskNotificationId5m(key)));
       expect(service.getTaskNotificationIdDeadline(key), equals(service.getTaskNotificationIdDeadline(key)));
-      expect(service.getHabitNotificationId(key), equals(service.getHabitNotificationId(key)));
+      expect(service.getHabitNotificationIdDeadline(key), equals(service.getHabitNotificationIdDeadline(key)));
+      expect(service.getHabitNotificationIdRemTime(key), equals(service.getHabitNotificationIdRemTime(key)));
     });
   });
 
-  group('Step 6 — Dynamic Timezone Resolution', () {
+  group('Dynamic Timezone Resolution', () {
     test('Configures a valid Olson timezone location and sets local location', () async {
       final service = NotificationService();
       await service.init();
@@ -100,10 +114,10 @@ void main() {
     });
   });
 
-  group('Step 8 — Task Reminder Scheduling, Editing & Cancellation', () {
+  group('Task Manager Notifications — Exact Business Rules', () {
     final service = NotificationService();
 
-    test('Active future task schedules 5m and deadline alerts', () async {
+    test('Active future task schedules exactly two notifications with exact titles and bodies', () async {
       final futureDate = DateTime.now().add(const Duration(days: 2));
       final task = Task(
         id: 'task_lifecycle_1',
@@ -124,11 +138,54 @@ void main() {
       final scheduledCalls = channelCalls.where((c) => c.method == 'zonedSchedule').toList();
       expect(scheduledCalls.length, equals(2));
 
+      // Notification 1: Five-minute warning
+      final notif5m = scheduledCalls.firstWhere(
+        (c) => c.arguments['id'] == service.getTaskNotificationId5m('task_lifecycle_1'),
+      );
+      expect(notif5m.arguments['title'], equals('Task due soon'));
+      expect(notif5m.arguments['body'], equals('Submit Quarterly Report is due in 5 minutes.'));
+
+      // Notification 2: Deadline reached
+      final notifDeadline = scheduledCalls.firstWhere(
+        (c) => c.arguments['id'] == service.getTaskNotificationIdDeadline('task_lifecycle_1'),
+      );
+      expect(notifDeadline.arguments['title'], equals('Task deadline reached'));
+      expect(notifDeadline.arguments['body'], equals('Submit Quarterly Report is due now.'));
+
       // Verify payload correctly specifies task type and id
-      final callPayload = scheduledCalls.first.arguments['payload'] as String;
+      final callPayload = notif5m.arguments['payload'] as String;
       final decoded = jsonDecode(callPayload) as Map<String, dynamic>;
       expect(decoded['type'], equals('task'));
       expect(decoded['id'], equals('task_lifecycle_1'));
+    });
+
+    test('Task created less than 5 minutes before deadline schedules only deadline notification', () async {
+      channelCalls.clear();
+      final now = DateTime.now();
+      // Deadline in 3 minutes
+      final dueTimeToday = now.add(const Duration(minutes: 3));
+      final taskNearDeadline = Task(
+        id: 'task_near_deadline',
+        title: 'Emergency Hotfix',
+        description: 'Deploy hotfix immediately',
+        priority: 'High',
+        category: 'Work',
+        labels: [],
+        dueDate: dueTimeToday,
+        dueTime: DateFormat('HH:mm').format(dueTimeToday),
+        completed: false,
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      await service.scheduleTaskReminders(taskNearDeadline);
+
+      final scheduledCalls = channelCalls.where((c) => c.method == 'zonedSchedule').toList();
+      // Only deadline alert scheduled; 5m warning is suppressed because it falls in the past
+      expect(scheduledCalls.length, equals(1));
+      expect(scheduledCalls.first.arguments['id'], equals(service.getTaskNotificationIdDeadline('task_near_deadline')));
+      expect(scheduledCalls.first.arguments['title'], equals('Task deadline reached'));
+      expect(scheduledCalls.first.arguments['body'], equals('Emergency Hotfix is due now.'));
     });
 
     test('Completed task cancels reminders and does not schedule new ones', () async {
@@ -197,70 +254,258 @@ void main() {
     });
   });
 
-  group('Step 9 — Habit Reminder Scheduling, Editing & Cancellation', () {
+  group('Habit Manager Notifications — Exact Business Rules', () {
     final service = NotificationService();
 
-    test('Habit with reminderTime schedules daily recurring reminder', () async {
+    test('Incomplete habit with future deadline and future rem_time schedules both notifications', () async {
       channelCalls.clear();
       final habit = Habit(
         id: 'habit_run_01',
-        name: 'Morning Jog',
+        name: 'Evening Jog',
         category: 'Health',
         colorValue: 0xFF4CAF50,
-        reminderTime: '07:30',
+        reminderTime: '22:00',
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
 
-      await service.scheduleHabitReminder(habit);
+      // If current hour is past 21:00, use times relative to now
+      final now = DateTime.now();
+      final deadlineStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 1)));
+      final remTimeStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 2)));
+
+      final testHabit = habit.copyWith(reminderTime: deadlineStr);
+
+      await service.scheduleHabitReminders(
+        habit: testHabit,
+        completedToday: false,
+        remTime: remTimeStr,
+      );
 
       final scheduled = channelCalls.where((c) => c.method == 'zonedSchedule').toList();
-      expect(scheduled.length, equals(1));
-      expect(scheduled.first.arguments['id'], equals(service.getHabitNotificationId('habit_run_01')));
+      expect(scheduled.length, equals(2));
 
-      final payload = jsonDecode(scheduled.first.arguments['payload'] as String);
-      expect(payload['type'], equals('habit'));
-      expect(payload['id'], equals('habit_run_01'));
-      expect(scheduled.first.arguments['matchDateTimeComponents'], equals(DateTimeComponents.time.index));
+      // Notification 1: Habit Deadline
+      final deadlineCall = scheduled.firstWhere(
+        (c) => c.arguments['id'] == service.getHabitNotificationIdDeadline('habit_run_01'),
+      );
+      expect(deadlineCall.arguments['title'], equals('Habit reminder'));
+      expect(deadlineCall.arguments['body'], equals('Time to complete: Evening Jog'));
+
+      // Notification 2: Global Reminder Time (Pending)
+      final remTimeCall = scheduled.firstWhere(
+        (c) => c.arguments['id'] == service.getHabitNotificationIdRemTime('habit_run_01'),
+      );
+      expect(remTimeCall.arguments['title'], equals('Habit still pending'));
+      expect(remTimeCall.arguments['body'], equals("You haven't completed Evening Jog today."));
     });
 
-    test('Habit without reminderTime cancels scheduled habit reminder', () async {
+    test('Habit completed today suppresses BOTH deadline and rem_time notifications', () async {
       channelCalls.clear();
-      final habitNoReminder = Habit(
-        id: 'habit_no_rem',
+      final now = DateTime.now();
+      final deadlineStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 1)));
+      final remTimeStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 2)));
+
+      final habit = Habit(
+        id: 'habit_completed_today',
         name: 'Drink Water',
         category: 'Health',
         colorValue: 0xFF2196F3,
-        reminderTime: null,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        reminderTime: deadlineStr,
+        createdAt: now,
+        updatedAt: now,
       );
 
-      await service.scheduleHabitReminder(habitNoReminder);
+      await service.scheduleHabitReminders(
+        habit: habit,
+        completedToday: true, // Marked completed today!
+        remTime: remTimeStr,
+      );
 
       final scheduled = channelCalls.where((c) => c.method == 'zonedSchedule').toList();
+      // Neither notification should be scheduled
       expect(scheduled.isEmpty, isTrue);
 
+      // Pre-existing notifications are cancelled
       final cancelCalls = channelCalls.where((c) => c.method == 'cancel').toList();
-      final canceledIds = cancelCalls.map(extractCancelId).whereType<int>().toSet();
-      expect(canceledIds.contains(service.getHabitNotificationId('habit_no_rem')), isTrue);
+      expect(cancelCalls.isNotEmpty, isTrue);
     });
 
-    test('Deleting habit explicitly cancels its reminder', () async {
+    test('Habit without reminderTime schedules only pending rem_time notification', () async {
       channelCalls.clear();
-      await service.cancelHabitReminder('habit_delete_01');
+      final now = DateTime.now();
+      final remTimeStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 2)));
+
+      final habitNoReminder = Habit(
+        id: 'habit_no_rem',
+        name: 'Read Book',
+        category: 'Leisure',
+        colorValue: 0xFF9C27B0,
+        reminderTime: null,
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      await service.scheduleHabitReminders(
+        habit: habitNoReminder,
+        completedToday: false,
+        remTime: remTimeStr,
+      );
+
+      final scheduled = channelCalls.where((c) => c.method == 'zonedSchedule').toList();
+      expect(scheduled.length, equals(1));
+      expect(scheduled.first.arguments['id'], equals(service.getHabitNotificationIdRemTime('habit_no_rem')));
+      expect(scheduled.first.arguments['title'], equals('Habit still pending'));
+      expect(scheduled.first.arguments['body'], equals("You haven't completed Read Book today."));
+    });
+
+    test('Deleting habit explicitly cancels both deadline and rem_time notifications', () async {
+      channelCalls.clear();
+      await service.cancelHabitReminders('habit_delete_01');
 
       final cancelCalls = channelCalls.where((c) => c.method == 'cancel').toList();
       final canceledIds = cancelCalls.map(extractCancelId).whereType<int>().toSet();
-      expect(canceledIds.contains(service.getHabitNotificationId('habit_delete_01')), isTrue);
+      expect(canceledIds.contains(service.getHabitNotificationIdDeadline('habit_delete_01')), isTrue);
+      expect(canceledIds.contains(service.getHabitNotificationIdRemTime('habit_delete_01')), isTrue);
     });
   });
 
-  group('Step 13 — Notification Reconciliation', () {
+  group('Money Manager Reminder — Exact Business Rules', () {
     final service = NotificationService();
+
+    test('Schedules exactly one daily reminder at rem_time with exact title and body', () async {
+      channelCalls.clear();
+      await service.scheduleDailyMoneyReminder('21:00');
+
+      final scheduled = channelCalls.where((c) => c.method == 'zonedSchedule').toList();
+      expect(scheduled.length, equals(1));
+      final call = scheduled.first;
+      expect(call.arguments['id'], equals(NotificationService.moneyReminderId));
+      expect(call.arguments['title'], equals("Update today's spending"));
+      expect(call.arguments['body'], equals("Don't forget to add today's expenses to ARC."));
+      expect(call.arguments['matchDateTimeComponents'], equals(DateTimeComponents.time.index));
+
+      final payload = jsonDecode(call.arguments['payload'] as String);
+      expect(payload['type'], equals('money'));
+    });
+
+    test('cancelMoneyReminders cancels the deterministic money reminder ID 888888', () async {
+      channelCalls.clear();
+      await service.cancelMoneyReminders();
+
+      final cancelCalls = channelCalls.where((c) => c.method == 'cancel').toList();
+      final canceledIds = cancelCalls.map(extractCancelId).whereType<int>().toSet();
+      expect(canceledIds.contains(NotificationService.moneyReminderId), isTrue);
+    });
+  });
+
+  group('NotificationReconciler — Lifecycle & Global rem_time Operations', () {
+    final service = NotificationService();
+    final reconciler = NotificationReconciler(notificationService: service);
+
+    test('onRemTimeChanged reschedules habit pending and money reminder without touching tasks', () async {
+      final now = DateTime.now();
+      final futureDeadlineStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 1)));
+      final newRemTime = DateFormat('HH:mm').format(now.add(const Duration(hours: 2)));
+
+      final habit = Habit(
+        id: 'habit_remtime_change',
+        name: 'Meditation',
+        category: 'Mindfulness',
+        colorValue: 0xFF4CAF50,
+        reminderTime: futureDeadlineStr,
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      channelCalls.clear();
+      await reconciler.onRemTimeChanged(
+        newRemTime: newRemTime,
+        userId: 'user_123',
+        habits: [habit],
+        habitEntries: [],
+        settings: SettingsModel.defaultSettings().copyWith(
+          remTime: '21:00',
+          masterNotificationsEnabled: true,
+          habitRemindersEnabled: true,
+          moneyRemindersEnabled: true,
+        ),
+      );
+
+      final scheduled = channelCalls.where((c) => c.method == 'zonedSchedule').toList();
+      final scheduledIds = scheduled.map((c) => c.arguments['id'] as int).toSet();
+
+      // Should schedule habit rem_time alert and money reminder
+      expect(scheduledIds.contains(service.getHabitNotificationIdRemTime('habit_remtime_change')), isTrue);
+      expect(scheduledIds.contains(NotificationService.moneyReminderId), isTrue);
+
+      // Does NOT schedule or touch any task IDs
+      expect(scheduledIds.any((id) => id >= 10000000 && id < 800000000), isFalse);
+    });
+
+    test('onHabitToggled: completing habit cancels its reminders; uncompleting reschedules them', () async {
+      final now = DateTime.now();
+      final futureDeadlineStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 1)));
+      final remTimeStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 2)));
+
+      final habit = Habit(
+        id: 'habit_toggle_test',
+        name: 'Workout',
+        category: 'Fitness',
+        colorValue: 0xFFE91E63,
+        reminderTime: futureDeadlineStr,
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      // 1. Toggled to complete -> cancels
+      channelCalls.clear();
+      await reconciler.onHabitToggled(
+        habitId: habit.id,
+        completed: true,
+        userId: 'user_123',
+        remTime: remTimeStr,
+        habit: habit,
+      );
+
+      final cancelCalls = channelCalls.where((c) => c.method == 'cancel').toList();
+      final canceledIds = cancelCalls.map(extractCancelId).whereType<int>().toSet();
+      expect(canceledIds.contains(service.getHabitNotificationIdDeadline(habit.id)), isTrue);
+      expect(canceledIds.contains(service.getHabitNotificationIdRemTime(habit.id)), isTrue);
+
+      // 2. Toggled back to incomplete -> reschedules
+      channelCalls.clear();
+      await reconciler.onHabitToggled(
+        habitId: habit.id,
+        completed: false,
+        userId: 'user_123',
+        remTime: remTimeStr,
+        habit: habit,
+      );
+
+      final scheduledCalls = channelCalls.where((c) => c.method == 'zonedSchedule').toList();
+      final scheduledIds = scheduledCalls.map((c) => c.arguments['id'] as int).toSet();
+      expect(scheduledIds.contains(service.getHabitNotificationIdDeadline(habit.id)), isTrue);
+      expect(scheduledIds.contains(service.getHabitNotificationIdRemTime(habit.id)), isTrue);
+    });
+
+    test('Reconcile with masterNotificationsEnabled == false cancels all notifications', () async {
+      channelCalls.clear();
+      await reconciler.reconcile(
+        userId: 'user_test',
+        tasks: [],
+        habits: [],
+        habitEntries: [],
+        settings: SettingsModel.defaultSettings().copyWith(masterNotificationsEnabled: false),
+      );
+
+      expect(channelCalls.any((c) => c.method == 'cancelAll'), isTrue);
+    });
 
     test('Reconciles mixed task and habit lists: cancels completed/past, schedules active future', () async {
       final now = DateTime.now();
+      final futureDeadlineStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 1)));
+      final futureRemTimeStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 2)));
 
       final activeTask = Task(
         id: 'reconcile_active_task',
@@ -295,7 +540,7 @@ void main() {
         name: 'Meditation',
         category: 'Mindfulness',
         colorValue: 0xFF9C27B0,
-        reminderTime: '21:00',
+        reminderTime: futureDeadlineStr,
         createdAt: now,
         updatedAt: now,
       );
@@ -311,10 +556,18 @@ void main() {
       );
 
       channelCalls.clear();
-      await service.reconcileScheduledNotifications(
+      await reconciler.reconcile(
+        userId: 'reconcile_user',
         tasks: [activeTask, completedTask],
         habits: [activeHabit, inactiveHabit],
-        hasTodayTx: false,
+        habitEntries: [],
+        remTime: futureRemTimeStr,
+        settings: SettingsModel.defaultSettings().copyWith(
+          masterNotificationsEnabled: true,
+          taskRemindersEnabled: true,
+          habitRemindersEnabled: true,
+          moneyRemindersEnabled: true,
+        ),
       );
 
       final scheduled = channelCalls.where((c) => c.method == 'zonedSchedule').toList();
@@ -323,21 +576,33 @@ void main() {
       // Active task and active habit should be scheduled
       expect(scheduledIds.contains(service.getTaskNotificationId5m(activeTask.id)), isTrue);
       expect(scheduledIds.contains(service.getTaskNotificationIdDeadline(activeTask.id)), isTrue);
-      expect(scheduledIds.contains(service.getHabitNotificationId(activeHabit.id)), isTrue);
+      expect(scheduledIds.contains(service.getHabitNotificationIdDeadline(activeHabit.id)), isTrue);
+      expect(scheduledIds.contains(service.getHabitNotificationIdRemTime(activeHabit.id)), isTrue);
 
-      // Completed task and inactive habit should NOT be scheduled
+      // Completed task should NOT be scheduled
       expect(scheduledIds.contains(service.getTaskNotificationId5m(completedTask.id)), isFalse);
-      expect(scheduledIds.contains(service.getHabitNotificationId(inactiveHabit.id)), isFalse);
+      expect(scheduledIds.contains(service.getTaskNotificationIdDeadline(completedTask.id)), isFalse);
     });
   });
 
-  group('Step 14 & 15 — Auth Lifecycle & User Isolation', () {
+  group('Auth Lifecycle & Multi-User Isolation', () {
     final service = NotificationService();
+    final reconciler = NotificationReconciler(notificationService: service);
 
     test('cancelAllUserNotifications cancels all active notifications on logout', () async {
       channelCalls.clear();
       await service.cancelAllUserNotifications();
 
+      expect(channelCalls.any((c) => c.method == 'cancelAll'), isTrue);
+    });
+
+    test('reconcile with null or empty userId purges all notifications', () async {
+      channelCalls.clear();
+      await reconciler.reconcile(userId: null);
+      expect(channelCalls.any((c) => c.method == 'cancelAll'), isTrue);
+
+      channelCalls.clear();
+      await reconciler.reconcile(userId: '');
       expect(channelCalls.any((c) => c.method == 'cancelAll'), isTrue);
     });
 
@@ -385,10 +650,17 @@ void main() {
       );
 
       channelCalls.clear();
-      await service.reconcileScheduledNotifications(
+      await reconciler.reconcile(
+        userId: 'user_b',
         tasks: [userBTask],
         habits: [],
-        hasTodayTx: true,
+        habitEntries: [],
+        settings: SettingsModel.defaultSettings().copyWith(
+          masterNotificationsEnabled: true,
+          taskRemindersEnabled: true,
+          habitRemindersEnabled: true,
+          moneyRemindersEnabled: true,
+        ),
       );
 
       final scheduledIds = channelCalls
@@ -403,7 +675,7 @@ void main() {
     });
   });
 
-  group('Step 20 — Permission & Status Methods', () {
+  group('Permission & Status Methods', () {
     final service = NotificationService();
 
     test('requestPermissions and areNotificationsEnabled complete safely without throwing', () async {

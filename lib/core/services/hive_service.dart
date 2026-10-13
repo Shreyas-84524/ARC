@@ -27,6 +27,10 @@ class HiveService {
   static const String moneyBoxName = 'money_box';
   static const String moneySyncQueueBoxName = 'money_sync_queue_box';
   static const String settingsBoxName = 'settings_box';
+  // Local-only Secret Notes namespaces (NEVER synced with cloud/Firebase)
+  static const String secretNotesSecurityBoxName = 'secret_notes_security';
+  static const String secretNotesPreferencesBoxName = 'secret_notes_preferences';
+  static const String secretNotesDataBoxName = 'secret_notes_data';
 
   Future<void> init() async {
     if (_initialized) return;
@@ -50,6 +54,9 @@ class HiveService {
       await Hive.openBox<Transaction>(moneyBoxName);
       await Hive.openBox(moneySyncQueueBoxName);
       await Hive.openBox(settingsBoxName);
+      await Hive.openBox(secretNotesSecurityBoxName);
+      await Hive.openBox(secretNotesPreferencesBoxName);
+      await Hive.openBox(secretNotesDataBoxName);
 
       _initialized = true;
       debugPrint('HiveService: successfully initialized and boxes opened.');

@@ -13,6 +13,8 @@ import 'package:arc/features/task_manager/models/task_model.dart';
 import 'package:arc/features/task_manager/widgets/task_editor_sheet.dart';
 import 'package:arc/core/widgets/empty_state.dart';
 import 'package:arc/providers/global_providers.dart';
+import 'package:go_router/go_router.dart';
+import 'package:arc/features/secret_notes/providers/secret_notes_provider.dart';
 
 class TasksScreen extends ConsumerStatefulWidget {
   const TasksScreen({super.key});
@@ -22,12 +24,73 @@ class TasksScreen extends ConsumerStatefulWidget {
 }
 
 class _TasksScreenState extends ConsumerState<TasksScreen> {
+  double _horizontalDragOffset = 0.0;
+
+  void _openSecretNotes() {
+    HapticFeedback.lightImpact();
+    final isConfigured =
+        ref.read(secretNotesSecurityServiceProvider).isConfiguredSync();
+    final isUnlocked = ref.read(secretNotesSessionProvider);
+
+    if (!isConfigured) {
+      context.push('/secret-notes/setup');
+    } else if (!isUnlocked) {
+      context.push('/secret-notes/unlock');
+    } else {
+      context.push('/secret-notes');
+    }
+  }
+
   void _showTaskEditor(BuildContext context, [Task? task]) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
       builder: (context) => TaskEditorSheet(taskToEdit: task),
+    );
+  }
+
+  void _showTaskToggleSnackBar(
+    BuildContext context,
+    String taskId,
+    bool wasCompleted,
+  ) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        dismissDirection: DismissDirection.down,
+        duration: const Duration(seconds: 5),
+        persist: false,
+        backgroundColor:
+            wasCompleted ? AppColors.accentPressed : AppColors.success,
+        content: Row(
+          children: [
+            Icon(
+              wasCompleted ? LucideIcons.rotateCcw : LucideIcons.checkCircle2,
+              color: Colors.black,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              wasCompleted ? 'Task Marked Incomplete' : 'Task Completed',
+              style: const TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        action: SnackBarAction(
+          label: 'Undo',
+          textColor: Colors.black,
+          disabledTextColor: Colors.black54,
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            ref.read(tasksProvider.notifier).toggleTask(taskId);
+          },
+        ),
+      ),
     );
   }
 
@@ -80,7 +143,20 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
     final activeCategory = ref.watch(taskCategoryFilterProvider);
     final taskStats = ref.watch(taskStatisticsProvider);
 
-    return Scaffold(
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onHorizontalDragStart: (details) {
+        _horizontalDragOffset = 0.0;
+      },
+      onHorizontalDragUpdate: (details) {
+        _horizontalDragOffset += details.primaryDelta ?? 0.0;
+      },
+      onHorizontalDragEnd: (details) {
+        if (_horizontalDragOffset >= 80.0 && (details.primaryVelocity ?? 0.0) >= 0) {
+          _openSecretNotes();
+        }
+      },
+      child: Scaffold(
       appBar: const CustomTopBar(title: 'Task Manager'),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -383,6 +459,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
         onPressed: () => _showTaskEditor(context),
         child: const Icon(LucideIcons.plus, size: 24),
       ).animate().scale(delay: 200.ms, duration: 250.ms, curve: Curves.easeOut),
+      ),
     );
   }
 
@@ -421,38 +498,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
             final wasCompleted = task.completed;
             await ref.read(tasksProvider.notifier).toggleTask(task.id);
             if (context.mounted) {
-              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      Icon(
-                        wasCompleted ? LucideIcons.rotateCcw : LucideIcons.checkCircle2,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        wasCompleted ? 'Task Marked Incomplete' : 'Task Completed',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  backgroundColor: wasCompleted ? AppColors.accentPressed : AppColors.success,
-                  duration: const Duration(seconds: 3),
-                  action: SnackBarAction(
-                    label: 'Undo',
-                    textColor: Colors.white,
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      ref.read(tasksProvider.notifier).toggleTask(task.id);
-                    },
-                  ),
-                ),
-              );
+              _showTaskToggleSnackBar(context, task.id, wasCompleted);
             }
           },
         ),
@@ -463,38 +509,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
               final wasCompleted = task.completed;
               await ref.read(tasksProvider.notifier).toggleTask(task.id);
               if (context.mounted) {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Row(
-                      children: [
-                        Icon(
-                          wasCompleted ? LucideIcons.rotateCcw : LucideIcons.checkCircle2,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          wasCompleted ? 'Task Marked Incomplete' : 'Task Completed',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    backgroundColor: wasCompleted ? AppColors.accentPressed : AppColors.success,
-                    duration: const Duration(seconds: 3),
-                    action: SnackBarAction(
-                      label: 'Undo',
-                      textColor: Colors.white,
-                      onPressed: () {
-                        HapticFeedback.lightImpact();
-                        ref.read(tasksProvider.notifier).toggleTask(task.id);
-                      },
-                    ),
-                  ),
-                );
+                _showTaskToggleSnackBar(context, task.id, wasCompleted);
               }
             },
             backgroundColor: AppColors.success,
@@ -539,9 +554,14 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                   Padding(
                     padding: const EdgeInsets.only(top: 2.0),
                     child: InkWell(
-                      onTap: () {
+                      key: Key('task_checkbox_${task.id}'),
+                      onTap: () async {
                         HapticFeedback.lightImpact();
-                        ref.read(tasksProvider.notifier).toggleTask(task.id);
+                        final wasCompleted = task.completed;
+                        await ref.read(tasksProvider.notifier).toggleTask(task.id);
+                        if (context.mounted) {
+                          _showTaskToggleSnackBar(context, task.id, wasCompleted);
+                        }
                       },
                       borderRadius: BorderRadius.circular(100),
                       child: AnimatedContainer(

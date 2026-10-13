@@ -16,6 +16,12 @@ import 'package:arc/features/user_management/views/splash_screen.dart';
 import 'package:arc/features/admin/screens/admin_dashboard_screen.dart';
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
 import 'package:arc/features/user_management/models/user_context.dart';
+import 'package:arc/features/secret_notes/screens/secret_notes_setup_screen.dart';
+import 'package:arc/features/secret_notes/screens/secret_notes_unlock_screen.dart';
+import 'package:arc/features/secret_notes/screens/secret_notes_dashboard_screen.dart';
+import 'package:arc/features/secret_notes/screens/secret_note_editor_screen.dart';
+import 'package:arc/features/secret_notes/screens/secret_notes_settings_screen.dart';
+import 'package:arc/features/secret_notes/providers/secret_notes_provider.dart';
 
 class RouterNotifier extends ChangeNotifier {
   final Ref _ref;
@@ -23,6 +29,22 @@ class RouterNotifier extends ChangeNotifier {
   RouterNotifier(this._ref) {
     _ref.listen<UserContext>(
       userContextProvider,
+      (previous, next) {
+        if (previous != next) {
+          notifyListeners();
+        }
+      },
+    );
+    _ref.listen<bool>(
+      secretNotesSessionProvider,
+      (previous, next) {
+        if (previous != next) {
+          notifyListeners();
+        }
+      },
+    );
+    _ref.listen<AsyncValue<bool>>(
+      secretNotesConfiguredProvider,
       (previous, next) {
         if (previous != next) {
           notifyListeners();
@@ -41,6 +63,9 @@ class RouterNotifier extends ChangeNotifier {
     final isAdminRoute = location == '/admin';
     final isPublicAuthRoute =
         isLoggingIn || isSignUp || isForgotPassword;
+    final isSecretNotesRoute = location.startsWith('/secret-notes');
+    final isSecretNotesSetup = location == '/secret-notes/setup';
+    final isSecretNotesUnlock = location == '/secret-notes/unlock';
 
     debugPrint(
         '[RouterNotifier.redirect] path: $location, isInitializing: ${userContext.isInitializing}, isAuthenticated: ${userContext.isAuthenticated}, isAdmin: ${userContext.isAdmin}');
@@ -52,6 +77,7 @@ class RouterNotifier extends ChangeNotifier {
 
     // 2. If user is NOT authenticated
     if (!userContext.isAuthenticated) {
+      _ref.read(secretNotesSessionProvider.notifier).lock();
       return isPublicAuthRoute ? null : '/login';
     }
 
@@ -68,6 +94,36 @@ class RouterNotifier extends ChangeNotifier {
     // 5. If user IS authenticated normal user on splash or public auth screen
     if (isPublicAuthRoute || isSplash) {
       return '/';
+    }
+
+    // 6. Secret Notes navigation and security gate
+    if (isSecretNotesRoute) {
+      // Entering Secret Notes: enable secure window protection on supported platforms (Android)
+      _ref.read(secretNotesWindowPrivacyServiceProvider).enableSecureScreen();
+
+      final securityService = _ref.read(secretNotesSecurityServiceProvider);
+      final isConfigured = securityService.isConfiguredSync();
+      final isUnlocked = _ref.read(secretNotesSessionProvider);
+
+      if (!isConfigured) {
+        return isSecretNotesSetup ? null : '/secret-notes/setup';
+      }
+
+      if (!isUnlocked) {
+        return isSecretNotesUnlock ? null : '/secret-notes/unlock';
+      }
+
+      if (isSecretNotesSetup || isSecretNotesUnlock) {
+        return '/secret-notes';
+      }
+    } else {
+      // Exiting Secret Notes: disable secure screen protection and automatically invalidate unlocked session
+      _ref.read(secretNotesWindowPrivacyServiceProvider).disableSecureScreen();
+      final wasUnlocked = _ref.read(secretNotesSessionProvider);
+      if (wasUnlocked) {
+        _ref.read(secretNotesSessionProvider.notifier).lock();
+        debugPrint('[RouterNotifier] User navigated out of Secret Notes. Session automatically locked.');
+      }
     }
 
     return null;
@@ -189,6 +245,43 @@ final routerProvider = Provider<GoRouter>((ref) {
           return const NotificationCenterScreen();
         },
       ),
+      GoRoute(
+        path: '/secret-notes/setup',
+        builder: (BuildContext context, GoRouterState state) {
+          return const SecretNotesSetupScreen();
+        },
+      ),
+      GoRoute(
+        path: '/secret-notes/unlock',
+        builder: (BuildContext context, GoRouterState state) {
+          return const SecretNotesUnlockScreen();
+        },
+      ),
+      GoRoute(
+        path: '/secret-notes',
+        builder: (BuildContext context, GoRouterState state) {
+          return const SecretNotesDashboardScreen();
+        },
+      ),
+      GoRoute(
+        path: '/secret-notes/settings',
+        builder: (BuildContext context, GoRouterState state) {
+          return const SecretNotesSettingsScreen();
+        },
+      ),
+      GoRoute(
+        path: '/secret-notes/new',
+        builder: (BuildContext context, GoRouterState state) {
+          return const SecretNoteEditorScreen();
+        },
+      ),
+      GoRoute(
+        path: '/secret-notes/:id',
+        builder: (BuildContext context, GoRouterState state) {
+          final noteId = state.pathParameters['id'] ?? '';
+          return SecretNoteEditorScreen(noteId: noteId);
+        },
+      ),
     ],
   );
 });
@@ -212,6 +305,33 @@ GoRouter createAppRouter({String initialLocation = '/login'}) {
       GoRoute(
         path: '/',
         builder: (context, state) => const DashboardScreen(),
+      ),
+      GoRoute(
+        path: '/secret-notes/setup',
+        builder: (context, state) => const SecretNotesSetupScreen(),
+      ),
+      GoRoute(
+        path: '/secret-notes/unlock',
+        builder: (context, state) => const SecretNotesUnlockScreen(),
+      ),
+      GoRoute(
+        path: '/secret-notes',
+        builder: (context, state) => const SecretNotesDashboardScreen(),
+      ),
+      GoRoute(
+        path: '/secret-notes/settings',
+        builder: (context, state) => const SecretNotesSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/secret-notes/new',
+        builder: (context, state) => const SecretNoteEditorScreen(),
+      ),
+      GoRoute(
+        path: '/secret-notes/:id',
+        builder: (context, state) {
+          final noteId = state.pathParameters['id'] ?? '';
+          return SecretNoteEditorScreen(noteId: noteId);
+        },
       ),
     ],
   );
