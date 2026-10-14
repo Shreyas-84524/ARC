@@ -43,9 +43,14 @@ class _SecretNotesDashboardScreenState
     }
   }
 
-  void _handleLock() {
+  void _exitToTasks() {
     ref.read(secretNotesSessionProvider.notifier).lock();
-    context.go('/tasks');
+    final router = GoRouter.maybeOf(context);
+    if (router != null) {
+      router.go('/tasks');
+    } else if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
   }
 
   void _openCreateNote() {
@@ -129,35 +134,35 @@ class _SecretNotesDashboardScreenState
     final isDark = theme.brightness == Brightness.dark;
     final notesAsync = ref.watch(secretNotesListProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Secret Notes'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/tasks');
-            }
-          },
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _exitToTasks();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Secret Notes'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(LucideIcons.arrowLeft),
+            onPressed: _exitToTasks,
+          ),
+          actions: [
+            IconButton(
+              tooltip: 'Secret Notes Settings',
+              icon: const Icon(LucideIcons.settings),
+              onPressed: () => context.push('/secret-notes/settings'),
+            ),
+            IconButton(
+              tooltip: 'Lock Secret Notes',
+              icon: const Icon(LucideIcons.lock),
+              onPressed: _exitToTasks,
+            ),
+            const SizedBox(width: 8),
+          ],
         ),
-        actions: [
-          IconButton(
-            tooltip: 'Secret Notes Settings',
-            icon: const Icon(LucideIcons.settings),
-            onPressed: () => context.push('/secret-notes/settings'),
-          ),
-          IconButton(
-            tooltip: 'Lock Secret Notes',
-            icon: const Icon(LucideIcons.lock),
-            onPressed: _handleLock,
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.accent,
         foregroundColor: AppColors.textPrimaryLight,
@@ -206,6 +211,7 @@ class _SecretNotesDashboardScreenState
           ),
         ),
       ),
+    ),
     );
   }
 }

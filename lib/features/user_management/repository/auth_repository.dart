@@ -51,7 +51,16 @@ class AuthRepository implements IAuthRepository {
 
   auth.FirebaseAuth get _auth => _firebaseAuth ?? auth.FirebaseAuth.instance;
   fs.FirebaseFirestore get _db => _firestore ?? fs.FirebaseFirestore.instance;
-  GoogleSignIn get _googleSignIn => _googleSignInInstance ?? GoogleSignIn();
+
+  static const String _webClientId =
+      '729643761637-6l1cekc186jos6m6bdss0l0a6lhp9bfr.apps.googleusercontent.com';
+
+  GoogleSignIn get _googleSignIn =>
+      _googleSignInInstance ??
+      GoogleSignIn(
+        clientId: kIsWeb ? _webClientId : null,
+        serverClientId: _webClientId,
+      );
 
   @override
   Stream<auth.User?> authStateChanges() => _auth.authStateChanges();
@@ -208,6 +217,8 @@ class AuthRepository implements IAuthRepository {
 
   @override
   Future<UserProfile> signInWithGoogle() async {
+    final platform = kIsWeb ? 'web' : defaultTargetPlatform.name;
+    debugPrint('AuthRepository: Initiating Google Sign-In flow on platform: $platform');
     try {
       auth.UserCredential credential;
 
@@ -215,25 +226,35 @@ class AuthRepository implements IAuthRepository {
         final googleProvider = auth.GoogleAuthProvider();
         googleProvider.addScope('email');
         googleProvider.addScope('profile');
+        debugPrint('AuthRepository: Invoking signInWithPopup on web.');
         credential = await _auth.signInWithPopup(googleProvider);
       } else {
+        debugPrint('AuthRepository: Opening native Google account picker.');
         final googleUser = await _googleSignIn.signIn();
         if (googleUser == null) {
+          debugPrint('AuthRepository: Google sign-in was cancelled by the user.');
           throw const AuthException('Google sign-in was cancelled.', code: 'cancelled');
         }
 
+        debugPrint('AuthRepository: Google account selected (${googleUser.email}). Fetching authentication tokens.');
         final googleAuth = await googleUser.authentication;
+        final hasIdToken = googleAuth.idToken != null && googleAuth.idToken!.isNotEmpty;
+        final hasAccessToken = googleAuth.accessToken != null && googleAuth.accessToken!.isNotEmpty;
+        debugPrint('AuthRepository: Building Firebase credential (idToken: $hasIdToken, accessToken: $hasAccessToken).');
+
         final authCredential = auth.GoogleAuthProvider.credential(
           accessToken: googleAuth.accessToken,
           idToken: googleAuth.idToken,
         );
+        debugPrint('AuthRepository: Reaching Firebase Authentication signInWithCredential.');
         credential = await _auth.signInWithCredential(authCredential);
       }
 
       final user = credential.user;
       if (user == null) {
-        throw const AuthException('Failed to retrieve authenticated user session.');
+        throw const AuthException('Failed to retrieve authenticated user session.', code: 'session-retrieval-failed');
       }
+      debugPrint('AuthRepository: Firebase Authentication successful for UID: ${user.uid}');
 
       try {
         await HiveService().ensureUserBoxesOpened(user.uid);
@@ -263,7 +284,13 @@ class AuthRepository implements IAuthRepository {
           updatedAt: now,
           lastLoginAt: now,
         );
+        debugPrint('AuthRepository: Created fresh user profile for UID: ${user.uid}');
       } else {
+        final currentProvider = existingProfile.authProvider;
+        final updatedProvider = currentProvider.contains('password')
+            ? 'password,google'
+            : 'google';
+
         profile = existingProfile.copyWith(
           lastLoginAt: now,
           updatedAt: now,
@@ -271,16 +298,40 @@ class AuthRepository implements IAuthRepository {
               ? existingProfile.displayName
               : (user.displayName ?? existingProfile.displayName),
           photoURL: user.photoURL ?? existingProfile.photoURL,
-          authProvider: 'google',
+          authProvider: updatedProvider,
         );
+        debugPrint('AuthRepository: Reused existing user profile for UID: ${user.uid}');
       }
 
       await _persistProfile(profile);
 
       return profile;
     } catch (e) {
-      if (e is AuthException) rethrow;
-      throw AuthException.fromFirebase(e);
+      if (e is AuthException) {
+        if (e.diagnostic != null) {
+          debugPrint('AuthRepository Diagnostic: ${e.diagnostic}');
+        }
+        rethrow;
+      }
+      if (e is auth.FirebaseAuthException) {
+        if (e.code == 'invalid-credential') {
+          throw const AuthException(
+            "ARC couldn't verify your Google account. Please try again.",
+            code: 'invalid-credential',
+          );
+        }
+        if (e.code == 'network-request-failed') {
+          throw const AuthException(
+            'Unable to connect to Google. Check your internet connection and try again.',
+            code: 'network-request-failed',
+          );
+        }
+      }
+      final mapped = AuthException.fromFirebase(e);
+      if (mapped.diagnostic != null) {
+        debugPrint('AuthRepository Diagnostic: ${mapped.diagnostic}');
+      }
+      throw mapped;
     }
   }
 

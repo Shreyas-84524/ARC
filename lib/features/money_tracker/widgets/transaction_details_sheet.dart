@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:arc/core/services/app_haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -77,7 +77,7 @@ class TransactionDetailsSheet extends ConsumerWidget {
               minimumSize: const Size(80, 40),
             ),
             onPressed: () {
-              HapticFeedback.mediumImpact();
+              AppHaptics.mediumImpact();
               Navigator.of(context).pop(true);
             },
             child: const Text('Delete'),

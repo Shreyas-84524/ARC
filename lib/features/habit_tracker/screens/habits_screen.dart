@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:arc/core/services/app_haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -311,7 +311,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
                                             child: Center(
                                               child: InkWell(
                                                 onTap: () {
-                                                  HapticFeedback.lightImpact();
+                                                  AppHaptics.lightImpact();
                                                   ref.read(habitEntriesProvider.notifier).toggleEntry(
                                                         habit.id,
                                                         dateStr,

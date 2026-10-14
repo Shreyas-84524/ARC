@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:arc/core/services/app_haptics.dart';
 import 'package:arc/core/theme/app_theme.dart';
 
 class PremiumSegmentedControl extends StatelessWidget {
@@ -96,7 +96,7 @@ class PremiumSegmentedControl extends StatelessWidget {
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
-                            HapticFeedback.selectionClick();
+                            AppHaptics.selectionClick();
                             controller.animateTo(index);
                             if (onTap != null) onTap!(index);
                           },

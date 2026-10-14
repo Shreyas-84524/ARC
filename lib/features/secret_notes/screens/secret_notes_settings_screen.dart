@@ -475,6 +475,14 @@ class _SecretNotesSettingsScreenState
   // ---------------------------------------------------------------------------
   // Build Methods
   // ---------------------------------------------------------------------------
+  void _handleBack() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/secret-notes');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -498,22 +506,22 @@ class _SecretNotesSettingsScreenState
         ? DateFormat('MMM d, yyyy • h:mm a').format(lastUpdated)
         : 'Never';
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Secret Notes Settings'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/secret-notes');
-            }
-          },
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _handleBack();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Secret Notes Settings'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(LucideIcons.arrowLeft),
+            onPressed: _handleBack,
+          ),
         ),
-      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -773,6 +781,7 @@ class _SecretNotesSettingsScreenState
           ),
         ),
       ),
+    ),
     );
   }
 

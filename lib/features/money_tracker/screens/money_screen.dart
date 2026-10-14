@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:arc/core/services/app_haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -100,7 +100,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
             onPressed: () {
               final double? amount = double.tryParse(controller.text.trim());
               if (amount != null && amount >= 0) {
-                HapticFeedback.mediumImpact();
+                AppHaptics.mediumImpact();
                 ref.read(monthlyBudgetProvider.notifier).setBudget(amount);
                 Navigator.of(context).pop();
               }
@@ -136,7 +136,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
               foregroundColor: Colors.white,
             ),
             onPressed: () {
-              HapticFeedback.mediumImpact();
+              AppHaptics.mediumImpact();
               Navigator.of(context).pop(true);
             },
             child: const Text('Delete'),

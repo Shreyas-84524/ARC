@@ -10,21 +10,23 @@ class SecretNotesBiometricService {
   final LocalAuthentication _auth;
 
   SecretNotesBiometricService({LocalAuthentication? auth})
-      : _auth = auth ?? LocalAuthentication();
+    : _auth = auth ?? LocalAuthentication();
 
-  /// Checks if the hardware supports biometrics and device authentication.
+  /// Checks that biometric hardware is supported and at least one biometric
+  /// is enrolled and available to this app.
   Future<bool> isBiometricAvailable() async {
     try {
       final canCheck = await _auth.canCheckBiometrics;
-      final isDeviceSupported = await _auth.isDeviceSupported();
-      if (!canCheck && !isDeviceSupported) {
+      if (!canCheck) {
         return false;
       }
 
       final availableBiometrics = await _auth.getAvailableBiometrics();
-      return availableBiometrics.isNotEmpty || (canCheck && isDeviceSupported);
+      return availableBiometrics.isNotEmpty;
     } catch (e) {
-      debugPrint('Secret Notes: biometric availability check failed gracefully: $e');
+      debugPrint(
+        'Secret Notes: biometric availability check failed gracefully: $e',
+      );
       return false;
     }
   }
@@ -37,7 +39,9 @@ class SecretNotesBiometricService {
     try {
       final available = await isBiometricAvailable();
       if (!available) {
-        debugPrint('Secret Notes: biometric authentication requested but unavailable.');
+        debugPrint(
+          'Secret Notes: biometric authentication requested but unavailable.',
+        );
         return false;
       }
 
@@ -49,7 +53,9 @@ class SecretNotesBiometricService {
 
       return authenticated;
     } catch (e) {
-      debugPrint('Secret Notes: biometric prompt encountered error or user cancelled: $e');
+      debugPrint(
+        'Secret Notes: biometric prompt encountered error or user cancelled: $e',
+      );
       return false;
     }
   }

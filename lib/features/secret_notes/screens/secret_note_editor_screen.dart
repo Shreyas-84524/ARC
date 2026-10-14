@@ -134,12 +134,17 @@ class _SecretNoteEditorScreenState
           duration: Duration(seconds: 2),
         ),
       );
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      } else {
-        try {
-          context.go('/secret-notes');
-        } catch (_) {}
+      _returnToDashboard();
+    }
+  }
+
+  void _returnToDashboard() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      final router = GoRouter.maybeOf(context);
+      if (router != null) {
+        router.go('/secret-notes');
       }
     }
   }
@@ -311,13 +316,7 @@ class _SecretNoteEditorScreenState
       _captureInitialSnapshot();
 
       if (mounted) {
-        if (Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
-        } else {
-          try {
-            context.go('/secret-notes');
-          } catch (_) {}
-        }
+        _returnToDashboard();
       }
     } catch (e) {
       if (mounted) {
@@ -370,13 +369,7 @@ class _SecretNoteEditorScreenState
     if (confirmed == true && mounted) {
       await ref.read(secretNotesListProvider.notifier).deleteNote(id);
       if (mounted) {
-        if (Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
-        } else {
-          try {
-            context.go('/secret-notes');
-          } catch (_) {}
-        }
+        _returnToDashboard();
       }
     }
   }
@@ -384,13 +377,7 @@ class _SecretNoteEditorScreenState
   Future<void> _handleBackPress() async {
     final canLeave = await _confirmDiscardChanges();
     if (canLeave && mounted) {
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      } else {
-        try {
-          context.go('/secret-notes');
-        } catch (_) {}
-      }
+      _returnToDashboard();
     }
   }
 

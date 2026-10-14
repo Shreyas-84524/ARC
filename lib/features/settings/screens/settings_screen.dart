@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:arc/core/services/app_haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -394,7 +394,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                         ),
                         onPressed: () {
-                          HapticFeedback.lightImpact();
+                          AppHaptics.lightImpact();
                           Navigator.of(context).pop(false);
                         },
                         child: const Text(
@@ -421,7 +421,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                         ),
                         onPressed: () {
-                          HapticFeedback.mediumImpact();
+                          AppHaptics.mediumImpact();
                           Navigator.of(context).pop(true);
                         },
                         child: const Text(
@@ -579,7 +579,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               foregroundColor: Colors.black,
             ),
             onPressed: () {
-              HapticFeedback.mediumImpact();
+              AppHaptics.mediumImpact();
               Navigator.of(context).pop(true);
             },
             child: const Text('Clear Cache'),
@@ -621,7 +621,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               foregroundColor: Colors.white,
             ),
             onPressed: () {
-              HapticFeedback.heavyImpact();
+              AppHaptics.heavyImpact();
               Navigator.of(context).pop(true);
             },
             child: const Text('Reset Data'),
@@ -1033,7 +1033,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            appSettings.remTime,
+                            "Edit",
                             style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent),
                           ),
                           const SizedBox(width: 4),
@@ -1173,7 +1173,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             child: InkWell(
               onTap: () {
-                HapticFeedback.lightImpact();
+                AppHaptics.lightImpact();
                 _handleLogout();
               },
               borderRadius: BorderRadius.circular(AppTheme.radiusCard),

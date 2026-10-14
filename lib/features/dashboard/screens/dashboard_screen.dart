@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:arc/core/services/app_haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
@@ -82,7 +82,7 @@ class DashboardScreen extends ConsumerWidget {
           textColor: Colors.black,
           disabledTextColor: Colors.black54,
           onPressed: () {
-            HapticFeedback.lightImpact();
+            AppHaptics.lightImpact();
             ref.read(tasksProvider.notifier).toggleTask(taskId);
           },
         ),
@@ -121,7 +121,7 @@ class DashboardScreen extends ConsumerWidget {
             onPressed: () {
               final double? amount = double.tryParse(controller.text.trim());
               if (amount != null && amount >= 0) {
-                HapticFeedback.mediumImpact();
+                AppHaptics.mediumImpact();
                 ref.read(monthlyBudgetProvider.notifier).setBudget(amount);
                 Navigator.of(context).pop();
               }
@@ -461,7 +461,7 @@ class DashboardScreen extends ConsumerWidget {
                         margin: EdgeInsets.zero,
                         child: InkWell(
                           onTap: () {
-                            HapticFeedback.lightImpact();
+                            AppHaptics.lightImpact();
                             ref
                                 .read(habitEntriesProvider.notifier)
                                 .toggleEntry(
@@ -567,7 +567,7 @@ class DashboardScreen extends ConsumerWidget {
                           onTap: () => _showTaskEditor(context, task),
                           leading: InkWell(
                             onTap: () async {
-                              HapticFeedback.lightImpact();
+                              AppHaptics.lightImpact();
                               final wasCompleted = task.completed;
                               await ref.read(tasksProvider.notifier).toggleTask(task.id);
                               if (context.mounted) {

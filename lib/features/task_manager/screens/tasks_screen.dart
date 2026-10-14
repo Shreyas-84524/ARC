@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:arc/core/services/app_haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -27,7 +27,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
   double _horizontalDragOffset = 0.0;
 
   void _openSecretNotes() {
-    HapticFeedback.lightImpact();
+    AppHaptics.lightImpact();
     final isConfigured =
         ref.read(secretNotesSecurityServiceProvider).isConfiguredSync();
     final isUnlocked = ref.read(secretNotesSessionProvider);
@@ -86,7 +86,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
           textColor: Colors.black,
           disabledTextColor: Colors.black54,
           onPressed: () {
-            HapticFeedback.lightImpact();
+            AppHaptics.lightImpact();
             ref.read(tasksProvider.notifier).toggleTask(taskId);
           },
         ),
@@ -121,7 +121,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
               minimumSize: const Size(80, 40),
             ),
             onPressed: () {
-              HapticFeedback.mediumImpact();
+              AppHaptics.mediumImpact();
               Navigator.of(context).pop(true);
             },
             child: const Text('Delete'),
@@ -494,7 +494,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
         dismissible: DismissiblePane(
           dismissThreshold: 0.15,
           onDismissed: () async {
-            HapticFeedback.mediumImpact();
+            AppHaptics.mediumImpact();
             final wasCompleted = task.completed;
             await ref.read(tasksProvider.notifier).toggleTask(task.id);
             if (context.mounted) {
@@ -505,7 +505,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
         children: [
           SlidableAction(
             onPressed: (context) async {
-              HapticFeedback.mediumImpact();
+              AppHaptics.mediumImpact();
               final wasCompleted = task.completed;
               await ref.read(tasksProvider.notifier).toggleTask(task.id);
               if (context.mounted) {
@@ -556,7 +556,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                     child: InkWell(
                       key: Key('task_checkbox_${task.id}'),
                       onTap: () async {
-                        HapticFeedback.lightImpact();
+                        AppHaptics.lightImpact();
                         final wasCompleted = task.completed;
                         await ref.read(tasksProvider.notifier).toggleTask(task.id);
                         if (context.mounted) {

@@ -26,6 +26,20 @@ void main() {
     return null;
   }
 
+  (String, String) getSafeFutureTimesToday() {
+    final now = DateTime.now();
+    final deadline = now.hour == 23 && now.minute >= 55
+        ? DateTime(now.year, now.month, now.day, 23, 58)
+        : now.add(const Duration(minutes: 2));
+    final remTime = now.hour == 23 && now.minute >= 55
+        ? DateTime(now.year, now.month, now.day, 23, 59)
+        : now.add(const Duration(minutes: 4));
+    return (
+      DateFormat('HH:mm').format(deadline),
+      DateFormat('HH:mm').format(remTime),
+    );
+  }
+
   setUpAll(() {
     tz.initializeTimeZones();
     const MethodChannel channel =
@@ -269,10 +283,8 @@ void main() {
         updatedAt: DateTime.now(),
       );
 
-      // If current hour is past 21:00, use times relative to now
-      final now = DateTime.now();
-      final deadlineStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 1)));
-      final remTimeStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 2)));
+      // Use safe future times for today's tests that won't wrap past midnight
+      final (deadlineStr, remTimeStr) = getSafeFutureTimesToday();
 
       final testHabit = habit.copyWith(reminderTime: deadlineStr);
 
@@ -303,8 +315,7 @@ void main() {
     test('Habit completed today suppresses BOTH deadline and rem_time notifications', () async {
       channelCalls.clear();
       final now = DateTime.now();
-      final deadlineStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 1)));
-      final remTimeStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 2)));
+      final (deadlineStr, remTimeStr) = getSafeFutureTimesToday();
 
       final habit = Habit(
         id: 'habit_completed_today',
@@ -334,7 +345,7 @@ void main() {
     test('Habit without reminderTime schedules only pending rem_time notification', () async {
       channelCalls.clear();
       final now = DateTime.now();
-      final remTimeStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 2)));
+      final (_, remTimeStr) = getSafeFutureTimesToday();
 
       final habitNoReminder = Habit(
         id: 'habit_no_rem',
@@ -405,8 +416,7 @@ void main() {
 
     test('onRemTimeChanged reschedules habit pending and money reminder without touching tasks', () async {
       final now = DateTime.now();
-      final futureDeadlineStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 1)));
-      final newRemTime = DateFormat('HH:mm').format(now.add(const Duration(hours: 2)));
+      final (futureDeadlineStr, newRemTime) = getSafeFutureTimesToday();
 
       final habit = Habit(
         id: 'habit_remtime_change',
@@ -445,8 +455,7 @@ void main() {
 
     test('onHabitToggled: completing habit cancels its reminders; uncompleting reschedules them', () async {
       final now = DateTime.now();
-      final futureDeadlineStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 1)));
-      final remTimeStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 2)));
+      final (futureDeadlineStr, remTimeStr) = getSafeFutureTimesToday();
 
       final habit = Habit(
         id: 'habit_toggle_test',
@@ -504,8 +513,7 @@ void main() {
 
     test('Reconciles mixed task and habit lists: cancels completed/past, schedules active future', () async {
       final now = DateTime.now();
-      final futureDeadlineStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 1)));
-      final futureRemTimeStr = DateFormat('HH:mm').format(now.add(const Duration(hours: 2)));
+      final (futureDeadlineStr, futureRemTimeStr) = getSafeFutureTimesToday();
 
       final activeTask = Task(
         id: 'reconcile_active_task',

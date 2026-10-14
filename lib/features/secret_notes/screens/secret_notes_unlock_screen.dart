@@ -73,7 +73,12 @@ class _SecretNotesUnlockScreenState extends ConsumerState<SecretNotesUnlockScree
       if (success) {
         ref.read(secretNotesSessionProvider.notifier).unlock();
         if (mounted) {
-          context.go('/secret-notes');
+          final router = GoRouter.maybeOf(context);
+          if (router != null) {
+            router.go('/secret-notes');
+          } else if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
         }
       }
       // Note: If user cancels or biometric fails, DO NOT increment failed attempts or lock out!
@@ -147,7 +152,12 @@ class _SecretNotesUnlockScreenState extends ConsumerState<SecretNotesUnlockScree
       if (isUnlocked) {
         ref.read(secretNotesSessionProvider.notifier).unlock();
         if (mounted) {
-          context.go('/secret-notes');
+          final router = GoRouter.maybeOf(context);
+          if (router != null) {
+            router.go('/secret-notes');
+          } else if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
         }
       } else {
         final remainingLockout = await securityService.getLockoutRemainingSeconds();
@@ -171,28 +181,38 @@ class _SecretNotesUnlockScreenState extends ConsumerState<SecretNotesUnlockScree
     }
   }
 
+  void _exitToTasks() {
+    ref.read(secretNotesSessionProvider.notifier).lock();
+    final router = GoRouter.maybeOf(context);
+    if (router != null) {
+      router.go('/tasks');
+    } else if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final isLocked = _lockoutSeconds > 0;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Secret Notes'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/tasks');
-            }
-          },
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _exitToTasks();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Secret Notes'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(LucideIcons.arrowLeft),
+            onPressed: _exitToTasks,
+          ),
         ),
-      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -312,6 +332,7 @@ class _SecretNotesUnlockScreenState extends ConsumerState<SecretNotesUnlockScree
           ),
         ),
       ),
+    ),
     );
   }
 }
