@@ -10,6 +10,9 @@ import 'package:arc/features/money_tracker/screens/money_screen.dart';
 import 'package:arc/features/money_tracker/widgets/transaction_details_sheet.dart';
 import 'package:arc/features/money_tracker/widgets/transaction_editor_sheet.dart';
 import 'package:arc/providers/global_providers.dart';
+import 'package:arc/features/money_tracker/models/money_automation_state.dart';
+import 'package:arc/features/money_tracker/repository/money_automation_repository.dart';
+import 'package:arc/features/money_tracker/providers/money_automation_provider.dart';
 
 class InMemoryMoneyRepository implements MoneyRepository {
   double _budget = 10000.0;
@@ -51,6 +54,13 @@ class InMemoryMoneyRepository implements MoneyRepository {
   Future<bool> syncPending() async => true;
 }
 
+class _TestMoneyAutomationNotifier extends MoneyAutomationNotifier {
+  _TestMoneyAutomationNotifier()
+      : super(MoneyAutomationRepository(inMemoryOnly: true), null) {
+    state = const MoneyAutomationState(isEnabled: true);
+  }
+}
+
 void main() {
   final testDate = DateTime.now();
 
@@ -65,6 +75,7 @@ void main() {
     return ProviderScope(
       overrides: [
         moneyRepositoryProvider.overrideWithValue(repo),
+        moneyAutomationProvider.overrideWith((ref) => _TestMoneyAutomationNotifier()),
       ],
       child: MaterialApp(
         theme: AppTheme.lightTheme,
@@ -94,6 +105,7 @@ void main() {
     expect(find.text('-₹450.00'), findsOneWidget);
 
     // Tap transaction tile
+    await tester.ensureVisible(find.text('Food'));
     await tester.tap(find.text('Food'));
     await tester.pumpAndSettle();
 
@@ -133,6 +145,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Tap tile to view details
+    await tester.ensureVisible(find.text('Shopping'));
     await tester.tap(find.text('Shopping'));
     await tester.pumpAndSettle();
 

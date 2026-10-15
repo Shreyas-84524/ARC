@@ -11,12 +11,14 @@ class CustomTopBar extends ConsumerWidget implements PreferredSizeWidget {
   final String title;
   final bool showActions;
   final bool? showDate;
+  final VoidCallback? onSettingsPressed;
 
   const CustomTopBar({
     super.key,
     required this.title,
     this.showActions = true,
     this.showDate,
+    this.onSettingsPressed,
   });
 
   @override
@@ -85,9 +87,10 @@ class CustomTopBar extends ConsumerWidget implements PreferredSizeWidget {
                   size: 20,
                   color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                 ),
-                onPressed: () {
-                  context.push('/settings');
-                },
+                onPressed: onSettingsPressed ??
+                    () {
+                      context.push('/settings');
+                    },
               ),
               const SizedBox(width: 12),
             ]

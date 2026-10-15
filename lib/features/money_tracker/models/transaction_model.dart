@@ -28,6 +28,12 @@ class Transaction extends HiveObject {
   @HiveField(7)
   final DateTime createdAt;
 
+  @HiveField(8)
+  final String source; // 'manual', 'sms_auto'
+
+  @HiveField(9)
+  final String? automationFingerprint;
+
   Transaction({
     required this.id,
     required this.amount,
@@ -37,6 +43,8 @@ class Transaction extends HiveObject {
     required this.time,
     required this.notes,
     required this.createdAt,
+    this.source = 'manual',
+    this.automationFingerprint,
   });
 
   Transaction copyWith({
@@ -48,6 +56,8 @@ class Transaction extends HiveObject {
     String? time,
     String? notes,
     DateTime? createdAt,
+    String? source,
+    String? automationFingerprint,
   }) {
     return Transaction(
       id: id ?? this.id,
@@ -58,6 +68,8 @@ class Transaction extends HiveObject {
       time: time ?? this.time,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
+      source: source ?? this.source,
+      automationFingerprint: automationFingerprint ?? this.automationFingerprint,
     );
   }
 
@@ -71,6 +83,8 @@ class Transaction extends HiveObject {
       'time': time,
       'notes': notes,
       'createdAt': createdAt.toIso8601String(),
+      'source': source,
+      'automationFingerprint': automationFingerprint,
     };
   }
 
@@ -84,6 +98,8 @@ class Transaction extends HiveObject {
       time: map['time'] ?? '',
       notes: map['notes'] ?? '',
       createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : DateTime.now(),
+      source: map['source'] ?? 'manual',
+      automationFingerprint: map['automationFingerprint'],
     );
   }
 
@@ -98,7 +114,9 @@ class Transaction extends HiveObject {
         other.date == date &&
         other.time == time &&
         other.notes == notes &&
-        other.createdAt == createdAt;
+        other.createdAt == createdAt &&
+        other.source == source &&
+        other.automationFingerprint == automationFingerprint;
   }
 
   @override
@@ -112,6 +130,8 @@ class Transaction extends HiveObject {
       time,
       notes,
       createdAt,
+      source,
+      automationFingerprint,
     );
   }
 }

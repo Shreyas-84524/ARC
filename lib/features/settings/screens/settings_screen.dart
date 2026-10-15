@@ -14,6 +14,9 @@ import 'package:arc/features/user_management/models/auth_exception.dart';
 import 'package:arc/features/user_management/views/widgets/google_logo.dart';
 import 'package:arc/core/services/hive_service.dart';
 import 'package:arc/core/notifications/notification_service.dart';
+import 'package:arc/features/money_tracker/models/money_automation_listener_status.dart';
+import 'package:arc/features/money_tracker/providers/money_automation_provider.dart';
+import 'package:arc/features/money_tracker/widgets/automatic_spending_info_dialog.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   final AuthService? authService;
@@ -531,6 +534,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ref.invalidate(habitEntriesProvider);
       ref.invalidate(moneyProvider);
       ref.invalidate(monthlyBudgetProvider);
+      ref.read(moneyAutomationProvider.notifier).onLogout();
+      ref.invalidate(moneyAutomationProvider);
+      ref.invalidate(moneyAutomationRepositoryProvider);
       ref.invalidate(appSettingsProvider);
       ref.invalidate(taskRepositoryProvider);
       ref.invalidate(habitRepositoryProvider);
@@ -645,6 +651,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final themeMode = ref.watch(themeModeProvider);
     final appSettings = ref.watch(appSettingsProvider);
     final userContext = ref.watch(userContextProvider);
+    final automationState = ref.watch(moneyAutomationProvider);
     final currentUsername = userContext.profile?.displayName ?? userContext.profile?.username ?? 'User';
 
     final linkedProviders = _authService.getLinkedProviders();
@@ -1130,6 +1137,63 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         NotificationService().scheduleDailyMoneyReminder(appSettings.remTime);
                       }
                     },
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // 4. Money Tracker Section
+          Text('Money Tracker', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Card(
+            child: Column(
+              children: [
+                SwitchListTile(
+                  secondary: const Icon(LucideIcons.sparkles, color: AppColors.accent),
+                  title: const Text('Automatic Spending Tracking', style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text(
+                    automationState.isEnabled
+                        ? 'Status: ${automationState.listenerStatus.label}'
+                        : 'Automatically detect confirmed spending transactions',
+                  ),
+                  value: automationState.isEnabled,
+                  activeThumbColor: AppColors.accent,
+                  onChanged: (val) async {
+                    AppHaptics.lightImpact();
+                    if (val) {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => const AutomaticSpendingInfoDialog(),
+                      );
+                      if (confirmed == true) {
+                        await ref.read(moneyAutomationProvider.notifier).enableAutomation();
+                      }
+                    } else {
+                      await ref.read(moneyAutomationProvider.notifier).disableAutomation();
+                    }
+                  },
+                ),
+                if (automationState.listenerStatus == MoneyAutomationListenerStatus.permissionRequired) ...[
+                  const Divider(height: 1, indent: 56),
+                  ListTile(
+                    leading: const Icon(LucideIcons.alertCircle, color: AppColors.warning),
+                    title: const Text('Android Permission Required', style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: const Text('Tap to grant SMS permission or open Settings'),
+                    trailing: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.warning,
+                        foregroundColor: Colors.black,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      onPressed: () {
+                        AppHaptics.mediumImpact();
+                        ref.read(moneyAutomationProvider.notifier).requestPermissionAgain();
+                      },
+                      child: const Text('Enable Access'),
+                    ),
                   ),
                 ],
               ],

@@ -16,6 +16,10 @@ import 'package:arc/features/money_tracker/widgets/transaction_details_sheet.dar
 import 'package:arc/core/widgets/empty_state.dart';
 import 'package:arc/core/widgets/premium_segmented_control.dart';
 import 'package:arc/providers/global_providers.dart';
+import 'package:arc/features/money_tracker/providers/money_automation_provider.dart';
+import 'package:arc/features/money_tracker/widgets/automatic_spending_prompt_card.dart';
+import 'package:arc/features/money_tracker/widgets/automatic_spending_info_dialog.dart';
+import 'package:arc/features/money_tracker/widgets/money_tracker_settings_sheet.dart';
 
 class MoneyScreen extends ConsumerStatefulWidget {
   const MoneyScreen({super.key});
@@ -44,6 +48,22 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(moneyAutomationProvider.notifier).resetVisitState();
+        ref.read(moneyAutomationProvider.notifier).checkListenerHealth();
+        _checkAndRecordPromptAppearance();
+      }
+    });
+  }
+
+  void _checkAndRecordPromptAppearance() {
+    final state = ref.read(moneyAutomationProvider);
+    final budget = ref.read(monthlyBudgetProvider);
+    final month = ref.read(currentMonthProvider);
+    if (state.shouldShowPrompt(hasMonthlyBudget: budget > 0, currentMonth: month)) {
+      ref.read(moneyAutomationProvider.notifier).markPromptShown(month);
+    }
   }
 
   @override
@@ -102,6 +122,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
               if (amount != null && amount >= 0) {
                 AppHaptics.mediumImpact();
                 ref.read(monthlyBudgetProvider.notifier).setBudget(amount);
+                _checkAndRecordPromptAppearance();
                 Navigator.of(context).pop();
               }
             },
@@ -188,8 +209,18 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
     // Savings Progress calculations
     final double savingsRate = totalIncome > 0 ? (savings / totalIncome).clamp(0.0, 1.0) : 0.0;
 
+    final automationState = ref.watch(moneyAutomationProvider);
+    final hasMonthlyBudget = monthlyBudget > 0.0;
+    final bool showAutomationPrompt = automationState.shouldShowPrompt(
+      hasMonthlyBudget: hasMonthlyBudget,
+      currentMonth: currentMonthStr,
+    );
+
     return Scaffold(
-      appBar: const CustomTopBar(title: 'Money Tracker'),
+      appBar: CustomTopBar(
+        title: 'Money Tracker',
+        onSettingsPressed: () => MoneyTrackerSettingsSheet.show(context),
+      ),
       body: Column(
         children: [
           // Premium Segmented Control
@@ -222,6 +253,25 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
                     child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Automatic Spending Tracking Prompt (shown above Monthly Budget when budget exists)
+                      if (showAutomationPrompt) ...[
+                        AutomaticSpendingPromptCard(
+                          onYes: () async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => const AutomaticSpendingInfoDialog(),
+                            );
+                            if (confirmed == true && context.mounted) {
+                              await ref.read(moneyAutomationProvider.notifier).enableAutomation();
+                            }
+                          },
+                          onNo: () {
+                            ref.read(moneyAutomationProvider.notifier).dismissPromptForSession();
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
                       // Set Budget Banner
                       if (monthlyBudget == 0.0)
                         Card(
@@ -922,35 +972,9 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isIncome = tx.type == 'Income';
     final Color color = isIncome ? AppColors.income : AppColors.danger;
+    final bool showCategoryPrompt = tx.category == 'Uncategorized' && tx.source == 'sms_auto';
     
-    IconData icon = LucideIcons.wallet;
-    
-    switch (tx.category) {
-      case 'Food':
-        icon = LucideIcons.utensils;
-        break;
-      case 'Transport':
-        icon = LucideIcons.car;
-        break;
-      case 'Rent':
-        icon = LucideIcons.home;
-        break;
-      case 'Bills':
-        icon = LucideIcons.fileText;
-        break;
-      case 'Entertainment':
-        icon = LucideIcons.film;
-        break;
-      case 'Shopping':
-        icon = LucideIcons.shoppingBag;
-        break;
-      case 'Salary':
-        icon = LucideIcons.banknote;
-        break;
-      case 'Freelance':
-        icon = LucideIcons.laptop;
-        break;
-    }
+    final IconData icon = _getCategoryIcon(tx.category);
 
     return Slidable(
       key: ValueKey(tx.id),
@@ -973,58 +997,231 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen> with SingleTickerProv
         ],
       ),
       child: Card(
-        child: InkWell(
-          onTap: () => _showTransactionDetails(context, tx),
-          borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: isDark ? 0.18 : 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: color, size: 20),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        tx.category,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            InkWell(
+              onTap: () => _showTransactionDetails(context, tx),
+              borderRadius: BorderRadius.vertical(
+                top: const Radius.circular(AppTheme.radiusCard),
+                bottom: Radius.circular(showCategoryPrompt ? 0 : AppTheme.radiusCard),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: isDark ? 0.18 : 0.12),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        tx.notes.isNotEmpty ? tx.notes : '${DateFormat('MMM d').format(tx.date)} at ${tx.time}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      child: Icon(icon, color: color, size: 20),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                tx.category,
+                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (tx.source == 'sms_auto') ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.accent.withValues(alpha: isDark ? 0.2 : 0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'Auto-added',
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.accent,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            tx.notes.isNotEmpty ? tx.notes : '${DateFormat('MMM d').format(tx.date)} at ${tx.time}',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      '${isIncome ? '+' : '-'}${CurrencyFormatter.format(tx.amount)}',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: isIncome ? AppColors.income : AppColors.danger,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 16),
-                Text(
-                  '${isIncome ? '+' : '-'}${CurrencyFormatter.format(tx.amount)}',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isIncome ? AppColors.income : AppColors.danger,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+            if (showCategoryPrompt)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 14.0),
+                child: InkWell(
+                  onTap: () => _showCategoryPickerForTransaction(context, tx),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withValues(alpha: isDark ? 0.15 : 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.accent.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(LucideIcons.tag, size: 14, color: AppColors.accent),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Add category to this transaction?',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
+  }
+
+  void _showCategoryPickerForTransaction(BuildContext context, Transaction tx) {
+    AppHaptics.selectionClick();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final categories = [
+      'Food',
+      'Travel',
+      'Shopping',
+      'Fuel',
+      'Bills',
+      'Entertainment',
+      'Health',
+      'Education',
+      'Other',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (bottomSheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white24 : Colors.black12,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Text(
+                  'Select Category',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: categories.map((cat) {
+                    final catIcon = _getCategoryIcon(cat);
+                    return ActionChip(
+                      avatar: Icon(catIcon, size: 16, color: AppColors.accent),
+                      label: Text(cat),
+                      backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                      onPressed: () async {
+                        AppHaptics.lightImpact();
+                        Navigator.of(bottomSheetContext).pop();
+                        final updated = tx.copyWith(category: cat);
+                        await ref.read(moneyProvider.notifier).updateTransaction(updated);
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'Food':
+        return LucideIcons.utensils;
+      case 'Transport':
+      case 'Travel':
+      case 'Fuel':
+        return LucideIcons.car;
+      case 'Rent':
+        return LucideIcons.home;
+      case 'Bills':
+        return LucideIcons.fileText;
+      case 'Entertainment':
+        return LucideIcons.film;
+      case 'Shopping':
+        return LucideIcons.shoppingBag;
+      case 'Salary':
+        return LucideIcons.banknote;
+      case 'Freelance':
+      case 'Freelancing':
+        return LucideIcons.laptop;
+      case 'Health':
+        return LucideIcons.activity;
+      case 'Education':
+        return LucideIcons.bookOpen;
+      case 'Uncategorized':
+        return LucideIcons.helpCircle;
+      default:
+        return LucideIcons.wallet;
+    }
   }
 
   Widget _buildEmptyState(BuildContext context) {

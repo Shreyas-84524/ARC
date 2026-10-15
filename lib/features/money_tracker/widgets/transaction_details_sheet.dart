@@ -45,6 +45,8 @@ class TransactionDetailsSheet extends ConsumerWidget {
         return LucideIcons.activity;
       case 'Education':
         return LucideIcons.bookOpen;
+      case 'Uncategorized':
+        return LucideIcons.helpCircle;
       default:
         return LucideIcons.wallet;
     }

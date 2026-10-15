@@ -31,6 +31,8 @@ class HiveService {
   static const String secretNotesSecurityBoxName = 'secret_notes_security';
   static const String secretNotesPreferencesBoxName = 'secret_notes_preferences';
   static const String secretNotesDataBoxName = 'secret_notes_data';
+  // Local-only Money Automation preferences (NEVER synced with cloud/Firebase)
+  static const String moneyAutomationPreferencesBoxName = 'money_automation_preferences';
 
   Future<void> init() async {
     if (_initialized) return;
@@ -57,6 +59,7 @@ class HiveService {
       await Hive.openBox(secretNotesSecurityBoxName);
       await Hive.openBox(secretNotesPreferencesBoxName);
       await Hive.openBox(secretNotesDataBoxName);
+      await Hive.openBox(moneyAutomationPreferencesBoxName);
 
       _initialized = true;
       debugPrint('HiveService: successfully initialized and boxes opened.');
@@ -99,6 +102,7 @@ class HiveService {
     await _openAndMigrateUserBox<Transaction>(moneyBoxName, userId);
     await _openAndMigrateUntypedBox(moneySyncQueueBoxName, userId);
     await _openAndMigrateUntypedBox(settingsBoxName, userId);
+    await _openAndMigrateUntypedBox(moneyAutomationPreferencesBoxName, userId);
 
     debugPrint('HiveService: All user-scoped boxes opened for UID: $userId');
   }
@@ -139,6 +143,7 @@ class HiveService {
       getUserBoxName(habitsSyncQueueBoxName, userId),
       getUserBoxName(moneySyncQueueBoxName, userId),
       getUserBoxName(settingsBoxName, userId),
+      getUserBoxName(moneyAutomationPreferencesBoxName, userId),
     ];
 
     for (final name in untypedBoxNames) {
