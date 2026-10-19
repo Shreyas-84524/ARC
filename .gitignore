@@ -1,0 +1,55 @@
+# Gradle and Android build output
+.gradle/
+.kotlin/
+**/build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Android Studio / IntelliJ machine state
+.idea/
+*.iml
+*.ipr
+*.iws
+local.properties
+
+# Signing material and credentials
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+keystore.properties
+signing.properties
+service-account*.json
+**/serviceAccount*.json
+google-services.json
+
+# Environment and local secrets
+.env
+.env.*
+!.env.example
+secrets.properties
+credentials.json
+*.credentials
+
+# Databases, exports, logs, and temporary files
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.bak
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# APK/AAB and profiling artifacts
+*.apk
+*.aab
+*.hprof
+*.trace
