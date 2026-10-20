@@ -1,0 +1,172 @@
+import 'package:intl/intl.dart';
+import 'package:arc/core/utilities/currency_formatter.dart';
+import 'package:arc/features/task_manager/repository/task_repository.dart';
+import 'package:arc/features/habit_tracker/repository/habit_repository.dart';
+import 'package:arc/features/money_tracker/repository/money_repository.dart';
+import 'package:arc/providers/global_providers.dart' show getHabitMetrics;
+
+class DashboardRepository {
+  final TaskRepository _taskRepository;
+  final HabitRepository _habitRepository;
+  final MoneyRepository _moneyRepository;
+
+  DashboardRepository({
+    required TaskRepository taskRepository,
+    required HabitRepository habitRepository,
+    required MoneyRepository moneyRepository,
+  })  : _taskRepository = taskRepository,
+        _habitRepository = habitRepository,
+        _moneyRepository = moneyRepository;
+
+  Map<String, dynamic> getDashboardData(String currentMonthStr) {
+    final tasks = _taskRepository.getTasks();
+    final completedTasks = tasks.where((t) => t.completed).length;
+    final totalTasks = tasks.length;
+
+    final habits = _habitRepository.getHabits();
+    final entries = _habitRepository.getEntries();
+
+    final now = DateTime.now();
+    final todayStr = DateFormat('yyyy-MM-dd').format(now);
+    final completedHabits =
+        entries.where((e) => e.dateStr == todayStr && e.completed).length;
+    final totalHabits = habits.length;
+
+    int maxStreak = 0;
+    for (final h in habits) {
+      final metrics = getHabitMetrics(h.id, entries, h.createdAt);
+      final streak = (metrics['currentStreak'] as int?) ?? 0;
+      if (streak > maxStreak) {
+        maxStreak = streak;
+      }
+    }
+
+    final transactions = _moneyRepository.getTransactions();
+    final monthlyBudget = _moneyRepository.getMonthlyBudget(currentMonthStr);
+
+    double totalIncome = 0.0;
+    double totalExpenses = 0.0;
+    double todayIncome = 0.0;
+    double todayExpenses = 0.0;
+
+    for (final tx in transactions) {
+      final txMonthStr = DateFormat('yyyy-MM').format(tx.date);
+      final txDateStr = DateFormat('yyyy-MM-dd').format(tx.date);
+
+      if (txMonthStr == currentMonthStr) {
+        if (tx.type == 'Income') {
+          totalIncome += tx.amount;
+          if (txDateStr == todayStr) todayIncome += tx.amount;
+        } else {
+          totalExpenses += tx.amount;
+          if (txDateStr == todayStr) todayExpenses += tx.amount;
+        }
+      }
+    }
+
+    final remainingBudget = monthlyBudget - totalExpenses;
+    final monthlySavings = totalIncome - totalExpenses;
+    final monthlySavingsRate =
+        totalIncome > 0 ? (monthlySavings / totalIncome).clamp(0.0, 1.0) : 0.0;
+
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+    final todayTasks = tasks.where((t) {
+      if (t.dueDate == null) return true;
+      return t.dueDate!.isAfter(todayStart.subtract(const Duration(seconds: 1))) &&
+          t.dueDate!.isBefore(todayEnd.add(const Duration(seconds: 1)));
+    }).toList();
+
+    final totalTodayTasks = todayTasks.length;
+    final completedTodayTasks =
+        todayTasks.where((t) => t.completed).length.clamp(0, totalTodayTasks);
+
+    final totalHabitsCount = habits.length;
+    final completedHabitsCount = entries
+        .where((e) => e.dateStr == todayStr && e.completed)
+        .length
+        .clamp(0, totalHabitsCount);
+
+    final double taskRate = totalTodayTasks > 0
+        ? (completedTodayTasks / totalTodayTasks).clamp(0.0, 1.0)
+        : 0.0;
+    final double habitRate = totalHabitsCount > 0
+        ? (completedHabitsCount / totalHabitsCount).clamp(0.0, 1.0)
+        : 0.0;
+
+    final double taskScore = taskRate * 50.0;
+    final double habitScore = habitRate * 50.0;
+
+    final int todayProductivityScore =
+        (taskScore + habitScore).clamp(0.0, 100.0).round();
+    final overallProductivityScore = todayProductivityScore;
+
+    // Build Recent Activity Feed (top 10 latest events)
+    final List<Map<String, dynamic>> activities = [];
+
+    // Recent tasks
+    for (final t in tasks) {
+      activities.add({
+        'type': 'task',
+        'title': t.title,
+        'subtitle': t.completed ? 'Task Completed' : 'Task Created (${t.category})',
+        'timestamp': t.updatedAt,
+        'isCompleted': t.completed,
+      });
+    }
+
+    // Recent habit entries
+    for (final e in entries.where((entry) => entry.completed)) {
+      final habit = habits.firstWhere(
+        (h) => h.id == e.habitId,
+        orElse: () => habits.first,
+      );
+      try {
+        final date = DateTime.parse(e.dateStr);
+        activities.add({
+          'type': 'habit',
+          'title': habit.name,
+          'subtitle': 'Habit Checked-in',
+          'timestamp': date,
+          'isCompleted': true,
+        });
+      } catch (_) {}
+    }
+
+    // Recent transactions
+    for (final tx in transactions) {
+      activities.add({
+        'type': 'money',
+        'title': '${tx.type}: ${CurrencyFormatter.format(tx.amount)}',
+        'subtitle': '${tx.category} • ${tx.notes.isNotEmpty ? tx.notes : "Transaction"}',
+        'timestamp': tx.date,
+        'isIncome': tx.type == 'Income',
+      });
+    }
+
+    activities.sort((a, b) =>
+        (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
+
+    final recentActivities = activities.take(10).toList();
+
+    return {
+      'completedTasks': completedTasks,
+      'totalTasks': totalTasks,
+      'completedHabits': completedHabits,
+      'totalHabits': totalHabits,
+      'remainingBudget': remainingBudget,
+      'totalBudget': monthlyBudget,
+      'streakDays': maxStreak,
+      'todayIncome': todayIncome,
+      'todayExpenses': todayExpenses,
+      'monthlySavings': monthlySavings,
+      'monthlySavingsRate': monthlySavingsRate,
+      'taskCompletionRate': (taskRate * 100).round(),
+      'habitCompletionRate': (habitRate * 100).round(),
+      'todayProductivityScore': todayProductivityScore,
+      'overallProductivityScore': overallProductivityScore,
+      'recentActivities': recentActivities,
+    };
+  }
+}

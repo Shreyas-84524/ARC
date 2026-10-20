@@ -1,0 +1,13 @@
+name: lucide_icons
+description: Compatible drop-in bridge for lucide_icons on Flutter 3.27+ / 3.47+
+version: 0.257.1
+publish_to: 'none'
+
+environment:
+  sdk: ^3.11.3
+  flutter: '>=3.27.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  lucide_icons_flutter: ^3.1.24
