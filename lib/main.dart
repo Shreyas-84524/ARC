@@ -2,13 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:timezone/data/latest.dart' as tz;
 import 'package:arc/firebase_options.dart';
 import 'package:arc/core/theme/app_theme.dart';
 import 'package:arc/routes/app_router.dart';
 import 'package:arc/core/services/hive_service.dart';
-import 'package:arc/core/notifications/notification_service.dart';
-import 'package:arc/core/notifications/notification_reconciler.dart';
+import 'package:arc/core/notifications/notification_orchestrator.dart';
 import 'package:arc/providers/global_providers.dart';
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
 import 'package:arc/features/user_management/models/user_context.dart';
@@ -22,9 +20,6 @@ void main() async {
       FlutterError.presentError(details);
       debugPrint('FlutterError caught: ${details.exception}');
     };
-
-    // Initialize Timezones
-    tz.initializeTimeZones();
 
     // Initialize Firebase Cloud services
     try {
@@ -43,21 +38,13 @@ void main() async {
       debugPrint('HiveService initialization warning: $e');
     }
 
-    // Initialize Local Notifications
-    try {
-      final notificationService = NotificationService();
-      await notificationService.init();
-      await notificationService.requestPermissions();
-      await notificationService.checkAppLaunchNotification();
-    } catch (e) {
-      debugPrint('NotificationService initialization warning: $e');
-    }
-
     // Run the application
     runApp(
       const ProviderScope(
         child: SyncInitializer(
-          child: ProjectArcApp(),
+          child: NotificationOrchestrator(
+            child: ProjectArcApp(),
+          ),
         ),
       ),
     );
@@ -110,16 +97,6 @@ class _SyncInitializerState extends ConsumerState<SyncInitializer> {
       );
       syncService.startRealTimeSync(onRefreshState: refreshAllNotifiers);
 
-      // Reconcile scheduled notifications for the authenticated user
-      final settings = ref.read(appSettingsProvider);
-      await NotificationReconciler().reconcile(
-        userId: userContext.userId,
-        tasks: ref.read(tasksProvider),
-        habits: ref.read(habitsProvider),
-        habitEntries: ref.read(habitEntriesProvider),
-        remTime: settings.remTime,
-        settings: settings,
-      );
     } catch (e) {
       debugPrint('SyncInitializer background sync notice: $e');
     }

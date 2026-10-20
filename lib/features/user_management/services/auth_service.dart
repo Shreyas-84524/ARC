@@ -5,7 +5,6 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:arc/features/user_management/models/user_profile.dart';
 import 'package:arc/features/user_management/repository/auth_repository.dart';
 import 'package:arc/core/services/data_migration_service.dart';
-import 'package:arc/core/notifications/notification_service.dart';
 
 /// Authentication service for Project Arc providing modern Firebase multi-provider
 /// authentication (Email/Password, Google Sign-In) and provider linking methods.
@@ -113,11 +112,6 @@ class AuthService {
 
   /// Signs out the current user from Firebase Authentication.
   Future<void> logout() async {
-    try {
-      await NotificationService().cancelAllUserNotifications();
-    } catch (e) {
-      debugPrint('AuthService notification cancel notice: $e');
-    }
     try {
       await _repository.signOut();
     } catch (e) {

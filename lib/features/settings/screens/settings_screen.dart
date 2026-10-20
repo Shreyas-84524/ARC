@@ -13,7 +13,8 @@ import 'package:arc/features/user_management/services/auth_service.dart';
 import 'package:arc/features/user_management/models/auth_exception.dart';
 import 'package:arc/features/user_management/views/widgets/google_logo.dart';
 import 'package:arc/core/services/hive_service.dart';
-import 'package:arc/core/notifications/notification_service.dart';
+import 'package:arc/core/notifications/notification_controller.dart';
+import 'package:arc/core/notifications/notification_models.dart';
 import 'package:arc/features/money_tracker/models/money_automation_listener_status.dart';
 import 'package:arc/features/money_tracker/providers/money_automation_provider.dart';
 import 'package:arc/features/money_tracker/widgets/automatic_spending_info_dialog.dart';
@@ -522,9 +523,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       // 3. Stop real-time listeners for current user
       syncService.stopRealTimeSync();
 
-      // Cancel all scheduled notifications for the outgoing user
-      await NotificationService().cancelAllUserNotifications();
-
       // 4. Safely close current user's Hive boxes
       await HiveService().closeUserBoxes(userId);
 
@@ -650,6 +648,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     final themeMode = ref.watch(themeModeProvider);
     final appSettings = ref.watch(appSettingsProvider);
+    final notificationHealth = ref.watch(notificationControllerProvider);
     final userContext = ref.watch(userContextProvider);
     final automationState = ref.watch(moneyAutomationProvider);
     final currentUsername = userContext.profile?.displayName ?? userContext.profile?.username ?? 'User';
@@ -1021,9 +1020,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       _moneyReminders = val;
                     });
                     ref.read(appSettingsProvider.notifier).updateMasterNotifications(val);
+                    if (val) {
+                      ref.read(notificationControllerProvider.notifier)
+                          .requestPermissionFromUserAction();
+                    }
                   },
                 ),
                 if (_masterNotifications) ...[
+                  if (notificationHealth.permission !=
+                      ArcNotificationPermissionState.granted)
+                    ListTile(
+                      leading: const Icon(LucideIcons.alertTriangle,
+                          color: AppColors.warning),
+                      title: const Text('Notification permission'),
+                      subtitle: Text(
+                        notificationHealth.permission ==
+                                ArcNotificationPermissionState.error
+                            ? 'Notification service failed to initialize.'
+                            : 'Notifications are not enabled on this device.',
+                      ),
+                      trailing: TextButton(
+                        onPressed: () => ref
+                            .read(notificationControllerProvider.notifier)
+                            .requestPermissionFromUserAction(),
+                        child: const Text('Enable'),
+                      ),
+                    ),
                   const Divider(height: 1, indent: 56),
                   ListTile(
                     leading: const Icon(LucideIcons.clock, color: AppColors.accent),
@@ -1086,17 +1108,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       setState(() => _taskReminders = val);
                       final updated = appSettings.copyWith(taskRemindersEnabled: val);
                       ref.read(appSettingsProvider.notifier).updateSettings(updated);
-                      if (!val) {
-                        for (final task in ref.read(tasksProvider)) {
-                          NotificationService().cancelTaskReminders(task.id);
-                        }
-                      } else {
-                        for (final task in ref.read(tasksProvider)) {
-                          if (!task.completed && task.dueDate != null && task.dueTime != null) {
-                            NotificationService().scheduleTaskReminders(task);
-                          }
-                        }
-                      }
                     },
                   ),
                   const Divider(height: 1, indent: 56),
@@ -1110,14 +1121,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       setState(() => _habitReminders = val);
                       final updated = appSettings.copyWith(habitRemindersEnabled: val);
                       ref.read(appSettingsProvider.notifier).updateSettings(updated);
-                      if (!val) {
-                        for (final habit in ref.read(habitsProvider)) {
-                          NotificationService().cancelHabitReminders(habit.id);
-                        }
-                        NotificationService().cancelEveningReminder();
-                      } else {
-                        ref.read(habitsProvider.notifier).refresh();
-                      }
                     },
                   ),
                   const Divider(height: 1, indent: 56),
@@ -1131,11 +1134,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       setState(() => _moneyReminders = val);
                       final updated = appSettings.copyWith(moneyRemindersEnabled: val);
                       ref.read(appSettingsProvider.notifier).updateSettings(updated);
-                      if (!val) {
-                        NotificationService().cancelMoneyReminders();
-                      } else {
-                        NotificationService().scheduleDailyMoneyReminder(appSettings.remTime);
-                      }
                     },
                   ),
                 ],
