@@ -22,6 +22,12 @@ import 'package:arc/features/secret_notes/screens/secret_notes_dashboard_screen.
 import 'package:arc/features/secret_notes/screens/secret_note_editor_screen.dart';
 import 'package:arc/features/secret_notes/screens/secret_notes_settings_screen.dart';
 import 'package:arc/features/secret_notes/providers/secret_notes_provider.dart';
+import 'package:arc/features/feedback/models/feedback_model.dart';
+import 'package:arc/features/feedback/screens/bug_report_screen.dart';
+import 'package:arc/features/feedback/screens/feature_request_screen.dart';
+import 'package:arc/features/feedback/screens/general_feedback_screen.dart';
+import 'package:arc/features/feedback/screens/rate_arc_screen.dart';
+import 'package:arc/features/feedback/screens/my_feedback_screen.dart';
 
 class RouterNotifier extends ChangeNotifier {
   final Ref _ref;
@@ -210,7 +216,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/tasks',
             builder: (BuildContext context, GoRouterState state) {
-              return const TasksScreen();
+              final taskId = state.uri.queryParameters['taskId'];
+              return TasksScreen(initialTaskId: taskId);
             },
           ),
           GoRoute(
@@ -231,6 +238,46 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/settings',
         builder: (BuildContext context, GoRouterState state) {
           return const SettingsScreen();
+        },
+      ),
+      GoRoute(
+        path: '/feedback',
+        builder: (BuildContext context, GoRouterState state) {
+          final category = state.uri.queryParameters['category'];
+          if (category == FeedbackCategory.bugReport) {
+            return const BugReportScreen();
+          } else if (category == FeedbackCategory.featureRequest) {
+            return const FeatureRequestScreen();
+          } else if (category == FeedbackCategory.generalFeedback) {
+            return const GeneralFeedbackScreen();
+          } else if (category == FeedbackCategory.appRating || category == 'rate_arc') {
+            return const RateArcScreen();
+          }
+          return const GeneralFeedbackScreen();
+        },
+        routes: [
+          GoRoute(
+            path: 'bug',
+            builder: (BuildContext context, GoRouterState state) => const BugReportScreen(),
+          ),
+          GoRoute(
+            path: 'feature',
+            builder: (BuildContext context, GoRouterState state) => const FeatureRequestScreen(),
+          ),
+          GoRoute(
+            path: 'general',
+            builder: (BuildContext context, GoRouterState state) => const GeneralFeedbackScreen(),
+          ),
+          GoRoute(
+            path: 'rate',
+            builder: (BuildContext context, GoRouterState state) => const RateArcScreen(),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/feedback/my-feedback',
+        builder: (BuildContext context, GoRouterState state) {
+          return const MyFeedbackScreen();
         },
       ),
       GoRoute(

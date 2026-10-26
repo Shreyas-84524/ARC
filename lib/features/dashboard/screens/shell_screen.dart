@@ -50,60 +50,69 @@ class ShellScreen extends StatelessWidget {
         GoRouterState.of(context).uri.path;
     final int currentIndex = _indexFromLocation(currentPath);
 
-    return Scaffold(
-      extendBody: false,
-      body: child,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.darkSurface
-              : Colors.white,
-          border: Border(
-            top: BorderSide(
-              color: isDark
-                  ? AppColors.borderSubtle
-                  : AppColors.borderSubtleLight,
-              width: 1.0,
+    return PopScope(
+      canPop: currentIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (currentIndex != 0) {
+          context.go('/');
+        }
+      },
+      child: Scaffold(
+        extendBody: false,
+        body: child,
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.darkSurface
+                : Colors.white,
+            border: Border(
+              top: BorderSide(
+                color: isDark
+                    ? AppColors.borderSubtle
+                    : AppColors.borderSubtleLight,
+                width: 1.0,
+              ),
             ),
           ),
-        ),
-        child: SafeArea(
-          top: false,
-          bottom: true,
-          child: SizedBox(
-            height: 64,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildNavItem(
-                  context,
-                  index: 0,
-                  icon: LucideIcons.layoutDashboard,
-                  active: currentIndex == 0,
-                  onTap: () => _onTabTapped(context, 0, currentIndex),
-                ),
-                _buildNavItem(
-                  context,
-                  index: 1,
-                  icon: LucideIcons.checkSquare,
-                  active: currentIndex == 1,
-                  onTap: () => _onTabTapped(context, 1, currentIndex),
-                ),
-                _buildNavItem(
-                  context,
-                  index: 2,
-                  icon: LucideIcons.zap,
-                  active: currentIndex == 2,
-                  onTap: () => _onTabTapped(context, 2, currentIndex),
-                ),
-                _buildNavItem(
-                  context,
-                  index: 3,
-                  icon: LucideIcons.wallet,
-                  active: currentIndex == 3,
-                  onTap: () => _onTabTapped(context, 3, currentIndex),
-                ),
-              ],
+          child: SafeArea(
+            top: false,
+            bottom: true,
+            child: SizedBox(
+              height: 64,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildNavItem(
+                    context,
+                    index: 0,
+                    icon: LucideIcons.layoutDashboard,
+                    active: currentIndex == 0,
+                    onTap: () => _onTabTapped(context, 0, currentIndex),
+                  ),
+                  _buildNavItem(
+                    context,
+                    index: 1,
+                    icon: LucideIcons.checkSquare,
+                    active: currentIndex == 1,
+                    onTap: () => _onTabTapped(context, 1, currentIndex),
+                  ),
+                  _buildNavItem(
+                    context,
+                    index: 2,
+                    icon: LucideIcons.zap,
+                    active: currentIndex == 2,
+                    onTap: () => _onTabTapped(context, 2, currentIndex),
+                  ),
+                  _buildNavItem(
+                    context,
+                    index: 3,
+                    icon: LucideIcons.wallet,
+                    active: currentIndex == 3,
+                    onTap: () => _onTabTapped(context, 3, currentIndex),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

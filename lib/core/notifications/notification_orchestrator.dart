@@ -9,6 +9,7 @@ import 'package:arc/features/user_management/models/user_context.dart';
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
 import 'package:arc/providers/global_providers.dart';
 import 'package:arc/routes/app_router.dart';
+import 'package:arc/features/feedback/providers/feedback_providers.dart';
 
 /// The single bridge between reactive application state and the centralized
 /// notification controller. Feature providers never schedule notifications.
@@ -83,8 +84,20 @@ class _NotificationOrchestratorState
   ) {
     final intent = health.navigationIntent;
     if (intent == null || !user.isAuthenticated || user.isAdmin) return;
+    if (!intent.isValidDestination) {
+      ref.read(notificationControllerProvider.notifier).clearNavigationIntent();
+      return;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      // Re-verify auth state and navigation intent before performing the navigation
+      final currentUser = ref.read(userContextProvider);
+      final currentHealth = ref.read(notificationControllerProvider);
+      if (!currentUser.isAuthenticated ||
+          currentUser.isAdmin ||
+          currentHealth.navigationIntent == null) {
+        return;
+      }
       ref.read(routerProvider).go(intent.destination);
       ref
           .read(notificationControllerProvider.notifier)
@@ -95,10 +108,22 @@ class _NotificationOrchestratorState
   @override
   Widget build(BuildContext context) {
     ref.listen(userContextProvider, (previous, next) {
-      if (previous?.userId != next.userId) {
+      final wasSwitch = previous?.userId != null &&
+          next.userId != null &&
+          previous!.userId != next.userId;
+      final wasLogout =
+          (previous?.isAuthenticated == true) && !next.isAuthenticated;
+
+      if (wasSwitch || wasLogout) {
         if (!next.isAuthenticated) {
           ref.read(notificationControllerProvider.notifier).handleLogout();
         }
+        ref.read(notificationControllerProvider.notifier).clearNavigationIntent();
+        ref.read(routerProvider).go('/');
+        _queueReconciliation('user_changed');
+      } else if (previous?.userId != next.userId) {
+        // Cold start auth resolution or login from unauthenticated state:
+        // Preserve pending navigation intent and reconcile schedules for new user
         _queueReconciliation('user_changed');
       }
       _tryHandleNavigation(next, ref.read(notificationControllerProvider));
@@ -111,6 +136,17 @@ class _NotificationOrchestratorState
       (_, _) => _queueReconciliation('habit_entries_changed'),
     );
     ref.listen(moneyProvider, (_, _) => _queueReconciliation('money_changed'));
+    ref.listen(currentUserFeedbackStreamProvider, (_, asyncValue) {
+      final user = ref.read(userContextProvider);
+      if (user.isAuthenticated && user.userId != null) {
+        asyncValue.whenData((feedbackList) {
+          ref.read(feedbackAcknowledgementServiceProvider).processFeedbackList(
+            userId: user.userId!,
+            feedbackList: feedbackList,
+          );
+        });
+      }
+    });
     ref.listen(notificationControllerProvider, (_, next) {
       _tryHandleNavigation(ref.read(userContextProvider), next);
     });

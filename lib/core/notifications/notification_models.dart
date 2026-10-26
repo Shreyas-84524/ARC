@@ -15,9 +15,10 @@ enum ArcNotificationType {
   habitPending,
   habitEveningCheckIn,
   moneyDaily,
+  feedbackAcknowledged,
 }
 
-enum ArcNotificationChannel { tasks, habits, money }
+enum ArcNotificationChannel { tasks, habits, money, feedback }
 
 enum ArcNotificationRecurrence { none, daily }
 
@@ -31,22 +32,56 @@ enum ArcNotificationPermissionState {
 
 @immutable
 class ArcNotificationPayload {
-  static const int currentVersion = 2;
+  static const int currentVersion = 3;
+
+  static const Set<String> allowedBaseDestinations = {
+    '/tasks',
+    '/habits',
+    '/money',
+    '/feedback/my-feedback',
+  };
 
   final ArcNotificationType type;
   final String entityId;
   final String fingerprint;
+  final String? customDestination;
 
   const ArcNotificationPayload({
     required this.type,
     required this.entityId,
     required this.fingerprint,
+    this.customDestination,
   });
 
-  String get destination {
+  String get category {
     switch (type) {
       case ArcNotificationType.taskReminder:
       case ArcNotificationType.taskDeadline:
+        return 'tasks';
+      case ArcNotificationType.habitReminder:
+      case ArcNotificationType.habitPending:
+      case ArcNotificationType.habitEveningCheckIn:
+        return 'habits';
+      case ArcNotificationType.moneyDaily:
+        return 'money';
+      case ArcNotificationType.feedbackAcknowledged:
+        return 'feedback';
+    }
+  }
+
+  String get destination {
+    if (customDestination != null && customDestination!.isNotEmpty) {
+      final uri = Uri.tryParse(customDestination!);
+      if (uri != null && allowedBaseDestinations.contains(uri.path)) {
+        return customDestination!;
+      }
+    }
+    switch (type) {
+      case ArcNotificationType.taskReminder:
+      case ArcNotificationType.taskDeadline:
+        if (entityId.isNotEmpty && entityId != 'task') {
+          return '/tasks?taskId=$entityId';
+        }
         return '/tasks';
       case ArcNotificationType.habitReminder:
       case ArcNotificationType.habitPending:
@@ -54,14 +89,25 @@ class ArcNotificationPayload {
         return '/habits';
       case ArcNotificationType.moneyDaily:
         return '/money';
+      case ArcNotificationType.feedbackAcknowledged:
+        return '/feedback/my-feedback';
     }
+  }
+
+  bool get isValidDestination {
+    final dest = destination;
+    final uri = Uri.tryParse(dest);
+    if (uri == null) return false;
+    return allowedBaseDestinations.contains(uri.path);
   }
 
   String toJson() => jsonEncode({
         'app': 'arc',
         'version': currentVersion,
+        'category': category,
         'type': type.name,
         'id': entityId,
+        'destination': destination,
         'fingerprint': fingerprint,
       });
 
@@ -73,6 +119,7 @@ class ArcNotificationPayload {
       final typeName = decoded['type']?.toString();
       final entityId = decoded['id']?.toString();
       final fingerprint = decoded['fingerprint']?.toString();
+      final destination = decoded['destination']?.toString();
       if (typeName == null || entityId == null) return null;
 
       ArcNotificationType? type;
@@ -83,7 +130,7 @@ class ArcNotificationPayload {
         }
       }
 
-      // Backward-compatible parsing for payloads scheduled by the old layer.
+      // Backward-compatible parsing for payloads scheduled by older versions
       type ??= switch (typeName) {
         'task' => ArcNotificationType.taskDeadline,
         'habit' => ArcNotificationType.habitReminder,
@@ -96,6 +143,7 @@ class ArcNotificationPayload {
         type: type,
         entityId: entityId,
         fingerprint: fingerprint ?? 'legacy',
+        customDestination: destination,
       );
     } catch (_) {
       return null;

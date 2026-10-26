@@ -17,7 +17,9 @@ import 'package:go_router/go_router.dart';
 import 'package:arc/features/secret_notes/providers/secret_notes_provider.dart';
 
 class TasksScreen extends ConsumerStatefulWidget {
-  const TasksScreen({super.key});
+  final String? initialTaskId;
+
+  const TasksScreen({super.key, this.initialTaskId});
 
   @override
   ConsumerState<TasksScreen> createState() => _TasksScreenState();
@@ -25,6 +27,33 @@ class TasksScreen extends ConsumerStatefulWidget {
 
 class _TasksScreenState extends ConsumerState<TasksScreen> {
   double _horizontalDragOffset = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkInitialTask();
+  }
+
+  @override
+  void didUpdateWidget(TasksScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialTaskId != null && widget.initialTaskId != oldWidget.initialTaskId) {
+      _checkInitialTask();
+    }
+  }
+
+  void _checkInitialTask() {
+    if (widget.initialTaskId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final tasks = ref.read(tasksProvider);
+        final matches = tasks.where((t) => t.id == widget.initialTaskId).toList();
+        if (matches.isNotEmpty) {
+          _showTaskEditor(context, matches.first);
+        }
+      });
+    }
+  }
 
   void _openSecretNotes() {
     AppHaptics.lightImpact();
