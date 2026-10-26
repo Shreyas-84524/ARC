@@ -2,17 +2,207 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function verifying server-authenticated Administrator identity
-    function isAdmin() {
-      return request.auth != null && (
-        request.auth.token.role == 'admin' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)/settings/profile).data.role == 'admin'
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // This security rules file assumes the following data structures:
+    //
+    // Collection: users/{userId}/{document=**}
+    // Document ID: user-scoped subcollections and documents
+    // Fields:
+    //   - User-scoped data boundary owned by userId or managed by verified Admin
+    //
+    // Collection: admin_logs/{logId}
+    // Document ID: auto-generated or timestamped log ID
+    // Fields:
+    //   - adminUid: string (required) - UID of administrator performing action
+    //   - action: string (required) - action performed (e.g. CREATE_USER, DELETE_USER)
+    //   - target: string (optional) - affected resource or user ID
+    //   - timestamp: timestamp (required) - time log was written
+    //
+    // Collection: feedback/{feedbackId}
+    // Document ID: unique UUID/id string matching feedbackId field
+    // Fields:
+    //   - feedbackId: string (required, 1-100 chars, immutable) - matches document ID
+    //   - userId: string (required, 1-128 chars, immutable) - author UID matching request.auth.uid
+    //   - category: string (required, immutable) - 'bug_report', 'feature_request', 'general_feedback', 'app_rating'
+    //   - module: string (required, 1-100 chars, immutable) - feature module or area
+    //   - message: string (required, 1-5000 chars, immutable) - feedback message content
+    //   - rating: int (optional, 1-5, or null, immutable) - user rating
+    //   - contactEmail: string (optional, max 254 chars, or null, immutable) - contact email
+    //   - appVersion: string (required, max 50 chars, immutable) - client application version
+    //   - createdAt: timestamp (required, immutable) - creation time (request.time)
+    //   - status: string (required, 'submitted', 'emailed', 'reviewed', 'acknowledged') - lifecycle state
+    //   - emailedAt: timestamp or null (immutable on client/admin update) - backend dispatch timestamp
+    //   - reviewedAt: timestamp or null (admin-updatable) - administrator review timestamp
+    //   - acknowledgedAt: timestamp or null (admin-updatable) - administrator acknowledgement timestamp
+    //   - notificationDelivered: bool (required, immutable on client/admin update) - delivery status flag
+    //
+    // Legacy root backup collections (read-only rollback references for authenticated users):
+    //   - tasks/{docId}
+    //   - habits/{docId}
+    //   - habitEntries/{docId}
+    //   - transactions/{docId}
+    //   - budgets/{docId}
+    //   - monthlySummaries/{docId}
+    //   - settings/{docId}
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function verifying administrator identity via Firebase Auth custom claims ONLY
+    // Uses .get() to prevent 'Property role is undefined on object' evaluation errors for normal users
+    // Guarantees zero privilege escalation from client-writable documents
+    function isCustomClaimAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.get('role', '') == 'admin' ||
+        request.auth.token.get('admin', false) == true
       );
+    }
+
+    // Helper function verifying server-authenticated Administrator identity
+    // Preserved for user-scoped data boundaries and admin audit logs
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.get('role', '') == 'admin' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)/settings/profile).data.get('role', '') == 'admin'
+      );
+    }
+
+    // ===============================================================
+    // Feedback Domain Validators
+    // ===============================================================
+
+    // Allowed fields for feedback documents (Strict schema enforcement)
+    function allowedFeedbackFields() {
+      return [
+        'feedbackId', 'userId', 'category', 'module', 'message',
+        'rating', 'contactEmail', 'appVersion', 'createdAt', 'status',
+        'emailedAt', 'reviewedAt', 'acknowledgedAt', 'notificationDelivered'
+      ];
+    }
+
+    // Required fields for feedback documents
+    function requiredFeedbackFields() {
+      return [
+        'feedbackId', 'userId', 'category', 'module', 'message',
+        'appVersion', 'createdAt', 'status', 'notificationDelivered'
+      ];
+    }
+
+    // Valid feedback categories
+    function isValidFeedbackCategory(category) {
+      return category in ['bug_report', 'feature_request', 'general_feedback', 'app_rating'];
+    }
+
+    // Valid feedback lifecycle statuses
+    function isValidFeedbackStatus(status) {
+      return status in ['submitted', 'emailed', 'reviewed', 'acknowledged'];
+    }
+
+    // Domain validator function for feedback documents (Validator Function Pattern)
+    // Uses .get(field, null) to safely inspect optional/nullable fields without throwing undefined property errors
+    function isValidFeedbackData(data) {
+      return data.keys().hasOnly(allowedFeedbackFields()) &&
+        data.keys().hasAll(requiredFeedbackFields()) &&
+        data.feedbackId is string &&
+        data.feedbackId.size() >= 1 &&
+        data.feedbackId.size() <= 100 &&
+        data.userId is string &&
+        data.userId.size() >= 1 &&
+        data.userId.size() <= 128 &&
+        isValidFeedbackCategory(data.category) &&
+        data.module is string &&
+        data.module.size() >= 1 &&
+        data.module.size() <= 100 &&
+        data.message is string &&
+        data.message.size() >= 1 &&
+        data.message.size() <= 5000 &&
+        data.appVersion is string &&
+        data.appVersion.size() >= 1 &&
+        data.appVersion.size() <= 50 &&
+        data.createdAt is timestamp &&
+        isValidFeedbackStatus(data.status) &&
+        data.notificationDelivered is bool &&
+        (data.get('rating', null) == null || (data.rating is int && data.rating >= 1 && data.rating <= 5)) &&
+        (data.get('contactEmail', null) == null || (data.contactEmail is string && data.contactEmail.size() <= 254)) &&
+        (data.get('emailedAt', null) == null || data.emailedAt is timestamp) &&
+        (data.get('reviewedAt', null) == null || data.reviewedAt is timestamp) &&
+        (data.get('acknowledgedAt', null) == null || data.acknowledgedAt is timestamp);
+    }
+
+    // Creation validator for user feedback submission
+    function isValidFeedbackCreate(feedbackId) {
+      let data = request.resource.data;
+      return isAuthenticated() &&
+        isValidFeedbackData(data) &&
+        data.userId == request.auth.uid &&
+        data.feedbackId == feedbackId &&
+        data.status == 'submitted' &&
+        data.createdAt == request.time &&
+        data.get('emailedAt', null) == null &&
+        data.get('reviewedAt', null) == null &&
+        data.get('acknowledgedAt', null) == null &&
+        data.notificationDelivered == false;
+    }
+
+    // Update validator for admin review and acknowledgement
+    function isValidFeedbackUpdate() {
+      let data = request.resource.data;
+      let existing = resource.data;
+      return isValidFeedbackData(data) &&
+        // Only permitted fields may be modified
+        data.diff(existing).affectedKeys().hasOnly(['status', 'reviewedAt', 'acknowledgedAt']) &&
+        // Immutable core fields cannot change (safe against omitted/nullable fields)
+        data.feedbackId == existing.feedbackId &&
+        data.userId == existing.userId &&
+        data.category == existing.category &&
+        data.module == existing.module &&
+        data.message == existing.message &&
+        data.get('rating', null) == existing.get('rating', null) &&
+        data.get('contactEmail', null) == existing.get('contactEmail', null) &&
+        data.appVersion == existing.appVersion &&
+        data.createdAt == existing.createdAt &&
+        // Reserved worker fields cannot be modified
+        data.get('emailedAt', null) == existing.get('emailedAt', null) &&
+        data.notificationDelivered == existing.notificationDelivered &&
+        // Permitted updated field constraints
+        (data.status in ['submitted', 'emailed', 'reviewed', 'acknowledged']) &&
+        (data.get('reviewedAt', null) == null || data.reviewedAt is timestamp) &&
+        (data.get('acknowledgedAt', null) == null || data.acknowledgedAt is timestamp);
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    // User Feedback collection
+    match /feedback/{feedbackId} {
+      // Normal users read their own feedback; custom claim admins read all feedback
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isCustomClaimAdmin());
+
+      // Authenticated users create their own feedback strictly adhering to submission schema
+      allow create: if isValidFeedbackCreate(feedbackId);
+
+      // Only verified administrators with custom claims can update status and review timestamps
+      allow update: if isCustomClaimAdmin() && isValidFeedbackUpdate();
+
+      // Deletion is strictly forbidden for all parties
+      allow delete: if false;
     }
 
     // User-scoped isolated data boundary (Strict UID match required or authenticated Admin)
     match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
 
     // Security Audit Logs (Accessible ONLY to authenticated Administrators)
@@ -21,12 +211,12 @@ service cloud.firestore {
     }
 
     // Legacy root backup collections (Authenticated read-only access for rollback reference)
-    match /tasks/{docId} { allow read: if request.auth != null; }
-    match /habits/{docId} { allow read: if request.auth != null; }
-    match /habitEntries/{docId} { allow read: if request.auth != null; }
-    match /transactions/{docId} { allow read: if request.auth != null; }
-    match /budgets/{docId} { allow read: if request.auth != null; }
-    match /monthlySummaries/{docId} { allow read: if request.auth != null; }
-    match /settings/{docId} { allow read: if request.auth != null; }
+    match /tasks/{docId} { allow read: if isAuthenticated(); }
+    match /habits/{docId} { allow read: if isAuthenticated(); }
+    match /habitEntries/{docId} { allow read: if isAuthenticated(); }
+    match /transactions/{docId} { allow read: if isAuthenticated(); }
+    match /budgets/{docId} { allow read: if isAuthenticated(); }
+    match /monthlySummaries/{docId} { allow read: if isAuthenticated(); }
+    match /settings/{docId} { allow read: if isAuthenticated(); }
   }
 }

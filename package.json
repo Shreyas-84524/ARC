@@ -2,5 +2,8 @@
   "dependencies": {
     "firebase-admin": "^14.3.0",
     "nodemailer": "^9.0.5"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0"
   }
 }

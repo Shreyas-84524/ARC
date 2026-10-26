@@ -1,0 +1,24 @@
+name = "arc-feedback-delivery-worker"
+main = "src/index.ts"
+compatibility_date = "2024-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Scheduled Cron Trigger: Runs every 5 minutes on Cloudflare Workers Free plan
+[triggers]
+crons = ["*/5 * * * *"]
+
+# Public environment variables (non-sensitive)
+[vars]
+FIREBASE_PROJECT_ID = "arc-productivity-shreyas"
+BATCH_SIZE = "10"
+MAX_RETRIES = "5"
+
+# The following secrets must NEVER be committed to Git.
+# Configure them using:
+#   wrangler secret put BREVO_API_KEY
+#   wrangler secret put RECIPIENT_EMAIL
+#   wrangler secret put SENDER_EMAIL
+#   wrangler secret put FIREBASE_CLIENT_EMAIL
+#   wrangler secret put FIREBASE_PRIVATE_KEY
+#   wrangler secret put CRON_SECRET (optional, for manual HTTP trigger)
+# Or define them in a local uncommitted .dev.vars file for development.
