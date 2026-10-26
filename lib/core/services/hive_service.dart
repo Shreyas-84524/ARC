@@ -33,6 +33,8 @@ class HiveService {
   static const String secretNotesDataBoxName = 'secret_notes_data';
   // Local-only Money Automation preferences (NEVER synced with cloud/Firebase)
   static const String moneyAutomationPreferencesBoxName = 'money_automation_preferences';
+  // Local-only Feedback Acknowledgement deduplication box
+  static const String feedbackAcknowledgementsBoxName = 'feedback_acknowledgements_box';
 
   Future<void> init() async {
     if (_initialized) return;
@@ -60,6 +62,7 @@ class HiveService {
       await Hive.openBox(secretNotesPreferencesBoxName);
       await Hive.openBox(secretNotesDataBoxName);
       await Hive.openBox(moneyAutomationPreferencesBoxName);
+      await Hive.openBox(feedbackAcknowledgementsBoxName);
 
       _initialized = true;
       debugPrint('HiveService: successfully initialized and boxes opened.');
