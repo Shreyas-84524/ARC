@@ -18,6 +18,7 @@ import 'package:arc/core/notifications/notification_models.dart';
 import 'package:arc/features/money_tracker/models/money_automation_listener_status.dart';
 import 'package:arc/features/money_tracker/providers/money_automation_provider.dart';
 import 'package:arc/features/money_tracker/widgets/automatic_spending_info_dialog.dart';
+import 'package:arc/features/settings/widgets/edit_display_name_dialog.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   final AuthService? authService;
@@ -704,18 +705,91 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              currentUsername,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    currentUsername,
+                                    style: theme.textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Tooltip(
+                                  message: 'Edit Display Name',
+                                  child: InkWell(
+                                    key: const Key('edit_display_name_button'),
+                                    onTap: () {
+                                      final profile = userContext.profile ??
+                                          UserProfile(
+                                            id: userContext.userId ?? '',
+                                            username: currentUsername,
+                                            displayName: currentUsername,
+                                            email: userEmail,
+                                            createdAt: DateTime.now(),
+                                          );
+                                      showDialog(
+                                        context: context,
+                                        builder: (dialogCtx) => EditDisplayNameDialog(
+                                          currentProfile: profile,
+                                          authService: _authService,
+                                        ),
+                                      );
+                                    },
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(4.0),
+                                      child: Icon(
+                                        LucideIcons.pencil,
+                                        size: 15,
+                                        color: isDark ? AppColors.accent : AppColors.darkAccent,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 2),
                             Text(
                               userEmail,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            InkWell(
+                              key: const Key('edit_display_name_text_button'),
+                              onTap: () {
+                                final profile = userContext.profile ??
+                                    UserProfile(
+                                      id: userContext.userId ?? '',
+                                      username: currentUsername,
+                                      displayName: currentUsername,
+                                      email: userEmail,
+                                      createdAt: DateTime.now(),
+                                    );
+                                showDialog(
+                                  context: context,
+                                  builder: (dialogCtx) => EditDisplayNameDialog(
+                                    currentProfile: profile,
+                                    authService: _authService,
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(4),
+                              child: Text(
+                                'Edit Display Name',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? AppColors.accent : AppColors.darkAccent,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: isDark ? AppColors.accent : AppColors.darkAccent,
+                                ),
                               ),
                             ),
                           ],
@@ -1200,7 +1274,74 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const SizedBox(height: 20),
 
-          // 5. Backup & Maintenance
+          // 5. Help & Feedback
+          Text('Help & Feedback', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(LucideIcons.bug, color: AppColors.danger),
+                  title: const Text('Report a Bug', style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: const Text('Encountered an issue or glitch? Let us know'),
+                  trailing: const Icon(LucideIcons.chevronRight, size: 18),
+                  onTap: () {
+                    AppHaptics.lightImpact();
+                    context.push('/feedback?category=bug_report');
+                  },
+                ),
+                const Divider(height: 1, indent: 56),
+                ListTile(
+                  leading: const Icon(LucideIcons.sparkles, color: AppColors.accent),
+                  title: const Text('Suggest a Feature', style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: const Text('Have an idea to make Arc better?'),
+                  trailing: const Icon(LucideIcons.chevronRight, size: 18),
+                  onTap: () {
+                    AppHaptics.lightImpact();
+                    context.push('/feedback?category=feature_request');
+                  },
+                ),
+                const Divider(height: 1, indent: 56),
+                ListTile(
+                  leading: const Icon(LucideIcons.messageSquare, color: AppColors.info),
+                  title: const Text('General Feedback', style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: const Text('Share your thoughts and suggestions'),
+                  trailing: const Icon(LucideIcons.chevronRight, size: 18),
+                  onTap: () {
+                    AppHaptics.lightImpact();
+                    context.push('/feedback?category=general_feedback');
+                  },
+                ),
+                const Divider(height: 1, indent: 56),
+                ListTile(
+                  leading: const Icon(LucideIcons.star, color: Color(0xFFFFC857)),
+                  title: const Text('Rate Arc', style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: const Text('Give us a 1–5 star rating and review'),
+                  trailing: const Icon(LucideIcons.chevronRight, size: 18),
+                  onTap: () {
+                    AppHaptics.lightImpact();
+                    context.push('/feedback?category=app_rating');
+                  },
+                ),
+                const Divider(height: 1, indent: 56),
+                ListTile(
+                  key: const Key('settings_my_feedback_tile'),
+                  leading: const Icon(LucideIcons.inbox, color: AppColors.accent),
+                  title: const Text('My Feedback', style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: const Text('View your submitted feedback'),
+                  trailing: const Icon(LucideIcons.chevronRight, size: 18),
+                  onTap: () {
+                    AppHaptics.lightImpact();
+                    context.push('/feedback/my-feedback');
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // 6. Backup & Maintenance
           Text('Backup & Maintenance', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Card(
