@@ -49,6 +49,12 @@ class _FakeGateway implements LocalNotificationGateway {
   }
 
   @override
+  Future<void> show(ArcNotificationSpec spec) async {
+    scheduleCount++;
+    pending[spec.id] = ArcPendingNotification(id: spec.id, payload: spec.payload);
+  }
+
+  @override
   Future<void> cancel(int id) async {
     cancelCount++;
     pending.remove(id);

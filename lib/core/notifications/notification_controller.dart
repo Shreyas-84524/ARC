@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:arc/core/notifications/notification_models.dart';
 import 'package:arc/core/notifications/notification_policy.dart';
 import 'package:arc/core/notifications/notification_service.dart';
+import 'package:arc/core/services/hive_service.dart';
 
 final notificationControllerProvider = StateNotifierProvider<
     NotificationController, NotificationHealth>((ref) {
@@ -40,6 +41,7 @@ class NotificationController extends StateNotifier<NotificationHealth> {
         },
       );
       await _gateway.initialize();
+      await migrateObsoleteSchedules();
       final permission = await _gateway.permissionState();
       state = state.copyWith(
         initialized: true,
@@ -77,6 +79,49 @@ class NotificationController extends StateNotifier<NotificationHealth> {
     if (!state.initialized) return;
     final permission = await _gateway.permissionState();
     state = state.copyWith(permission: permission);
+  }
+
+  /// One-time migration to remove obsolete per-habit reminders (habitPending)
+  /// without calling cancelAll(), preserving valid schedules from other modules.
+  Future<int> migrateObsoleteSchedules({dynamic boxOverride}) async {
+    try {
+      dynamic box = boxOverride;
+      if (box == null) {
+        try {
+          box = HiveService().getBox(HiveService.settingsBoxName);
+        } catch (_) {
+          // If Hive is not initialized (e.g. in unit tests), continue migration in memory
+        }
+      }
+      if (box != null && box.get('migrated_consolidated_habit_notifications_v1', defaultValue: false) == true) {
+        return 0;
+      }
+
+      final pending = await _gateway.pendingNotifications();
+      var migratedCount = 0;
+
+      for (final request in pending) {
+        final payload = ArcNotificationPayload.tryParse(request.payload);
+        final isHabitPending = payload?.type == ArcNotificationType.habitPending;
+        final isInHabitRemRange = request.id >= NotificationPolicy.habitRemTimeMin &&
+            request.id < (NotificationPolicy.habitRemTimeMin + NotificationPolicy.habitRemTimeRange);
+
+        if (isHabitPending || isInHabitRemRange) {
+          await _gateway.cancel(request.id);
+          migratedCount++;
+          debugPrint('ARC_NOTIFICATIONS: Cancelled obsolete per-habit notification ${request.id}');
+        }
+      }
+
+      if (box != null) {
+        await box.put('migrated_consolidated_habit_notifications_v1', true);
+      }
+      debugPrint('ARC_NOTIFICATIONS: Migration completed. Removed $migratedCount obsolete notifications.');
+      return migratedCount;
+    } catch (e) {
+      debugPrint('ARC_NOTIFICATIONS: Migration check failed: $e');
+      return 0;
+    }
   }
 
   Future<void> reconcile(

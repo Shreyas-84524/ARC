@@ -4,6 +4,7 @@ import 'package:arc/core/notifications/notification_models.dart';
 
 class NotificationPolicy {
   static const int moneyReminderId = 888888;
+  static const int dailyHabitCheckInId = 999999;
   static const int eveningHabitReminderId = 999999;
 
   static const int taskPreDeadlineMin = 10000000;
@@ -14,6 +15,8 @@ class NotificationPolicy {
   static const int habitDeadlineRange = 300000000;
   static const int habitRemTimeMin = 1100000000;
   static const int habitRemTimeRange = 300000000;
+  static const int feedbackNotificationMin = 1400000000;
+  static const int feedbackNotificationRange = 600000000;
 
   List<ArcNotificationSpec> build(NotificationSnapshot snapshot) {
     final userId = snapshot.userId;
@@ -138,44 +141,26 @@ class NotificationPolicy {
           ));
         }
       }
-
-      final pendingTrigger = _nextDailyTrigger(
-        snapshot.now,
-        snapshot.settings.remTime,
-        forceTomorrow: completedToday,
-      );
-      if (pendingTrigger != null) {
-        specs.add(_daily(
-          id: getHabitNotificationIdRemTime(habit.id),
-          type: ArcNotificationType.habitPending,
-          channel: ArcNotificationChannel.habits,
-          entityId: habit.id,
-          title: 'Habit still pending',
-          body: "Don't forget to complete ${habit.name} today.",
-          scheduledAt: pendingTrigger,
-          localTime: snapshot.settings.remTime,
-          suppressedDate: suppressedDate,
-        ));
-      }
     }
 
+    // Consolidated single Habit Tracker check-in reminder at the user's configured reminder time
     if (snapshot.habits.isNotEmpty) {
       final allCompleted = incompleteCount == 0;
-      final eveningTrigger = _nextDailyTrigger(
+      final checkInTrigger = _nextDailyTrigger(
         snapshot.now,
-        snapshot.settings.eveningCheckinTime,
+        snapshot.settings.remTime,
         forceTomorrow: allCompleted,
       );
-      if (eveningTrigger != null) {
+      if (checkInTrigger != null) {
         specs.add(_daily(
-          id: eveningHabitReminderId,
+          id: dailyHabitCheckInId,
           type: ArcNotificationType.habitEveningCheckIn,
           channel: ArcNotificationChannel.habits,
-          entityId: 'evening_habit',
+          entityId: 'daily_habit_checkin',
           title: 'Habit check-in',
           body: "Don't forget to review today's habits.",
-          scheduledAt: eveningTrigger,
-          localTime: snapshot.settings.eveningCheckinTime,
+          scheduledAt: checkInTrigger,
+          localTime: snapshot.settings.remTime,
           suppressedDate: allCompleted ? today : null,
         ));
       }
@@ -202,7 +187,7 @@ class NotificationPolicy {
       channel: ArcNotificationChannel.money,
       entityId: 'daily_money',
       title: "Update today's spending",
-      body: "Don't forget to add today's expenses to ARC.",
+      body: "Don't forget to add today's expenses to Arc.",
       scheduledAt: trigger,
       localTime: snapshot.settings.remTime,
       suppressedDate: hasTodayTransaction ? today : null,
@@ -324,4 +309,8 @@ class NotificationPolicy {
   int getHabitNotificationIdRemTime(String habitId) =>
       habitRemTimeMin +
       (getStableHash('habit_rem_$habitId') % habitRemTimeRange);
+
+  int getFeedbackNotificationId(String feedbackId) =>
+      feedbackNotificationMin +
+      (getStableHash('fb_ack_$feedbackId') % feedbackNotificationRange);
 }

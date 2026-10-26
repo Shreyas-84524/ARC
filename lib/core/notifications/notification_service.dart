@@ -18,6 +18,7 @@ abstract class LocalNotificationGateway {
   Future<ArcNotificationPermissionState> requestPermission();
   Future<List<ArcPendingNotification>> pendingNotifications();
   Future<void> schedule(ArcNotificationSpec spec);
+  Future<void> show(ArcNotificationSpec spec);
   Future<void> cancel(int id);
   Future<void> cancelAll();
   Future<void> dispose();
@@ -29,7 +30,7 @@ abstract class LocalNotificationGateway {
 class FlutterLocalNotificationGateway implements LocalNotificationGateway {
   final FlutterLocalNotificationsPlugin _plugin;
   final StreamController<ArcNotificationPayload> _tapController =
-      StreamController<ArcNotificationPayload>.broadcast();
+      StreamController<ArcNotificationPayload>.broadcast(sync: true);
 
   bool _initialized = false;
   String _timezoneName = 'Unknown';
@@ -99,6 +100,14 @@ class FlutterLocalNotificationGateway implements LocalNotificationGateway {
         'arc_money_channel',
         'Money Reminders',
         description: 'Daily prompts to record expenses',
+        importance: Importance.high,
+        playSound: true,
+        enableVibration: true,
+      ));
+      await android?.createNotificationChannel(const AndroidNotificationChannel(
+        'arc_feedback_channel',
+        'Feedback Updates',
+        description: 'Updates and thank-you notes for submitted feedback',
         importance: Importance.high,
         playSound: true,
         enableVibration: true,
@@ -226,6 +235,42 @@ class FlutterLocalNotificationGateway implements LocalNotificationGateway {
   }
 
   @override
+  Future<void> show(ArcNotificationSpec spec) async {
+    if (kIsWeb) return;
+    if (!_initialized) {
+      await initialize();
+    }
+
+    final channel = _channelDetails(spec.channel);
+    final details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        channel.$1,
+        channel.$2,
+        channelDescription: channel.$3,
+        importance: Importance.high,
+        priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
+        visibility: NotificationVisibility.public,
+        category: AndroidNotificationCategory.reminder,
+      ),
+      iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+
+    await _plugin.show(
+      spec.id,
+      spec.title,
+      spec.body,
+      details,
+      payload: spec.payload,
+    );
+  }
+
+  @override
   Future<void> cancel(int id) => _plugin.cancel(id);
 
   @override
@@ -261,6 +306,11 @@ class FlutterLocalNotificationGateway implements LocalNotificationGateway {
           'arc_money_channel',
           'Money Reminders',
           'Daily prompts to record expenses',
+        ),
+      ArcNotificationChannel.feedback => (
+          'arc_feedback_channel',
+          'Feedback Updates',
+          'Updates and thank-you notes for submitted feedback',
         ),
     };
   }
