@@ -1,3 +1,5 @@
+import 'package:arc/core/utils/display_name_utils.dart';
+
 class GreetingUtils {
   /// Returns time-of-day greeting:
   /// - Morning (5:00 - 11:59) -> "Good Morning"
@@ -18,7 +20,7 @@ class GreetingUtils {
   }
 
   /// Returns header title for TopBar.
-  /// When title is 'Dashboard', computes dynamic greeting with username if available.
+  /// When title is 'Dashboard', computes dynamic greeting displaying only the user's first name.
   /// If username is null or empty, falls back to neutral time-based greeting (e.g. "Good Morning").
   static String getGreetingTitle({
     required String title,
@@ -30,8 +32,9 @@ class GreetingUtils {
     }
 
     final greeting = getGreeting(now ?? DateTime.now());
-    if (username != null && username.trim().isNotEmpty) {
-      return '$greeting, ${username.trim()}';
+    final firstName = DisplayNameUtils.extractFirstName(username, fallback: '');
+    if (firstName.isNotEmpty) {
+      return '$greeting, $firstName';
     }
     return greeting;
   }

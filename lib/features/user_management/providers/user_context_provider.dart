@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:arc/features/user_management/models/user_context.dart';
 import 'package:arc/features/user_management/models/user_profile.dart';
+import 'package:arc/features/user_management/repository/auth_repository.dart';
 import 'package:arc/core/services/hive_service.dart';
 
 class UserContextNotifier extends StateNotifier<UserContext> {
@@ -46,6 +48,30 @@ class UserContextNotifier extends StateNotifier<UserContext> {
   }
 
   Future<void> _setFromFirebaseUser(auth.User user) async {
+    try {
+      await HiveService().ensureUserBoxesOpened(user.uid);
+    } catch (e) {
+      // Ignore in mock testing environments
+    }
+
+    // Check Hive cache first for instantaneous offline/startup display
+    UserProfile? cachedProfile;
+    try {
+      final box = HiveService().getUserBox(HiveService.settingsBoxName, user.uid);
+      final raw = box.get('cached_user_profile');
+      if (raw is Map) {
+        cachedProfile = UserProfile.fromMap(Map<String, dynamic>.from(raw));
+      }
+    } catch (e) {
+      debugPrint('UserContextNotifier: Error reading cached profile: $e');
+    }
+
+    if (cachedProfile != null) {
+      state = UserContext(userId: user.uid, profile: cachedProfile, isInitializing: false);
+      unawaited(_reconcileProfile(user.uid));
+      return;
+    }
+
     final email = user.email;
     final displayName = (user.displayName != null && user.displayName!.isNotEmpty)
         ? user.displayName!
@@ -81,6 +107,8 @@ class UserContextNotifier extends StateNotifier<UserContext> {
       id: user.uid,
       username: username,
       displayName: displayName,
+      displayNameSource: provider == 'google' ? 'google' : 'default',
+      displayNameUpdatedAt: DateTime.now(),
       email: email,
       photoURL: user.photoURL,
       authProvider: provider,
@@ -88,12 +116,27 @@ class UserContextNotifier extends StateNotifier<UserContext> {
       createdAt: user.metadata.creationTime ?? DateTime.now(),
       lastLoginAt: user.metadata.lastSignInTime,
     );
+
     try {
-      await HiveService().ensureUserBoxesOpened(user.uid);
-    } catch (e) {
-      // Ignore in mock testing environments
-    }
+      final box = HiveService().getUserBox(HiveService.settingsBoxName, user.uid);
+      await box.put('cached_user_profile', profile.toMap());
+    } catch (_) {}
+
     state = UserContext(userId: user.uid, profile: profile, isInitializing: false);
+    unawaited(_reconcileProfile(user.uid));
+  }
+
+  Future<void> _reconcileProfile(String uid) async {
+    try {
+      final authRepo = AuthRepository();
+      await authRepo.flushPendingProfileSync(uid);
+      final remote = await authRepo.getUserProfile(uid);
+      if (remote != null && mounted) {
+        state = state.copyWith(profile: remote);
+      }
+    } catch (e) {
+      debugPrint('UserContextNotifier reconcile warning: $e');
+    }
   }
 
   static String _usernameFromEmail(String email) {
@@ -113,10 +156,25 @@ class UserContextNotifier extends StateNotifier<UserContext> {
   void setActiveUser({required String userId, UserProfile? profile}) {
     try {
       HiveService().ensureUserBoxesOpened(userId);
+      if (profile != null) {
+        final box = HiveService().getUserBox(HiveService.settingsBoxName, userId);
+        box.put('cached_user_profile', profile.toMap());
+      }
     } catch (e) {
       // In mock/test environments HiveService might not be initialized
     }
     state = UserContext(userId: userId, profile: profile, isInitializing: false);
+  }
+
+  /// Updates the profile in state and syncs to user-scoped Hive cache.
+  void updateProfile(UserProfile updatedProfile) {
+    state = state.copyWith(profile: updatedProfile);
+    try {
+      final box = HiveService().getUserBox(HiveService.settingsBoxName, updatedProfile.id);
+      box.put('cached_user_profile', updatedProfile.toMap());
+    } catch (e) {
+      debugPrint('UserContextNotifier updateProfile cache warning: $e');
+    }
   }
 
   /// Resets to legacy unauthenticated mode (single-user root collections).

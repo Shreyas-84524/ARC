@@ -98,6 +98,18 @@ class AuthService {
     );
   }
 
+  /// Updates the user's custom in-app display name.
+  /// Validates Unicode support, rejects emojis, normalizes spacing, and caches to Hive/Firestore.
+  Future<UserProfile> updateDisplayName({
+    required String userId,
+    required String newDisplayName,
+  }) async {
+    return _repository.updateDisplayName(
+      userId: userId,
+      newDisplayName: newDisplayName,
+    );
+  }
+
   /// Changes the currently authenticated user's password in Firebase Authentication.
   /// NEVER stores password in Firestore, Hive, or local storage.
   Future<void> changePassword({

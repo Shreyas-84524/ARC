@@ -7,6 +7,7 @@ import 'package:arc/features/user_management/models/user_profile.dart';
 import 'package:arc/features/user_management/models/auth_exception.dart';
 import 'package:arc/core/services/hive_service.dart';
 import 'package:arc/core/services/data_migration_service.dart';
+import 'package:arc/core/utils/display_name_utils.dart';
 
 abstract class IAuthRepository {
   Stream<auth.User?> authStateChanges();
@@ -27,6 +28,10 @@ abstract class IAuthRepository {
   Future<void> signOut();
   Future<UserProfile?> getUserProfile(String uid);
   Future<void> updateUserProfile(UserProfile profile);
+  Future<UserProfile> updateDisplayName({
+    required String userId,
+    required String newDisplayName,
+  });
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,
@@ -276,6 +281,8 @@ class AuthRepository implements IAuthRepository {
           id: user.uid,
           username: displayName,
           displayName: displayName,
+          displayNameSource: 'google',
+          displayNameUpdatedAt: now,
           email: user.email,
           photoURL: user.photoURL,
           authProvider: 'google',
@@ -291,16 +298,40 @@ class AuthRepository implements IAuthRepository {
             ? 'password,google'
             : 'google';
 
+        final isCustomized = existingProfile.displayNameSource == 'user_customized';
+        String resolvedDisplayName;
+        String resolvedSource;
+        DateTime? resolvedUpdatedAt = existingProfile.displayNameUpdatedAt;
+
+        if (isCustomized) {
+          resolvedDisplayName = existingProfile.displayName;
+          resolvedSource = 'user_customized';
+        } else {
+          final freshGoogleName = (user.displayName != null && user.displayName!.trim().isNotEmpty)
+              ? user.displayName!.trim()
+              : null;
+          if (freshGoogleName != null && freshGoogleName.isNotEmpty) {
+            resolvedDisplayName = freshGoogleName;
+            resolvedSource = 'google';
+            resolvedUpdatedAt = now;
+          } else {
+            resolvedDisplayName = existingProfile.displayName.isNotEmpty
+                ? existingProfile.displayName
+                : (user.email != null ? _displayNameFromEmail(user.email!) : 'Google User');
+            resolvedSource = existingProfile.displayNameSource;
+          }
+        }
+
         profile = existingProfile.copyWith(
           lastLoginAt: now,
           updatedAt: now,
-          displayName: existingProfile.displayName.isNotEmpty
-              ? existingProfile.displayName
-              : (user.displayName ?? existingProfile.displayName),
+          displayName: resolvedDisplayName,
+          displayNameSource: resolvedSource,
+          displayNameUpdatedAt: resolvedUpdatedAt,
           photoURL: user.photoURL ?? existingProfile.photoURL,
           authProvider: updatedProvider,
         );
-        debugPrint('AuthRepository: Reused existing user profile for UID: ${user.uid}');
+        debugPrint('AuthRepository: Reconciled existing user profile for UID: ${user.uid} with name: $resolvedDisplayName (source: $resolvedSource)');
       }
 
       await _persistProfile(profile);
@@ -447,7 +478,9 @@ class AuthRepository implements IAuthRepository {
       // 1. Try reading from users/{uid}
       final userDoc = await _db.collection('users').doc(uid).get();
       if (userDoc.exists && userDoc.data() != null) {
-        return UserProfile.fromMap(userDoc.data()!);
+        final profile = UserProfile.fromMap(userDoc.data()!);
+        await saveProfileToHive(profile);
+        return profile;
       }
 
       // 2. Fallback to users/{uid}/settings/profile
@@ -458,17 +491,155 @@ class AuthRepository implements IAuthRepository {
           .doc('profile')
           .get();
       if (profileDoc.exists && profileDoc.data() != null) {
-        return UserProfile.fromMap(profileDoc.data()!);
+        final profile = UserProfile.fromMap(profileDoc.data()!);
+        await saveProfileToHive(profile);
+        return profile;
       }
     } catch (e) {
-      debugPrint('AuthRepository getUserProfile notice: $e');
+      debugPrint('AuthRepository getUserProfile remote notice: $e');
     }
-    return null;
+
+    // 3. Fallback to user-scoped Hive cache
+    return getCachedProfileFromHive(uid);
   }
 
   @override
   Future<void> updateUserProfile(UserProfile profile) async {
     await _persistProfile(profile);
+  }
+
+  @override
+  Future<UserProfile> updateDisplayName({
+    required String userId,
+    required String newDisplayName,
+  }) async {
+    final validationError = DisplayNameUtils.validate(newDisplayName);
+    if (validationError != null) {
+      throw ArgumentError(validationError);
+    }
+
+    final normalized = DisplayNameUtils.normalize(newDisplayName);
+    final now = DateTime.now();
+
+    UserProfile? current = await getUserProfile(userId) ?? getCachedProfileFromHive(userId);
+    final UserProfile updated;
+
+    if (current != null) {
+      updated = current.copyWith(
+        displayName: normalized,
+        displayNameSource: 'user_customized',
+        displayNameUpdatedAt: now,
+        updatedAt: now,
+      );
+    } else {
+      updated = UserProfile(
+        id: userId,
+        username: normalized,
+        displayName: normalized,
+        displayNameSource: 'user_customized',
+        displayNameUpdatedAt: now,
+        authProvider: 'default',
+        role: 'user',
+        createdAt: now,
+        updatedAt: now,
+        lastLoginAt: now,
+      );
+    }
+
+    // Save locally to Hive first for offline-first responsiveness
+    await saveProfileToHive(updated);
+
+    // Update in Firebase Auth currentUser if active
+    try {
+      if (_auth.currentUser != null && _auth.currentUser!.uid == userId) {
+        await _auth.currentUser!.updateDisplayName(normalized);
+      }
+    } catch (e) {
+      debugPrint('AuthRepository updateDisplayName FirebaseAuth warning: $e');
+    }
+
+    // Persist to Firestore with offline queueing support
+    try {
+      final profileMap = updated.toMap();
+      await _db
+          .collection('users')
+          .doc(userId)
+          .set(profileMap, fs.SetOptions(merge: true));
+
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('settings')
+          .doc('profile')
+          .set(profileMap, fs.SetOptions(merge: true));
+
+      try {
+        final box = HiveService().getUserBox(HiveService.settingsBoxName, userId);
+        await box.put('profile_sync_pending', false);
+      } catch (_) {}
+    } catch (e) {
+      debugPrint('AuthRepository updateDisplayName remote write failed, queued: $e');
+      try {
+        final box = HiveService().getUserBox(HiveService.settingsBoxName, userId);
+        await box.put('profile_sync_pending', true);
+      } catch (_) {}
+    }
+
+    return updated;
+  }
+
+  /// Caches a [UserProfile] into the user's isolated Hive settings box.
+  Future<void> saveProfileToHive(UserProfile profile) async {
+    try {
+      await HiveService().ensureUserBoxesOpened(profile.id);
+      final box = HiveService().getUserBox(HiveService.settingsBoxName, profile.id);
+      await box.put('cached_user_profile', profile.toMap());
+    } catch (e) {
+      debugPrint('AuthRepository saveProfileToHive warning: $e');
+    }
+  }
+
+  /// Reads a cached [UserProfile] from the user's isolated Hive settings box.
+  UserProfile? getCachedProfileFromHive(String userId) {
+    try {
+      final box = HiveService().getUserBox(HiveService.settingsBoxName, userId);
+      final data = box.get('cached_user_profile');
+      if (data is Map) {
+        return UserProfile.fromMap(Map<String, dynamic>.from(data));
+      }
+    } catch (e) {
+      debugPrint('AuthRepository getCachedProfileFromHive warning: $e');
+    }
+    return null;
+  }
+
+  /// Flushes any pending offline profile mutations to Firestore.
+  Future<void> flushPendingProfileSync(String userId) async {
+    try {
+      final box = HiveService().getUserBox(HiveService.settingsBoxName, userId);
+      final isPending = box.get('profile_sync_pending', defaultValue: false) == true;
+      if (!isPending) return;
+
+      final cached = getCachedProfileFromHive(userId);
+      if (cached != null) {
+        final profileMap = cached.toMap();
+        await _db
+            .collection('users')
+            .doc(userId)
+            .set(profileMap, fs.SetOptions(merge: true));
+        await _db
+            .collection('users')
+            .doc(userId)
+            .collection('settings')
+            .doc('profile')
+            .set(profileMap, fs.SetOptions(merge: true));
+
+        await box.put('profile_sync_pending', false);
+        debugPrint('AuthRepository: Successfully flushed pending profile sync for $userId');
+      }
+    } catch (e) {
+      debugPrint('AuthRepository flushPendingProfileSync warning: $e');
+    }
   }
 
   @override
@@ -599,17 +770,25 @@ class AuthRepository implements IAuthRepository {
 
     final role = matchingUsername.toLowerCase() == 'admin' ? 'admin' : 'user';
 
-    final profile = UserProfile(
-      id: uid,
-      username: matchingUsername,
-      displayName: matchingUsername,
-      email: internalEmail,
-      authProvider: 'password',
-      role: role,
-      createdAt: now,
-      updatedAt: now,
-      lastLoginAt: now,
-    );
+    final existingProfile = await getUserProfile(uid);
+    final profile = existingProfile != null
+        ? existingProfile.copyWith(
+            lastLoginAt: now,
+            updatedAt: now,
+          )
+        : UserProfile(
+            id: uid,
+            username: matchingUsername,
+            displayName: matchingUsername,
+            displayNameSource: 'user_customized',
+            displayNameUpdatedAt: now,
+            email: internalEmail,
+            authProvider: 'password',
+            role: role,
+            createdAt: now,
+            updatedAt: now,
+            lastLoginAt: now,
+          );
 
     await _persistProfile(profile);
 
@@ -625,10 +804,13 @@ class AuthRepository implements IAuthRepository {
   }
 
   Future<void> _persistProfile(UserProfile profile) async {
+    // Always save to user-scoped Hive cache first
+    await saveProfileToHive(profile);
+
     try {
       final profileMap = profile.toMap();
 
-      // Write under users/{uid} (Task 5 & 10 requirement)
+      // Write under users/{uid}
       await _db
           .collection('users')
           .doc(profile.id)
@@ -641,8 +823,17 @@ class AuthRepository implements IAuthRepository {
           .collection('settings')
           .doc('profile')
           .set(profileMap, fs.SetOptions(merge: true));
+
+      try {
+        final box = HiveService().getUserBox(HiveService.settingsBoxName, profile.id);
+        await box.put('profile_sync_pending', false);
+      } catch (_) {}
     } catch (e) {
-      debugPrint('AuthRepository profile save warning: $e');
+      debugPrint('AuthRepository profile save remote write warning: $e');
+      try {
+        final box = HiveService().getUserBox(HiveService.settingsBoxName, profile.id);
+        await box.put('profile_sync_pending', true);
+      } catch (_) {}
     }
   }
 

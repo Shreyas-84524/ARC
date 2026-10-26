@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:arc/core/theme/app_theme.dart';
 
 class SplashScreen extends StatelessWidget {
@@ -24,7 +25,7 @@ class SplashScreen extends StatelessWidget {
                 ),
               ),
               child: const Icon(
-                Icons.auto_awesome,
+                LucideIcons.sparkles,
                 size: 40,
                 color: AppColors.accent,
               ),
@@ -39,10 +40,15 @@ class SplashScreen extends StatelessWidget {
                 letterSpacing: 4.0,
               ),
             ),
-            const SizedBox(height: 32),
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
-              strokeWidth: 2.5,
+            const SizedBox(height: 8),
+            Text(
+              'TRACK. GROW. ACHIEVE.',
+              style: TextStyle(
+                color: AppColors.textSecondaryDark,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 2.0,
+              ),
             ),
           ],
         ),
