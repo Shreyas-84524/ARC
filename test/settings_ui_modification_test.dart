@@ -131,7 +131,7 @@ void main() {
     expect(find.text('Online'), findsNothing);
 
     // 5. Verify Logout option is present
-    await tester.drag(find.byType(ListView), const Offset(0, -600));
+    await tester.drag(find.byType(ListView), const Offset(0, -1200));
     await tester.pumpAndSettle();
     expect(find.text('Log Out'), findsOneWidget);
   });

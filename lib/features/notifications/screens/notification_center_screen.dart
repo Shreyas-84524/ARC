@@ -86,6 +86,7 @@ class _NotificationTile extends StatelessWidget {
       ArcNotificationType.habitPending => LucideIcons.zap,
       ArcNotificationType.habitEveningCheckIn => LucideIcons.bell,
       ArcNotificationType.moneyDaily => LucideIcons.wallet,
+      ArcNotificationType.feedbackAcknowledged => LucideIcons.messageSquare,
     };
     return Card(
       child: ListTile(

@@ -46,3 +46,21 @@ app.*.map.json
 
 # Ignore markdown inside lib
 lib/**/*.md
+
+# Cloudflare Workers & Credentials
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.wrangler/
+service-account*.json
+*.pem
+private-key*.json
+
+# Node & NPM
+node_modules/
+**/node_modules/
+
+# Build caches & IDE
+.gradle/
+.agents/
+.vscode/

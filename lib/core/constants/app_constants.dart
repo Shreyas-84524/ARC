@@ -64,8 +64,6 @@ enum TransactionType {
 }
 
 class AppConstants {
-  static const double gridUnit = 8.0;
-
   // Categories
   static const List<String> taskCategories = [
     'Work',
@@ -75,40 +73,5 @@ class AppConstants {
     'Finance',
     'Social',
     'Other'
-  ];
-
-  static const List<String> habitCategories = [
-    'Fitness',
-    'Mind',
-    'Work',
-    'Study',
-    'Finance',
-    'Routine',
-    'Other'
-  ];
-
-  static const List<String> moneyCategories = [
-    'Food',
-    'Shopping',
-    'Fuel',
-    'Travel',
-    'Entertainment',
-    'Bills',
-    'Health',
-    'Education',
-    'Salary',
-    'Freelancing',
-    'Investment',
-    'Other'
-  ];
-
-  static const List<Color> habitColors = [
-    Color(0xffD7FF2F), // Neon Lime
-    Color(0xffFF4D4F), // Red
-    Color(0xffFF9F43), // Orange
-    Color(0xffFFD93D), // Yellow
-    Color(0xff5AA9FF), // Blue
-    Color(0xffD7FF2F), // Default Green (Neon Lime)
-    Color(0xffD6D6D6), // Silver
   ];
 }

@@ -391,11 +391,11 @@ void main() {
       await tester.pumpAndSettle();
 
       final switchFinder = find.widgetWithText(SwitchListTile, 'Automatic Spending Tracking');
-
+            
       // Scroll until SwitchListTile is fully visible
       await tester.scrollUntilVisible(
-        switchFinder,
-        300,
+        find.text('Money Tracker'),
+        150,
         scrollable: find.byType(Scrollable),
       );
       await tester.pumpAndSettle();
