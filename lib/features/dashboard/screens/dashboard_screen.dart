@@ -8,6 +8,7 @@ import 'package:arc/core/theme/app_theme.dart';
 import 'package:arc/core/utilities/currency_formatter.dart';
 import 'package:arc/core/utilities/responsive_layout.dart';
 import 'package:arc/core/widgets/top_bar.dart';
+import 'package:arc/features/dashboard/models/dashboard_data.dart';
 import 'package:arc/features/task_manager/models/task_model.dart';
 import 'package:arc/features/task_manager/widgets/task_editor_sheet.dart';
 import 'package:arc/features/habit_tracker/models/habit_model.dart';
@@ -202,69 +203,17 @@ class DashboardScreen extends ConsumerWidget {
 
     // Subscriptions
     final dashboardData = ref.watch(dashboardProvider);
-    final remainingBudget =
-        (dashboardData['remainingBudget'] as double?) ?? 0.0;
-    final totalBudget = (dashboardData['totalBudget'] as double?) ?? 0.0;
-    final streakDays = (dashboardData['streakDays'] as int?) ?? 0;
-
-    final todayIncome = (dashboardData['todayIncome'] as double?) ?? 0.0;
-    final todayExpenses = (dashboardData['todayExpenses'] as double?) ?? 0.0;
-    final monthlySavings = (dashboardData['monthlySavings'] as double?) ?? 0.0;
-    final todayScore = (dashboardData['todayProductivityScore'] as int?) ?? 0;
-
-    final List recentActivities =
-        (dashboardData['recentActivities'] as List?) ?? [];
-
-    final tasksList = ref.watch(tasksProvider);
     final habitsList = ref.watch(habitsProvider);
     final entriesList = ref.watch(habitEntriesProvider);
 
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
-    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
     final todayStr = DateFormat('yyyy-MM-dd').format(now);
-
-    final todayTasks = tasksList.where((t) {
-      if (t.dueDate == null) return true;
-      return t.dueDate!.isAfter(
-            todayStart.subtract(const Duration(seconds: 1)),
-          ) &&
-          t.dueDate!.isBefore(todayEnd.add(const Duration(seconds: 1)));
-    }).toList();
-
-    final upcomingDeadlines = tasksList.where((t) {
-      if (t.completed || t.dueDate == null) return false;
-      return t.dueDate!.isAfter(todayEnd);
-    }).toList();
-
-    final totalTodayTasksCount = todayTasks.length;
+    final todayTasks = dashboardData.todayTasks;
+    final upcomingDeadlines = dashboardData.upcomingDeadlines;
     final completedTodayTasksCount = todayTasks
-        .where((t) => t.completed)
-        .length
-        .clamp(0, totalTodayTasksCount);
-
-    final totalHabitsCount = habitsList.length;
-    final completedTodayHabitsCount = entriesList
-        .where((e) => e.dateStr == todayStr && e.completed)
-        .length
-        .clamp(0, totalHabitsCount);
-
-    final double taskScore = totalTodayTasksCount > 0
-        ? (completedTodayTasksCount / totalTodayTasksCount) * 50.0
-        : 0.0;
-
-    final double habitScore = totalHabitsCount > 0
-        ? (completedTodayHabitsCount / totalHabitsCount) * 50.0
-        : 0.0;
-
-    final double finalProgressScore = (taskScore + habitScore).clamp(
-      0.0,
-      100.0,
-    );
-    final double progressPercentage = (finalProgressScore / 100.0).clamp(
-      0.0,
-      1.0,
-    );
+        .where((task) => task.completed)
+        .length;
 
     return Scaffold(
       appBar: const CustomTopBar(title: 'Dashboard'),
@@ -299,7 +248,7 @@ class DashboardScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              "Completed: $completedTodayTasksCount / $totalTodayTasksCount Tasks • $completedTodayHabitsCount / $totalHabitsCount Habits",
+                              "Completed: $completedTodayTasksCount / ${todayTasks.length} Tasks • ${dashboardData.completedHabits} / ${dashboardData.totalHabits} Habits",
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: isDark
                                     ? AppColors.textSecondaryDark
@@ -317,7 +266,7 @@ class DashboardScreen extends ConsumerWidget {
                             height: 64,
                             width: 64,
                             child: CircularProgressIndicator(
-                              value: progressPercentage,
+                              value: dashboardData.progress,
                               strokeWidth: 6,
                               backgroundColor: isDark
                                   ? AppColors.darkBgSecondary
@@ -328,7 +277,7 @@ class DashboardScreen extends ConsumerWidget {
                             ),
                           ),
                           Text(
-                            "${finalProgressScore.round()}%",
+                            "${dashboardData.todayProductivityScore}%",
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: isDark
@@ -404,7 +353,7 @@ class DashboardScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          "$todayScore / 100",
+                          "${dashboardData.todayProductivityScore} / 100",
                           style: const TextStyle(
                             color: AppColors.textPrimaryLight,
                             fontWeight: FontWeight.bold,
@@ -430,18 +379,20 @@ class DashboardScreen extends ConsumerWidget {
                   _buildMetricCard(
                     context,
                     title: 'Remaining Budget',
-                    value: CurrencyFormatter.format(remainingBudget),
+                    value: CurrencyFormatter.format(
+                      dashboardData.remainingBudget,
+                    ),
                     subtitle:
-                        'Limit: ${CurrencyFormatter.format(totalBudget, decimalDigits: 0)}',
+                        'Limit: ${CurrencyFormatter.format(dashboardData.totalBudget, decimalDigits: 0)}',
                     icon: LucideIcons.wallet,
-                    color: remainingBudget >= 0
+                    color: dashboardData.remainingBudget >= 0
                         ? AppColors.success
                         : AppColors.danger,
                   ),
                   _buildMetricCard(
                     context,
                     title: 'Daily Streak',
-                    value: '$streakDays Days',
+                    value: '${dashboardData.streakDays} Days',
                     subtitle: 'Keep it going!',
                     icon: LucideIcons.zap,
                     color: AppColors.accent,
@@ -449,19 +400,23 @@ class DashboardScreen extends ConsumerWidget {
                   _buildMetricCard(
                     context,
                     title: 'Today Expenses',
-                    value: CurrencyFormatter.format(todayExpenses),
+                    value: CurrencyFormatter.format(
+                      dashboardData.todayExpenses,
+                    ),
                     subtitle:
-                        'Income: ${CurrencyFormatter.format(todayIncome)}',
+                        'Income: ${CurrencyFormatter.format(dashboardData.todayIncome)}',
                     icon: LucideIcons.trendingDown,
                     color: AppColors.danger,
                   ),
                   _buildMetricCard(
                     context,
                     title: 'Monthly Savings',
-                    value: CurrencyFormatter.format(monthlySavings),
+                    value: CurrencyFormatter.format(
+                      dashboardData.monthlySavings,
+                    ),
                     subtitle: 'Savings Net',
                     icon: LucideIcons.piggyBank,
-                    color: monthlySavings >= 0
+                    color: dashboardData.monthlySavings >= 0
                         ? AppColors.success
                         : AppColors.danger,
                   ),
@@ -742,34 +697,30 @@ class DashboardScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              if (recentActivities.isEmpty)
+              if (dashboardData.recentActivities.isEmpty)
                 _buildCleanCard(context, 'No recent activity recorded yet.')
               else
                 ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: recentActivities.length,
+                  itemCount: dashboardData.recentActivities.length,
                   separatorBuilder: (context, index) =>
                       const SizedBox(height: 10),
                   itemBuilder: (context, index) {
-                    final act = recentActivities[index];
-                    final type = act['type'] as String;
-                    final title = act['title'] as String;
-                    final subtitle = act['subtitle'] as String;
-                    final timestamp = act['timestamp'] as DateTime;
+                    final activity = dashboardData.recentActivities[index];
 
                     IconData icon = LucideIcons.activity;
                     Color color = AppColors.accent;
 
-                    if (type == 'task') {
+                    if (activity.type == DashboardActivityType.task) {
                       icon = LucideIcons.checkSquare;
                       color = AppColors.info;
-                    } else if (type == 'habit') {
+                    } else if (activity.type == DashboardActivityType.habit) {
                       icon = LucideIcons.zap;
                       color = AppColors.accent;
-                    } else if (type == 'money') {
+                    } else if (activity.type == DashboardActivityType.money) {
                       icon = LucideIcons.wallet;
-                      color = (act['isIncome'] ?? false)
+                      color = activity.isIncome
                           ? AppColors.success
                           : AppColors.danger;
                     }
@@ -786,13 +737,13 @@ class DashboardScreen extends ConsumerWidget {
                           child: Icon(icon, color: color, size: 18),
                         ),
                         title: Text(
-                          title,
+                          activity.title,
                           style: theme.textTheme.bodyLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         subtitle: Text(
-                          '$subtitle • ${DateFormat('MMM d, h:mm a').format(timestamp)}',
+                          '${activity.subtitle} • ${DateFormat('MMM d, h:mm a').format(activity.timestamp)}',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: isDark
                                 ? AppColors.textMutedDark
@@ -814,7 +765,8 @@ class DashboardScreen extends ConsumerWidget {
         foregroundColor: AppColors.textPrimaryLight,
         shape: const CircleBorder(),
         elevation: 6,
-        onPressed: () => _showQuickAddDialog(context, ref, totalBudget),
+        onPressed: () =>
+            _showQuickAddDialog(context, ref, dashboardData.totalBudget),
         child: const Icon(LucideIcons.plus, size: 24),
       ).animate().scale(delay: 200.ms, duration: 250.ms, curve: Curves.easeOut),
     );

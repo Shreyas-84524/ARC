@@ -12,6 +12,7 @@ import 'package:arc/features/money_tracker/repository/money_repository.dart';
 import 'package:arc/features/settings/models/settings_model.dart';
 import 'package:arc/features/settings/repository/settings_repository.dart';
 import 'package:arc/features/dashboard/repository/dashboard_repository.dart';
+import 'package:arc/features/dashboard/models/dashboard_data.dart';
 import 'package:arc/core/services/sync_service.dart';
 import 'package:arc/core/services/sync_manager.dart';
 import 'package:arc/core/services/task_cleanup_service.dart';
@@ -751,12 +752,12 @@ final dashboardRepositoryProvider = Provider<DashboardRepository>((ref) {
 });
 
 // Dashboard State Provider
-final dashboardProvider = Provider<Map<String, dynamic>>((ref) {
+final dashboardProvider = Provider<DashboardData>((ref) {
   ref.watch(tasksProvider);
   ref.watch(habitsProvider);
   ref.watch(habitEntriesProvider);
   ref.watch(moneyProvider);
   final repo = ref.watch(dashboardRepositoryProvider);
   final currentMonth = ref.watch(currentMonthProvider);
-  return repo.getDashboardData(currentMonth);
+  return repo.getDashboardSnapshot(currentMonth);
 });
