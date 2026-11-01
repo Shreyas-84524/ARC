@@ -19,12 +19,13 @@ export 'package:arc/features/feedback/utils/feedback_serializers.dart';
 /// Provider for the feedback acknowledgement and local notification service.
 final feedbackAcknowledgementServiceProvider =
     Provider<IFeedbackAcknowledgementService>((ref) {
-  return FeedbackAcknowledgementService();
-});
+      return FeedbackAcknowledgementService();
+    });
 
 /// Provider for the remote Firestore data source.
-final feedbackRemoteDataSourceProvider =
-    Provider<IFeedbackRemoteDataSource>((ref) {
+final feedbackRemoteDataSourceProvider = Provider<IFeedbackRemoteDataSource>((
+  ref,
+) {
   return FeedbackRemoteDataSource();
 });
 
@@ -35,8 +36,9 @@ final feedbackRepositoryProvider = Provider<IFeedbackRepository>((ref) {
 });
 
 /// Future provider fetching the currently logged-in user's feedback list.
-final currentUserFeedbackProvider =
-    FutureProvider<List<FeedbackModel>>((ref) async {
+final currentUserFeedbackProvider = FutureProvider<List<FeedbackModel>>((
+  ref,
+) async {
   final userContext = ref.watch(userContextProvider);
   final repository = ref.watch(feedbackRepositoryProvider);
 
@@ -60,8 +62,9 @@ final currentUserFeedbackProvider =
 });
 
 /// Stream provider for live real-time updates of the current user's feedback.
-final currentUserFeedbackStreamProvider =
-    StreamProvider<List<FeedbackModel>>((ref) {
+final currentUserFeedbackStreamProvider = StreamProvider<List<FeedbackModel>>((
+  ref,
+) {
   final userContext = ref.watch(userContextProvider);
   final repository = ref.watch(feedbackRepositoryProvider);
 
@@ -81,8 +84,10 @@ final currentUserFeedbackStreamProvider =
 });
 
 /// Future provider fetching the details and status of a specific feedback item.
-final feedbackStatusProvider =
-    FutureProvider.family<FeedbackModel?, String>((ref, feedbackId) async {
+final feedbackStatusProvider = FutureProvider.family<FeedbackModel?, String>((
+  ref,
+  feedbackId,
+) async {
   final repository = ref.watch(feedbackRepositoryProvider);
   return repository.getFeedbackStatus(feedbackId);
 });
@@ -90,9 +95,9 @@ final feedbackStatusProvider =
 /// Stream provider listening to real-time status updates of a specific feedback item.
 final feedbackStatusStreamProvider =
     StreamProvider.family<FeedbackModel?, String>((ref, feedbackId) {
-  final repository = ref.watch(feedbackRepositoryProvider);
-  return repository.watchFeedbackStatus(feedbackId);
-});
+      final repository = ref.watch(feedbackRepositoryProvider);
+      return repository.watchFeedbackStatus(feedbackId);
+    });
 
 /// Filter parameters for administrative feedback queries.
 @immutable
@@ -101,11 +106,7 @@ class AdminFeedbackFilter {
   final String? category;
   final int limit;
 
-  const AdminFeedbackFilter({
-    this.status,
-    this.category,
-    this.limit = 50,
-  });
+  const AdminFeedbackFilter({this.status, this.category, this.limit = 50});
 
   @override
   bool operator ==(Object other) {
@@ -126,13 +127,14 @@ class AdminFeedbackFilter {
 
 /// Future provider allowing administrators to query feedback submissions.
 final adminFeedbackListProvider =
-    FutureProvider.family<List<FeedbackModel>, AdminFeedbackFilter>(
-  (ref, filter) async {
-    final repository = ref.watch(feedbackRepositoryProvider);
-    return repository.getFeedbackForAdmin(
-      status: filter.status,
-      category: filter.category,
-      limit: filter.limit,
-    );
-  },
-);
+    FutureProvider.family<List<FeedbackModel>, AdminFeedbackFilter>((
+      ref,
+      filter,
+    ) async {
+      final repository = ref.watch(feedbackRepositoryProvider);
+      return repository.getFeedbackForAdmin(
+        status: filter.status,
+        category: filter.category,
+        limit: filter.limit,
+      );
+    });

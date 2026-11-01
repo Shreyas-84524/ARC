@@ -14,9 +14,9 @@ class DashboardRepository {
     required TaskRepository taskRepository,
     required HabitRepository habitRepository,
     required MoneyRepository moneyRepository,
-  })  : _taskRepository = taskRepository,
-        _habitRepository = habitRepository,
-        _moneyRepository = moneyRepository;
+  }) : _taskRepository = taskRepository,
+       _habitRepository = habitRepository,
+       _moneyRepository = moneyRepository;
 
   Map<String, dynamic> getDashboardData(String currentMonthStr) {
     final tasks = _taskRepository.getTasks();
@@ -28,8 +28,9 @@ class DashboardRepository {
 
     final now = DateTime.now();
     final todayStr = DateFormat('yyyy-MM-dd').format(now);
-    final completedHabits =
-        entries.where((e) => e.dateStr == todayStr && e.completed).length;
+    final completedHabits = entries
+        .where((e) => e.dateStr == todayStr && e.completed)
+        .length;
     final totalHabits = habits.length;
 
     int maxStreak = 0;
@@ -66,21 +67,26 @@ class DashboardRepository {
 
     final remainingBudget = monthlyBudget - totalExpenses;
     final monthlySavings = totalIncome - totalExpenses;
-    final monthlySavingsRate =
-        totalIncome > 0 ? (monthlySavings / totalIncome).clamp(0.0, 1.0) : 0.0;
+    final monthlySavingsRate = totalIncome > 0
+        ? (monthlySavings / totalIncome).clamp(0.0, 1.0)
+        : 0.0;
 
     final todayStart = DateTime(now.year, now.month, now.day);
     final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
     final todayTasks = tasks.where((t) {
       if (t.dueDate == null) return true;
-      return t.dueDate!.isAfter(todayStart.subtract(const Duration(seconds: 1))) &&
+      return t.dueDate!.isAfter(
+            todayStart.subtract(const Duration(seconds: 1)),
+          ) &&
           t.dueDate!.isBefore(todayEnd.add(const Duration(seconds: 1)));
     }).toList();
 
     final totalTodayTasks = todayTasks.length;
-    final completedTodayTasks =
-        todayTasks.where((t) => t.completed).length.clamp(0, totalTodayTasks);
+    final completedTodayTasks = todayTasks
+        .where((t) => t.completed)
+        .length
+        .clamp(0, totalTodayTasks);
 
     final totalHabitsCount = habits.length;
     final completedHabitsCount = entries
@@ -98,8 +104,9 @@ class DashboardRepository {
     final double taskScore = taskRate * 50.0;
     final double habitScore = habitRate * 50.0;
 
-    final int todayProductivityScore =
-        (taskScore + habitScore).clamp(0.0, 100.0).round();
+    final int todayProductivityScore = (taskScore + habitScore)
+        .clamp(0.0, 100.0)
+        .round();
     final overallProductivityScore = todayProductivityScore;
 
     // Build Recent Activity Feed (top 10 latest events)
@@ -110,7 +117,9 @@ class DashboardRepository {
       activities.add({
         'type': 'task',
         'title': t.title,
-        'subtitle': t.completed ? 'Task Completed' : 'Task Created (${t.category})',
+        'subtitle': t.completed
+            ? 'Task Completed'
+            : 'Task Created (${t.category})',
         'timestamp': t.updatedAt,
         'isCompleted': t.completed,
       });
@@ -139,14 +148,17 @@ class DashboardRepository {
       activities.add({
         'type': 'money',
         'title': '${tx.type}: ${CurrencyFormatter.format(tx.amount)}',
-        'subtitle': '${tx.category} • ${tx.notes.isNotEmpty ? tx.notes : "Transaction"}',
+        'subtitle':
+            '${tx.category} • ${tx.notes.isNotEmpty ? tx.notes : "Transaction"}',
         'timestamp': tx.date,
         'isIncome': tx.type == 'Income',
       });
     }
 
-    activities.sort((a, b) =>
-        (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
+    activities.sort(
+      (a, b) =>
+          (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime),
+    );
 
     final recentActivities = activities.take(10).toList();
 

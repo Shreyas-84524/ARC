@@ -15,11 +15,11 @@ class Task extends HiveObject {
   final String description;
 
   @HiveField(3)
-  final String priority; // High, Must, Low
+  final String priority; // High, Medium, Low
 
-  /// User-facing display priority ("High", "Must", "Low").
-  /// Provides backward compatibility for legacy tasks saved with "Much".
-  String get displayPriority => (priority == 'Much') ? 'Must' : priority;
+  /// Provides backward compatibility for legacy middle-priority names.
+  String get displayPriority =>
+      (priority == 'Much' || priority == 'Must') ? 'Medium' : priority;
 
   @HiveField(4)
   final String category; // Work, Personal, etc.
@@ -91,7 +91,9 @@ class Task extends HiveObject {
       dueTime: dueTime ?? this.dueTime,
       reminder: reminder ?? this.reminder,
       completed: completed ?? this.completed,
-      completedAt: setCompletedAtNull ? null : (completedAt ?? this.completedAt),
+      completedAt: setCompletedAtNull
+          ? null
+          : (completedAt ?? this.completedAt),
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -117,7 +119,9 @@ class Task extends HiveObject {
 
   factory Task.fromMap(Map<String, dynamic> map) {
     final rawPriority = map['priority'] ?? 'Low';
-    final priority = (rawPriority == 'Much') ? 'Must' : rawPriority;
+    final priority = (rawPriority == 'Much' || rawPriority == 'Must')
+        ? 'Medium'
+        : rawPriority;
     return Task(
       id: map['id'] ?? '',
       title: map['title'] ?? '',
@@ -127,11 +131,19 @@ class Task extends HiveObject {
       labels: List<String>.from(map['labels'] ?? []),
       dueDate: map['dueDate'] != null ? DateTime.parse(map['dueDate']) : null,
       dueTime: map['dueTime'],
-      reminder: map['reminder'] != null ? DateTime.parse(map['reminder']) : null,
+      reminder: map['reminder'] != null
+          ? DateTime.parse(map['reminder'])
+          : null,
       completed: map['completed'] ?? false,
-      completedAt: map['completedAt'] != null ? DateTime.parse(map['completedAt']) : null,
-      createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : DateTime.now(),
-      updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : DateTime.now(),
+      completedAt: map['completedAt'] != null
+          ? DateTime.parse(map['completedAt'])
+          : null,
+      createdAt: map['createdAt'] != null
+          ? DateTime.parse(map['createdAt'])
+          : DateTime.now(),
+      updatedAt: map['updatedAt'] != null
+          ? DateTime.parse(map['updatedAt'])
+          : DateTime.now(),
     );
   }
 

@@ -17,13 +17,14 @@ class AuthService {
     GoogleSignIn? googleSignIn,
     DataMigrationService? migrationService,
     AuthRepository? repository,
-  }) : _repository = repository ??
-            AuthRepository(
-              firebaseAuth: firebaseAuth,
-              firestore: firestore,
-              googleSignIn: googleSignIn,
-              migrationService: migrationService,
-            );
+  }) : _repository =
+           repository ??
+           AuthRepository(
+             firebaseAuth: firebaseAuth,
+             firestore: firestore,
+             googleSignIn: googleSignIn,
+             migrationService: migrationService,
+           );
 
   AuthRepository get repository => _repository;
 

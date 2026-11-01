@@ -13,10 +13,12 @@ class TransactionEditorSheet extends ConsumerStatefulWidget {
   const TransactionEditorSheet({super.key});
 
   @override
-  ConsumerState<TransactionEditorSheet> createState() => _TransactionEditorSheetState();
+  ConsumerState<TransactionEditorSheet> createState() =>
+      _TransactionEditorSheetState();
 }
 
-class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet> {
+class _TransactionEditorSheetState
+    extends ConsumerState<TransactionEditorSheet> {
   final _formKey = GlobalKey<FormState>();
 
   late TextEditingController _amountController;
@@ -27,8 +29,24 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = TimeOfDay.now();
 
-  final List<String> _incomeCategories = ['Salary', 'Freelancing', 'Investment', 'Gift', 'Other'];
-  final List<String> _expenseCategories = ['Food', 'Travel', 'Shopping', 'Fuel', 'Bills', 'Entertainment', 'Health', 'Education', 'Other'];
+  final List<String> _incomeCategories = [
+    'Salary',
+    'Freelancing',
+    'Investment',
+    'Gift',
+    'Other',
+  ];
+  final List<String> _expenseCategories = [
+    'Food',
+    'Travel',
+    'Shopping',
+    'Fuel',
+    'Bills',
+    'Entertainment',
+    'Health',
+    'Education',
+    'Other',
+  ];
 
   @override
   void initState() {
@@ -149,7 +167,9 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final categories = _selectedType == 'Income' ? _incomeCategories : _expenseCategories;
+    final categories = _selectedType == 'Income'
+        ? _incomeCategories
+        : _expenseCategories;
 
     return ConstrainedBox(
       constraints: BoxConstraints(
@@ -201,10 +221,16 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
                             });
                           }
                         },
-                        backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
+                        backgroundColor: isDark
+                            ? AppColors.darkCard
+                            : AppColors.lightCard,
                         selectedColor: AppColors.danger,
                         labelStyle: TextStyle(
-                          color: _selectedType == 'Expense' ? Colors.white : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                          color: _selectedType == 'Expense'
+                              ? Colors.white
+                              : (isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -222,10 +248,16 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
                             });
                           }
                         },
-                        backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
+                        backgroundColor: isDark
+                            ? AppColors.darkCard
+                            : AppColors.lightCard,
                         selectedColor: AppColors.success,
                         labelStyle: TextStyle(
-                          color: _selectedType == 'Income' ? Colors.white : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                          color: _selectedType == 'Income'
+                              ? Colors.white
+                              : (isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -237,8 +269,12 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
                 // Amount Field
                 TextFormField(
                   controller: _amountController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                   decoration: const InputDecoration(
                     hintText: '0.00',
                     prefixText: '${CurrencyFormatter.symbol} ',
@@ -264,7 +300,10 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
                   initialValue: _selectedCategory,
                   decoration: const InputDecoration(
                     labelText: 'Category',
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                   ),
                   items: categories.map((c) {
                     return DropdownMenuItem<String>(
@@ -285,20 +324,35 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
                     Expanded(
                       child: InkWell(
                         onTap: () => _selectDate(context),
-                        borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.radiusInput,
+                        ),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
                           decoration: BoxDecoration(
-                            color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
-                            borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+                            color: isDark
+                                ? AppColors.darkSurface
+                                : AppColors.lightBgSecondary,
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.radiusInput,
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(LucideIcons.calendar, size: 18, color: AppColors.accent),
+                              const Icon(
+                                LucideIcons.calendar,
+                                size: 18,
+                                color: AppColors.accent,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  DateFormat('MMM d, yyyy').format(_selectedDate),
+                                  DateFormat(
+                                    'MMM d, yyyy',
+                                  ).format(_selectedDate),
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -314,16 +368,29 @@ class _TransactionEditorSheetState extends ConsumerState<TransactionEditorSheet>
                     Expanded(
                       child: InkWell(
                         onTap: () => _selectTime(context),
-                        borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.radiusInput,
+                        ),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
                           decoration: BoxDecoration(
-                            color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
-                            borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+                            color: isDark
+                                ? AppColors.darkSurface
+                                : AppColors.lightBgSecondary,
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.radiusInput,
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(LucideIcons.clock, size: 18, color: AppColors.accent),
+                              const Icon(
+                                LucideIcons.clock,
+                                size: 18,
+                                color: AppColors.accent,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(

@@ -16,11 +16,9 @@ class LoginRateLimiter {
   final SharedPreferences? _prefs;
   final DateTime Function() _clock;
 
-  LoginRateLimiter({
-    SharedPreferences? prefs,
-    DateTime Function()? clock,
-  })  : _prefs = prefs,
-        _clock = clock ?? DateTime.now;
+  LoginRateLimiter({SharedPreferences? prefs, DateTime Function()? clock})
+    : _prefs = prefs,
+      _clock = clock ?? DateTime.now;
 
   Future<SharedPreferences> _getPrefs() async {
     return _prefs ?? await SharedPreferences.getInstance();
@@ -126,7 +124,8 @@ class LoginRateLimiter {
     int attempts = prefs.getInt(keyAttempts) ?? 0;
 
     if (windowStartMs == null ||
-        now.difference(DateTime.fromMillisecondsSinceEpoch(windowStartMs)) >= windowDuration) {
+        now.difference(DateTime.fromMillisecondsSinceEpoch(windowStartMs)) >=
+            windowDuration) {
       // Start a fresh 6-hour window
       await prefs.setInt(keyWindowStart, now.millisecondsSinceEpoch);
       attempts = 1;
@@ -159,7 +158,8 @@ class LoginRateLimiter {
     final now = _clock();
     final windowStartMs = prefs.getInt(keyWindowStart);
     if (windowStartMs == null) return 0;
-    if (now.difference(DateTime.fromMillisecondsSinceEpoch(windowStartMs)) >= windowDuration) {
+    if (now.difference(DateTime.fromMillisecondsSinceEpoch(windowStartMs)) >=
+        windowDuration) {
       await reset();
       return 0;
     }

@@ -16,7 +16,8 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
 
   @override
-  ConsumerState<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+  ConsumerState<AdminDashboardScreen> createState() =>
+      _AdminDashboardScreenState();
 }
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
@@ -46,7 +47,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading users: ${e.toString().replaceAll('StateError:', '').trim()}'),
+            content: Text(
+              'Error loading users: ${e.toString().replaceAll('StateError:', '').trim()}',
+            ),
             backgroundColor: AppColors.danger,
           ),
         );
@@ -118,7 +121,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   }
                 } catch (e) {
                   setDialogState(() {
-                    errorMessage = e.toString().replaceAll('ArgumentError:', '').replaceAll('StateError:', '').trim();
+                    errorMessage = e
+                        .toString()
+                        .replaceAll('ArgumentError:', '')
+                        .replaceAll('StateError:', '')
+                        .trim();
                   });
                 }
               },
@@ -134,7 +141,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('User "${usernameController.text.trim()}" created successfully.'),
+            content: Text(
+              'User "${usernameController.text.trim()}" created successfully.',
+            ),
             backgroundColor: AppColors.accent,
           ),
         );
@@ -188,7 +197,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to delete user: ${e.toString().replaceAll('ArgumentError:', '').replaceAll('StateError:', '').trim()}'),
+              content: Text(
+                'Failed to delete user: ${e.toString().replaceAll('ArgumentError:', '').replaceAll('StateError:', '').trim()}',
+              ),
               backgroundColor: AppColors.danger,
             ),
           );
@@ -230,7 +241,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               'Logged in as $adminName (Administrator)',
               style: TextStyle(
                 fontSize: 12,
-                color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                color: isDark
+                    ? AppColors.textMutedDark
+                    : AppColors.textMutedLight,
               ),
             ),
           ],
@@ -266,15 +279,16 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                                 children: [
                                   Text(
                                     'User Management',
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     'Manage Project Arc multi-user accounts safely.',
                                     style: theme.textTheme.bodySmall?.copyWith(
-                                      color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                                      color: isDark
+                                          ? AppColors.textMutedDark
+                                          : AppColors.textMutedLight,
                                     ),
                                   ),
                                 ],
@@ -287,7 +301,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                 ),
-                                icon: const Icon(LucideIcons.userPlus, size: 18),
+                                icon: const Icon(
+                                  LucideIcons.userPlus,
+                                  size: 18,
+                                ),
                                 label: const Text(
                                   'Create User',
                                   style: TextStyle(fontWeight: FontWeight.bold),
@@ -327,7 +344,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         margin: const EdgeInsets.only(bottom: 10),
                         child: ListTile(
                           leading: CircleAvatar(
-                            backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
+                            backgroundColor: isDark
+                                ? AppColors.darkCard
+                                : AppColors.lightCard,
                             child: const Icon(
                               LucideIcons.user,
                               color: AppColors.accent,
@@ -344,7 +363,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                                 : 'No email',
                             style: TextStyle(
                               fontSize: 12,
-                              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                              color: isDark
+                                  ? AppColors.textMutedDark
+                                  : AppColors.textMutedLight,
                             ),
                           ),
                           trailing: OutlinedButton.icon(

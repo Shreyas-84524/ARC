@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
 import android.telephony.SmsMessage
+import android.util.Log
 
 /**
  * MoneySmsReceiver catches incoming SMS broadcasts on Android.
@@ -16,21 +17,31 @@ import android.telephony.SmsMessage
  * - The event is handed off only to the local in-memory bridge.
  */
 class MoneySmsReceiver : BroadcastReceiver() {
+    companion object {
+        private const val TAG = "ArcMoneyReceiver"
+    }
+
     override fun onReceive(context: Context?, intent: Intent?) {
-        if (intent == null || context == null) return
+        if (intent == null || context == null) {
+            Log.w(TAG, "SMS broadcast dropped: missing context or intent")
+            return
+        }
 
         // 1. Check if automation is active
         if (!MoneyAutomationBridge.isAutomationEnabled(context)) {
+            Log.i(TAG, "SMS broadcast ignored: automatic tracking disabled")
             return
         }
 
         // 2. Verify broadcast action
         val action = intent.action
         if (action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) {
+            Log.w(TAG, "Broadcast ignored: unexpected action")
             return
         }
 
         try {
+            Log.i(TAG, "Eligible SMS broadcast received")
             val messages: Array<SmsMessage> = Telephony.Sms.Intents.getMessagesFromIntent(intent) ?: return
             if (messages.isEmpty()) return
 
@@ -55,9 +66,13 @@ class MoneySmsReceiver : BroadcastReceiver() {
                     body = fullBody,
                     timestamp = timestamp
                 )
+                Log.i(TAG, "SMS event handed to automation bridge")
+            } else {
+                Log.w(TAG, "SMS broadcast contained no message body")
             }
         } catch (e: Exception) {
-            // Suppress errors to avoid crashing broadcast queue
+            // Never include SMS content or financial fields in diagnostics.
+            Log.e(TAG, "SMS broadcast processing failed (${e.javaClass.simpleName})")
         }
     }
 }

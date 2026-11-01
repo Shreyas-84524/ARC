@@ -26,9 +26,9 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
 // App Settings State Notifier Provider
 final appSettingsProvider =
     StateNotifierProvider<SettingsNotifier, SettingsModel>((ref) {
-  final repo = ref.watch(settingsRepositoryProvider);
-  return SettingsNotifier(repo);
-});
+      final repo = ref.watch(settingsRepositoryProvider);
+      return SettingsNotifier(repo);
+    });
 
 class SettingsNotifier extends StateNotifier<SettingsModel> {
   final SettingsRepository _repository;
@@ -86,9 +86,12 @@ class TasksNotifier extends StateNotifier<List<Task>> {
 
   TasksNotifier(this._repository) : super([]) {
     _loadTasks();
-    TaskCleanupService().init(_repository, onCleanup: () {
-      state = _repository.getTasks();
-    });
+    TaskCleanupService().init(
+      _repository,
+      onCleanup: () {
+        state = _repository.getTasks();
+      },
+    );
   }
 
   void _loadTasks() {
@@ -235,7 +238,9 @@ final filteredTasksProvider = Provider<List<Task>>((ref) {
     filtered = filtered.where((task) {
       final titleMatch = task.title.toLowerCase().contains(query);
       final descMatch = task.description.toLowerCase().contains(query);
-      final labelMatch = task.labels.any((l) => l.toLowerCase().contains(query));
+      final labelMatch = task.labels.any(
+        (l) => l.toLowerCase().contains(query),
+      );
       return titleMatch || descMatch || labelMatch;
     }).toList();
   }
@@ -249,19 +254,35 @@ final filteredTasksProvider = Provider<List<Task>>((ref) {
   }
 
   if (status == 'Pending') {
-    filtered = filtered.where((task) => !task.completed && !isTaskOverdue(task)).toList();
+    filtered = filtered
+        .where((task) => !task.completed && !isTaskOverdue(task))
+        .toList();
   } else if (status == 'Completed') {
     filtered = filtered.where((task) => task.completed).toList();
   } else if (status == 'Overdue') {
-    filtered = filtered.where((task) => !task.completed && isTaskOverdue(task)).toList();
+    filtered = filtered
+        .where((task) => !task.completed && isTaskOverdue(task))
+        .toList();
   }
 
   if (dateFilter == 'Today') {
-    filtered = filtered.where((task) => !task.completed && isTaskToday(task) && !isTaskOverdue(task)).toList();
+    filtered = filtered
+        .where(
+          (task) =>
+              !task.completed && isTaskToday(task) && !isTaskOverdue(task),
+        )
+        .toList();
   } else if (dateFilter == 'Upcoming') {
-    filtered = filtered.where((task) => !task.completed && isTaskUpcoming(task) && !isTaskOverdue(task)).toList();
+    filtered = filtered
+        .where(
+          (task) =>
+              !task.completed && isTaskUpcoming(task) && !isTaskOverdue(task),
+        )
+        .toList();
   } else if (dateFilter == 'Overdue') {
-    filtered = filtered.where((task) => !task.completed && isTaskOverdue(task)).toList();
+    filtered = filtered
+        .where((task) => !task.completed && isTaskOverdue(task))
+        .toList();
   }
 
   if (sortBy == 'DueDate') {
@@ -285,7 +306,9 @@ final filteredTasksProvider = Provider<List<Task>>((ref) {
   } else if (sortBy == 'CreationDate') {
     filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
   } else if (sortBy == 'Alphabetical') {
-    filtered.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+    filtered.sort(
+      (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+    );
   }
 
   return filtered;
@@ -354,9 +377,15 @@ final taskStatisticsProvider = Provider<Map<String, dynamic>>((ref) {
   final totalTasks = tasks.length;
   final completedTasks = tasks.where((t) => t.completed).length;
   final overdueTasks = tasks.where((t) => isTaskOverdue(t)).length;
-  final pendingTasks = tasks.where((t) => !t.completed && !isTaskOverdue(t)).length;
-  final todayTasks = tasks.where((t) => !t.completed && isTaskToday(t) && !isTaskOverdue(t)).length;
-  final upcomingTasks = tasks.where((t) => !t.completed && isTaskUpcoming(t) && !isTaskOverdue(t)).length;
+  final pendingTasks = tasks
+      .where((t) => !t.completed && !isTaskOverdue(t))
+      .length;
+  final todayTasks = tasks
+      .where((t) => !t.completed && isTaskToday(t) && !isTaskOverdue(t))
+      .length;
+  final upcomingTasks = tasks
+      .where((t) => !t.completed && isTaskUpcoming(t) && !isTaskOverdue(t))
+      .length;
 
   final completionRate = totalTasks == 0 ? 0.0 : (completedTasks / totalTasks);
 
@@ -377,6 +406,7 @@ int _priorityValue(String priority) {
       return 3;
     case 'Must':
     case 'Much':
+    case 'Medium':
       return 2;
     case 'Low':
     default:
@@ -391,7 +421,9 @@ final habitRepositoryProvider = Provider<HabitRepository>((ref) {
 });
 
 // Habits State Provider
-final habitsProvider = StateNotifierProvider<HabitsNotifier, List<Habit>>((ref) {
+final habitsProvider = StateNotifierProvider<HabitsNotifier, List<Habit>>((
+  ref,
+) {
   final repo = ref.watch(habitRepositoryProvider);
   return HabitsNotifier(repo);
 });
@@ -436,9 +468,9 @@ class HabitsNotifier extends StateNotifier<List<Habit>> {
 // Habit Entries State Provider
 final habitEntriesProvider =
     StateNotifierProvider<HabitEntriesNotifier, List<HabitEntry>>((ref) {
-  final repo = ref.watch(habitRepositoryProvider);
-  return HabitEntriesNotifier(repo);
-});
+      final repo = ref.watch(habitRepositoryProvider);
+      return HabitEntriesNotifier(repo);
+    });
 
 class HabitEntriesNotifier extends StateNotifier<List<HabitEntry>> {
   final HabitRepository _repository;
@@ -451,7 +483,11 @@ class HabitEntriesNotifier extends StateNotifier<List<HabitEntry>> {
     state = _repository.getEntries();
   }
 
-  Future<void> toggleEntry(String habitId, String dateStr, bool completed) async {
+  Future<void> toggleEntry(
+    String habitId,
+    String dateStr,
+    bool completed,
+  ) async {
     await _repository.toggleEntry(habitId, dateStr, completed);
     state = _repository.getEntries();
   }
@@ -463,9 +499,13 @@ class HabitEntriesNotifier extends StateNotifier<List<HabitEntry>> {
 
 // Helper to calculate habit metrics
 Map<String, dynamic> getHabitMetrics(
-    String habitId, List<HabitEntry> entries, DateTime createdAt) {
-  final habitEntries =
-      entries.where((e) => e.habitId == habitId && e.completed).toList();
+  String habitId,
+  List<HabitEntry> entries,
+  DateTime createdAt,
+) {
+  final habitEntries = entries
+      .where((e) => e.habitId == habitId && e.completed)
+      .toList();
 
   final completedDates = habitEntries
       .map((e) {
@@ -482,11 +522,7 @@ Map<String, dynamic> getHabitMetrics(
   completedDates.sort((a, b) => b.compareTo(a));
 
   if (completedDates.isEmpty) {
-    return {
-      'currentStreak': 0,
-      'longestStreak': 0,
-      'completionRate': 0.0,
-    };
+    return {'currentStreak': 0, 'longestStreak': 0, 'completionRate': 0.0};
   }
 
   final now = DateTime.now();
@@ -545,8 +581,8 @@ Map<String, dynamic> getHabitMetrics(
 
 // Money Repository Provider
 final moneyRepositoryProvider = Provider<MoneyRepository>((ref) {
-  final userContext = ref.watch(userContextProvider);
-  return MoneyRepository(userId: userContext.userId);
+  final userId = ref.watch(userContextProvider.select((user) => user.userId));
+  return MoneyRepository(userId: userId);
 });
 
 // Current Month Helper Provider ("yyyy-MM")
@@ -557,10 +593,10 @@ final currentMonthProvider = Provider<String>((ref) {
 // Monthly Budget State Notifier Provider
 final monthlyBudgetProvider =
     StateNotifierProvider<MonthlyBudgetNotifier, double>((ref) {
-  final repo = ref.watch(moneyRepositoryProvider);
-  final month = ref.watch(currentMonthProvider);
-  return MonthlyBudgetNotifier(repo, month);
-});
+      final repo = ref.watch(moneyRepositoryProvider);
+      final month = ref.watch(currentMonthProvider);
+      return MonthlyBudgetNotifier(repo, month);
+    });
 
 class MonthlyBudgetNotifier extends StateNotifier<double> {
   final MoneyRepository _repository;
@@ -591,8 +627,9 @@ class MonthlyBudgetNotifier extends StateNotifier<double> {
 }
 
 // Money Transactions State Notifier Provider
-final moneyProvider =
-    StateNotifierProvider<MoneyNotifier, List<Transaction>>((ref) {
+final moneyProvider = StateNotifierProvider<MoneyNotifier, List<Transaction>>((
+  ref,
+) {
   final repo = ref.watch(moneyRepositoryProvider);
   final month = ref.watch(currentMonthProvider);
   final budget = ref.watch(monthlyBudgetProvider);
@@ -605,7 +642,7 @@ class MoneyNotifier extends StateNotifier<List<Transaction>> {
   final double _currentBudget;
 
   MoneyNotifier(this._repository, this._currentMonth, this._currentBudget)
-      : super([]) {
+    : super([]) {
     _loadTransactions();
   }
 
@@ -649,7 +686,12 @@ class MoneyNotifier extends StateNotifier<List<Transaction>> {
   }
 }
 
-void _saveSummaryHelper(MoneyRepository repository, String month, double budget, List<Transaction> transactions) {
+void _saveSummaryHelper(
+  MoneyRepository repository,
+  String month,
+  double budget,
+  List<Transaction> transactions,
+) {
   double income = 0.0;
   double expenses = 0.0;
 

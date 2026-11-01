@@ -16,8 +16,4 @@ enum MoneyTransactionClassification {
 /// Confidence level of the classification.
 ///
 /// Only [high] confidence confirmed debits proceed as accepted candidates.
-enum MoneyTransactionConfidence {
-  high,
-  medium,
-  low,
-}
+enum MoneyTransactionConfidence { high, medium, low }

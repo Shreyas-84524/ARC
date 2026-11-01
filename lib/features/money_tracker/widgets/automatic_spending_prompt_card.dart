@@ -63,7 +63,9 @@ class AutomaticSpendingPromptCard extends StatelessWidget {
             Text(
               'ARC can detect confirmed debit transactions from your device notifications and keep your monthly budget updated automatically.',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                color: isDark
+                    ? AppColors.textMutedDark
+                    : AppColors.textMutedLight,
                 height: 1.35,
               ),
             ),
@@ -77,7 +79,10 @@ class AutomaticSpendingPromptCard extends StatelessWidget {
                     onNo();
                   },
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -86,7 +91,9 @@ class AutomaticSpendingPromptCard extends StatelessWidget {
                     'No',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                      color: isDark
+                          ? AppColors.textMutedDark
+                          : AppColors.textMutedLight,
                     ),
                   ),
                 ),
@@ -100,7 +107,10 @@ class AutomaticSpendingPromptCard extends StatelessWidget {
                     backgroundColor: AppColors.accent,
                     foregroundColor: Colors.black,
                     minimumSize: const Size(60, 36),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),

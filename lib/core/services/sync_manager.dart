@@ -4,13 +4,15 @@ import 'package:arc/core/services/hive_service.dart';
 import 'package:arc/core/services/sync_service.dart';
 
 enum SyncStatus { idle, syncing, success, failed }
+
 enum LogoutSyncStatus { idle, syncing, success, failed }
 
 class SyncManager {
   final String? _userId;
 
   static const String lastSuccessfulFullSyncKey = 'last_successful_full_sync';
-  static const String recentSyncTimestampsKey = 'recent_successful_sync_timestamps';
+  static const String recentSyncTimestampsKey =
+      'recent_successful_sync_timestamps';
   static const String syncStatusKey = 'sync_status';
   static const String syncLastErrorKey = 'sync_last_error';
   static const String logoutStatusKey = 'logout_sync_status';
@@ -37,7 +39,9 @@ class SyncManager {
         final lastSync = DateTime.parse(lastSyncIso);
         final elapsed = currentTime.difference(lastSync);
         if (elapsed < const Duration(hours: 12)) {
-          debugPrint('SyncManager: Full sync blocked. Minimum 12-hour interval has not elapsed (elapsed: ${elapsed.inHours}h ${elapsed.inMinutes % 60}m).');
+          debugPrint(
+            'SyncManager: Full sync blocked. Minimum 12-hour interval has not elapsed (elapsed: ${elapsed.inHours}h ${elapsed.inMinutes % 60}m).',
+          );
           return false;
         }
       } catch (e) {
@@ -48,7 +52,9 @@ class SyncManager {
     // 2. Check rolling 24-hour window (max 2 full syncs)
     final recentSyncsList = _getRecentSuccessfulSyncs(now: currentTime);
     if (recentSyncsList.length >= 2) {
-      debugPrint('SyncManager: Full sync blocked. Maximum 2 full syncs per rolling 24-hour window reached (${recentSyncsList.length} syncs in last 24h).');
+      debugPrint(
+        'SyncManager: Full sync blocked. Maximum 2 full syncs per rolling 24-hour window reached (${recentSyncsList.length} syncs in last 24h).',
+      );
       return false;
     }
 
@@ -71,7 +77,9 @@ class SyncManager {
     final isFirstRunEmpty = syncService.isFirstInstallAndEmpty();
 
     if (!isFirstRunEmpty && !forceManual && !canFullSync(now: currentTime)) {
-      debugPrint('SyncManager: Full sync blocked by cooldown policy. Flushing pending local changes only...');
+      debugPrint(
+        'SyncManager: Full sync blocked by cooldown policy. Flushing pending local changes only...',
+      );
       await flushPendingChanges(syncService);
       return;
     }
@@ -79,8 +87,12 @@ class SyncManager {
     _setStatus(SyncStatus.syncing);
 
     try {
-      debugPrint('SyncManager: Starting full bidirectional Hive <-> Firestore sync for UID: $_userId...');
-      await syncService.pullInitialDataFromFirestore(onRefreshState: onRefreshState);
+      debugPrint(
+        'SyncManager: Starting full bidirectional Hive <-> Firestore sync for UID: $_userId...',
+      );
+      await syncService.pullInitialDataFromFirestore(
+        onRefreshState: onRefreshState,
+      );
 
       // Record successful full sync ONLY after pullInitialDataFromFirestore succeeds
       await recordSuccessfulSync(timestamp: currentTime);
@@ -97,7 +109,8 @@ class SyncManager {
   LogoutSyncStatus getLogoutSyncStatus() {
     final uid = _userId ?? 'default';
     final box = _getSettingsBox();
-    final statusStr = box.get('${logoutStatusKey}_$uid', defaultValue: 'idle') as String;
+    final statusStr =
+        box.get('${logoutStatusKey}_$uid', defaultValue: 'idle') as String;
     switch (statusStr) {
       case 'syncing':
         return LogoutSyncStatus.syncing;
@@ -155,7 +168,10 @@ class SyncManager {
     final currentTime = now ?? DateTime.now();
     final uid = _userId ?? 'default';
     final box = _getSettingsBox();
-    final rawList = box.get('${recentSyncTimestampsKey}_$uid', defaultValue: <dynamic>[]);
+    final rawList = box.get(
+      '${recentSyncTimestampsKey}_$uid',
+      defaultValue: <dynamic>[],
+    );
     final List<DateTime> result = [];
     if (rawList is List) {
       for (final item in rawList) {
@@ -175,7 +191,8 @@ class SyncManager {
   SyncStatus getSyncStatus() {
     final uid = _userId ?? 'default';
     final box = _getSettingsBox();
-    final statusStr = box.get('${syncStatusKey}_$uid', defaultValue: 'idle') as String;
+    final statusStr =
+        box.get('${syncStatusKey}_$uid', defaultValue: 'idle') as String;
     switch (statusStr) {
       case 'syncing':
         return SyncStatus.syncing;

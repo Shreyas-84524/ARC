@@ -16,7 +16,8 @@ import 'package:arc/features/secret_notes/models/secret_notes_security_state.dar
 class SecretNotesLocalRepository {
   static const String securityBoxName = 'secret_notes_security';
   static const String preferencesBoxName = 'secret_notes_preferences';
-  static const String dataBoxName = 'secret_notes_data'; // Reserved for Phase 2/3 note storage
+  static const String dataBoxName =
+      'secret_notes_data'; // Reserved for Phase 2/3 note storage
 
   Box<dynamic>? _securityBox;
   Box<dynamic>? _preferencesBox;
@@ -32,8 +33,8 @@ class SecretNotesLocalRepository {
     Box<dynamic>? securityBox,
     Box<dynamic>? preferencesBox,
     this.inMemoryOnly = false,
-  })  : _securityBox = securityBox,
-        _preferencesBox = preferencesBox {
+  }) : _securityBox = securityBox,
+       _preferencesBox = preferencesBox {
     if (inMemoryOnly || (securityBox != null && preferencesBox != null)) {
       _isInitialized = true;
     }
@@ -47,7 +48,8 @@ class SecretNotesLocalRepository {
     }
 
     try {
-      final isHiveReady = HiveService().isInitialized || Hive.isBoxOpen(securityBoxName);
+      final isHiveReady =
+          HiveService().isInitialized || Hive.isBoxOpen(securityBoxName);
       if (!isHiveReady) {
         _isInitialized = true;
         return;
@@ -70,9 +72,13 @@ class SecretNotesLocalRepository {
       }
 
       _isInitialized = true;
-      debugPrint('Secret Notes: local storage namespaces successfully initialized.');
+      debugPrint(
+        'Secret Notes: local storage namespaces successfully initialized.',
+      );
     } catch (e) {
-      debugPrint('Secret Notes: storage initialization warning, operating with local memory fallback: $e');
+      debugPrint(
+        'Secret Notes: storage initialization warning, operating with local memory fallback: $e',
+      );
       _isInitialized = true;
     }
   }
@@ -86,7 +92,9 @@ class SecretNotesLocalRepository {
       }
       final box = (_securityBox != null && _securityBox!.isOpen)
           ? _securityBox!
-          : (Hive.isBoxOpen(securityBoxName) ? Hive.box(securityBoxName) : null);
+          : (Hive.isBoxOpen(securityBoxName)
+                ? Hive.box(securityBoxName)
+                : null);
       if (box != null && box.isOpen) {
         final isConfigured = box.get('is_configured', defaultValue: false);
         final salt = box.get('pin_salt');
@@ -106,13 +114,19 @@ class SecretNotesLocalRepository {
       if (!inMemoryOnly && _securityBox != null && _securityBox!.isOpen) {
         final rawMap = _securityBox!.toMap();
         final introSeen = await hasSeenIntro();
-        return SecretNotesSecurityState.fromMap(rawMap).copyWith(hasSeenIntro: introSeen);
+        return SecretNotesSecurityState.fromMap(
+          rawMap,
+        ).copyWith(hasSeenIntro: introSeen);
       } else {
         final introSeen = await hasSeenIntro();
-        return SecretNotesSecurityState.fromMap(_fallbackSecurityStore).copyWith(hasSeenIntro: introSeen);
+        return SecretNotesSecurityState.fromMap(
+          _fallbackSecurityStore,
+        ).copyWith(hasSeenIntro: introSeen);
       }
     } catch (e) {
-      debugPrint('Secret Notes: corrupted local security data detected, resetting gracefully: $e');
+      debugPrint(
+        'Secret Notes: corrupted local security data detected, resetting gracefully: $e',
+      );
       return const SecretNotesSecurityState();
     }
   }
@@ -134,9 +148,14 @@ class SecretNotesLocalRepository {
   Future<bool> hasSeenIntro() async {
     try {
       if (!inMemoryOnly && _preferencesBox != null && _preferencesBox!.isOpen) {
-        return _preferencesBox!.get('secret_notes_intro_seen', defaultValue: false) as bool;
+        return _preferencesBox!.get(
+              'secret_notes_intro_seen',
+              defaultValue: false,
+            )
+            as bool;
       }
-      return _fallbackPreferencesStore['secret_notes_intro_seen'] as bool? ?? false;
+      return _fallbackPreferencesStore['secret_notes_intro_seen'] as bool? ??
+          false;
     } catch (e) {
       debugPrint('Secret Notes: error reading intro seen preference: $e');
       return false;
@@ -159,9 +178,14 @@ class SecretNotesLocalRepository {
   Future<bool> isBiometricEnabled() async {
     try {
       if (!inMemoryOnly && _preferencesBox != null && _preferencesBox!.isOpen) {
-        return _preferencesBox!.get('biometric_unlock_enabled', defaultValue: false) as bool;
+        return _preferencesBox!.get(
+              'biometric_unlock_enabled',
+              defaultValue: false,
+            )
+            as bool;
       }
-      return _fallbackPreferencesStore['biometric_unlock_enabled'] as bool? ?? false;
+      return _fallbackPreferencesStore['biometric_unlock_enabled'] as bool? ??
+          false;
     } catch (e) {
       debugPrint('Secret Notes: error reading biometric preference: $e');
       return false;
@@ -179,6 +203,34 @@ class SecretNotesLocalRepository {
       debugPrint('Secret Notes: failed to persist biometric preference: $e');
       _fallbackPreferencesStore['biometric_unlock_enabled'] = value;
     }
+  }
+
+  /// Removes only the optional access lock. Notes and the intro preference remain.
+  Future<void> clearSecurityConfiguration() async {
+    const keys = <String>[
+      'is_configured',
+      'pin_salt',
+      'pin_hash',
+      'iterations',
+      'failed_attempts',
+      'locked_until',
+    ];
+    try {
+      if (!inMemoryOnly && _securityBox != null && _securityBox!.isOpen) {
+        await _securityBox!.deleteAll(keys);
+      }
+      if (!inMemoryOnly && _preferencesBox != null && _preferencesBox!.isOpen) {
+        await _preferencesBox!.put('biometric_unlock_enabled', false);
+      }
+    } catch (e) {
+      debugPrint(
+        'Secret Notes: failed to remove optional PIN configuration: $e',
+      );
+    }
+    for (final key in keys) {
+      _fallbackSecurityStore.remove(key);
+    }
+    _fallbackPreferencesStore['biometric_unlock_enabled'] = false;
   }
 
   Future<void> clearAll() async {

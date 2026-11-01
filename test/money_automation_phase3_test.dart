@@ -9,6 +9,7 @@ import 'package:arc/features/money_tracker/services/money_automation_listener_se
 import 'package:arc/features/money_tracker/services/money_automation_platform_bridge.dart';
 import 'package:arc/features/money_tracker/services/money_deduplication_service.dart';
 import 'package:arc/features/money_tracker/services/money_transaction_parser.dart';
+import 'money_automation_phase4_test.dart' show InMemoryMoneyRepository;
 
 class FakeMoneyAutomationPlatformBridge implements MoneyAutomationPlatformBridge {
   @override
@@ -251,6 +252,7 @@ void main() {
       listenerService: listenerService,
       parser: parser,
       deduplicationService: dedupService,
+      moneyRepository: InMemoryMoneyRepository(),
     );
 
     // Enable automation

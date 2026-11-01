@@ -11,12 +11,14 @@ class MoneyAutomationListenerService {
   StreamSubscription<MoneyAutomationRawEvent>? _subscription;
 
   MoneyAutomationListenerService({MoneyAutomationPlatformBridge? bridge})
-      : _bridge = bridge ?? MethodChannelMoneyAutomationBridge();
+    : _bridge = bridge ?? MethodChannelMoneyAutomationBridge();
 
   MoneyAutomationPlatformBridge get bridge => _bridge;
 
   /// Verifies current operational health and permission state.
-  Future<MoneyAutomationListenerStatus> checkHealth({required bool isEnabled}) async {
+  Future<MoneyAutomationListenerStatus> checkHealth({
+    required bool isEnabled,
+  }) async {
     if (!_bridge.isPlatformSupported) {
       return MoneyAutomationListenerStatus.unavailable;
     }
@@ -57,7 +59,9 @@ class MoneyAutomationListenerService {
       _subscription = _bridge.eventStream.listen(
         (event) {
           // Sanitized debug logging: Never print full SMS body, OTPs, or financial details.
-          debugPrint('[MoneyAutomation] Transaction event received at ${event.timestamp}');
+          debugPrint(
+            '[MoneyAutomation] Transaction event received at ${event.timestamp}',
+          );
           onEvent(event);
         },
         onError: (err) {

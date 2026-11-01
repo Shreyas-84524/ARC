@@ -17,10 +17,12 @@ class SecretNotesUnlockScreen extends ConsumerStatefulWidget {
   const SecretNotesUnlockScreen({super.key});
 
   @override
-  ConsumerState<SecretNotesUnlockScreen> createState() => _SecretNotesUnlockScreenState();
+  ConsumerState<SecretNotesUnlockScreen> createState() =>
+      _SecretNotesUnlockScreenState();
 }
 
-class _SecretNotesUnlockScreenState extends ConsumerState<SecretNotesUnlockScreen> {
+class _SecretNotesUnlockScreenState
+    extends ConsumerState<SecretNotesUnlockScreen> {
   final TextEditingController _pinController = TextEditingController();
   final FocusNode _pinFocus = FocusNode();
 
@@ -37,14 +39,18 @@ class _SecretNotesUnlockScreenState extends ConsumerState<SecretNotesUnlockScree
   @override
   void initState() {
     super.initState();
-    _checkInitialLockout();
-    _checkBiometrics();
+    _initializeUnlock();
+  }
+
+  Future<void> _initializeUnlock() async {
+    await _checkInitialLockout();
+    if (mounted) await _checkBiometrics();
   }
 
   Future<void> _checkBiometrics() async {
     final securityService = ref.read(secretNotesSecurityServiceProvider);
     final isBioPrefEnabled = await securityService.isBiometricEnabled();
-    if (!isBioPrefEnabled) return;
+    if (!mounted || !isBioPrefEnabled || _hasAuthenticated) return;
 
     final bioService = ref.read(secretNotesBiometricServiceProvider);
     final available = await bioService.isBiometricAvailable();
@@ -53,7 +59,10 @@ class _SecretNotesUnlockScreenState extends ConsumerState<SecretNotesUnlockScree
         _canUseBiometrics = available;
       });
       // Prompt on screen open if not locked out, not already attempted, and not authenticated
-      if (available && _lockoutSeconds == 0 && !_autoBiometricsAttempted && !_hasAuthenticated) {
+      if (available &&
+          _lockoutSeconds == 0 &&
+          !_autoBiometricsAttempted &&
+          !_hasAuthenticated) {
         _autoBiometricsAttempted = true;
         attemptBiometricUnlock();
       }
@@ -63,7 +72,10 @@ class _SecretNotesUnlockScreenState extends ConsumerState<SecretNotesUnlockScree
   /// Authoritative method for biometric authentication.
   /// Guarded against duplicate simultaneous calls, post-auth re-entrance, and active lockouts.
   Future<void> attemptBiometricUnlock() async {
-    if (_biometricAuthInProgress || _hasAuthenticated || _isLoading || _lockoutSeconds > 0) {
+    if (_biometricAuthInProgress ||
+        _hasAuthenticated ||
+        _isLoading ||
+        _lockoutSeconds > 0) {
       return;
     }
 
@@ -79,6 +91,7 @@ class _SecretNotesUnlockScreenState extends ConsumerState<SecretNotesUnlockScree
         reason: 'Authenticate to unlock your Secret Notes',
       );
 
+      if (!mounted) return;
       if (success) {
         _hasAuthenticated = true;
         ref.read(secretNotesSessionProvider.notifier).unlock();
@@ -114,6 +127,7 @@ class _SecretNotesUnlockScreenState extends ConsumerState<SecretNotesUnlockScree
   Future<void> _checkInitialLockout() async {
     final securityService = ref.read(secretNotesSecurityServiceProvider);
     final remaining = await securityService.getLockoutRemainingSeconds();
+    if (!mounted) return;
     if (remaining > 0) {
       _startLockoutTimer(remaining);
     }
@@ -123,7 +137,8 @@ class _SecretNotesUnlockScreenState extends ConsumerState<SecretNotesUnlockScree
     _lockoutTimer?.cancel();
     setState(() {
       _lockoutSeconds = seconds;
-      _errorMessage = 'Too many failed attempts. Try again in $_lockoutSeconds seconds.';
+      _errorMessage =
+          'Too many failed attempts. Try again in $_lockoutSeconds seconds.';
     });
 
     _lockoutTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -135,7 +150,8 @@ class _SecretNotesUnlockScreenState extends ConsumerState<SecretNotesUnlockScree
           timer.cancel();
         } else {
           _lockoutSeconds--;
-          _errorMessage = 'Too many failed attempts. Try again in $_lockoutSeconds seconds.';
+          _errorMessage =
+              'Too many failed attempts. Try again in $_lockoutSeconds seconds.';
         }
       });
     });
@@ -159,8 +175,10 @@ class _SecretNotesUnlockScreenState extends ConsumerState<SecretNotesUnlockScree
     try {
       final securityService = ref.read(secretNotesSecurityServiceProvider);
       final isUnlocked = await securityService.verifyPin(pin);
+      if (!mounted) return;
 
       if (isUnlocked) {
+        _hasAuthenticated = true;
         ref.read(secretNotesSessionProvider.notifier).unlock();
         if (mounted) {
           final router = GoRouter.maybeOf(context);
@@ -171,7 +189,8 @@ class _SecretNotesUnlockScreenState extends ConsumerState<SecretNotesUnlockScree
           }
         }
       } else {
-        final remainingLockout = await securityService.getLockoutRemainingSeconds();
+        final remainingLockout = await securityService
+            .getLockoutRemainingSeconds();
         if (remainingLockout > 0) {
           _startLockoutTimer(remainingLockout);
         } else {
@@ -227,127 +246,139 @@ class _SecretNotesUnlockScreenState extends ConsumerState<SecretNotesUnlockScree
             onPressed: _exitToTasks,
           ),
         ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              horizontal: ResponsiveLayout.horizontalPadding(context),
-              vertical: 24,
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: isLocked
-                            ? AppColors.danger.withValues(alpha: 0.15)
-                            : AppColors.accent.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: ResponsiveLayout.horizontalPadding(context),
+                vertical: 24,
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: isLocked
+                              ? AppColors.danger.withValues(alpha: 0.15)
+                              : AppColors.accent.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isLocked ? LucideIcons.shieldAlert : LucideIcons.lock,
+                          color: isLocked ? AppColors.danger : AppColors.accent,
+                          size: 32,
+                        ),
                       ),
-                      child: Icon(
-                        isLocked ? LucideIcons.shieldAlert : LucideIcons.lock,
-                        color: isLocked ? AppColors.danger : AppColors.accent,
-                        size: 32,
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Enter Secret PIN',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Enter Secret PIN',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Enter your Secret PIN to unlock your private space.',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  SecretNotesPinField(
-                    controller: _pinController,
-                    focusNode: _pinFocus,
-                    autofocus: !isLocked,
-                    label: 'Secret PIN',
-                    errorText: _errorMessage,
-                    onChanged: (val) {
-                      setState(() {
-                        if (_errorMessage != null && !isLocked) {
-                          _errorMessage = null;
-                        }
-                      });
-                    },
-                    onSubmitted: (_) => isUnlockEnabled ? _handleUnlock() : null,
-                  ),
-                  const SizedBox(height: 36),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: AppColors.textPrimaryLight,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Enter your Secret PIN to unlock your private space.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
                       ),
-                      elevation: 0,
                     ),
-                    onPressed: isUnlockEnabled ? _handleUnlock : null,
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.textPrimaryLight,
+                    const SizedBox(height: 32),
+                    SecretNotesPinField(
+                      controller: _pinController,
+                      focusNode: _pinFocus,
+                      autofocus: !isLocked,
+                      label: 'Secret PIN',
+                      errorText: _errorMessage,
+                      onChanged: (val) {
+                        setState(() {
+                          if (_errorMessage != null && !isLocked) {
+                            _errorMessage = null;
+                          }
+                        });
+                      },
+                      onSubmitted: (_) =>
+                          isUnlockEnabled ? _handleUnlock() : null,
+                    ),
+                    const SizedBox(height: 36),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: AppColors.textPrimaryLight,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusButton,
+                          ),
+                        ),
+                        elevation: 0,
+                      ),
+                      onPressed: isUnlockEnabled ? _handleUnlock : null,
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.textPrimaryLight,
+                              ),
+                            )
+                          : Text(
+                              isLocked
+                                  ? 'Locked ($_lockoutSeconds s)'
+                                  : 'Unlock',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          )
-                        : Text(
-                            isLocked ? 'Locked ($_lockoutSeconds s)' : 'Unlock',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                    ),
+                    if (_canUseBiometrics && !isLocked) ...[
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.accent,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.radiusButton,
                             ),
                           ),
-                  ),
-                  if (_canUseBiometrics && !isLocked) ...[
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.accent,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                        ),
+                        onPressed:
+                            (_isLoading ||
+                                _biometricAuthInProgress ||
+                                _hasAuthenticated)
+                            ? null
+                            : attemptBiometricUnlock,
+                        icon: const Icon(LucideIcons.fingerprint, size: 20),
+                        label: const Text(
+                          'Unlock with Biometrics',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                      onPressed: (_isLoading || _biometricAuthInProgress || _hasAuthenticated)
-                          ? null
-                          : attemptBiometricUnlock,
-                      icon: const Icon(LucideIcons.fingerprint, size: 20),
-                      label: const Text(
-                        'Unlock with Biometrics',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
         ),
       ),
-    ),
     );
   }
 }

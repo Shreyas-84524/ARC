@@ -11,10 +11,16 @@ class TaskRepository {
   final fs.FirebaseFirestore? _firestore;
 
   TaskRepository({String? userId, fs.FirebaseFirestore? firestore})
-      : _userId = userId,
-        _taskBox = HiveService().getUserBox<Task>(HiveService.tasksBoxName, userId),
-        _queueBox = HiveService().getUserBox(HiveService.tasksSyncQueueBoxName, userId),
-        _firestore = firestore;
+    : _userId = userId,
+      _taskBox = HiveService().getUserBox<Task>(
+        HiveService.tasksBoxName,
+        userId,
+      ),
+      _queueBox = HiveService().getUserBox(
+        HiveService.tasksSyncQueueBoxName,
+        userId,
+      ),
+      _firestore = firestore;
 
   fs.FirebaseFirestore get _db => _firestore ?? fs.FirebaseFirestore.instance;
 
@@ -74,7 +80,9 @@ class TaskRepository {
   Future<bool> syncPending() async {
     if (_queueBox.isEmpty) return true;
 
-    debugPrint('[TaskRepository.syncPending] Found ${_queueBox.length} pending task sync items for UID: $_userId');
+    debugPrint(
+      '[TaskRepository.syncPending] Found ${_queueBox.length} pending task sync items for UID: $_userId',
+    );
     final keys = List.from(_queueBox.keys);
     bool allSuccess = true;
 
@@ -89,35 +97,54 @@ class TaskRepository {
       final action = item['action'] as String?;
 
       if (id == null || action == null) {
-        debugPrint('[TaskRepository.syncPending] Removing malformed queue item with key: $key');
+        debugPrint(
+          '[TaskRepository.syncPending] Removing malformed queue item with key: $key',
+        );
         await _queueBox.delete(key);
         continue;
       }
 
       final docPath = _tasksRef().doc(id).path;
-      debugPrint('[TaskRepository.syncPending] Attempting $action for task ID: $id on path: $docPath');
+      debugPrint(
+        '[TaskRepository.syncPending] Attempting $action for task ID: $id on path: $docPath',
+      );
 
       try {
         if (action == 'upsert') {
           final task = _taskBox.get(id);
-          final payload = task?.toMap() ?? (item['data'] as Map<String, dynamic>?);
+          final payload =
+              task?.toMap() ?? (item['data'] as Map<String, dynamic>?);
           if (payload != null) {
-            await _tasksRef().doc(id).set(payload).timeout(const Duration(seconds: 8));
+            await _tasksRef()
+                .doc(id)
+                .set(payload)
+                .timeout(const Duration(seconds: 8));
           } else {
-            debugPrint('[TaskRepository.syncPending] Missing payload for task ID: $id; removing queue entry.');
+            debugPrint(
+              '[TaskRepository.syncPending] Missing payload for task ID: $id; removing queue entry.',
+            );
             await _queueBox.delete(key);
             continue;
           }
         } else if (action == 'delete') {
-          await _tasksRef().doc(id).delete().timeout(const Duration(seconds: 8));
+          await _tasksRef()
+              .doc(id)
+              .delete()
+              .timeout(const Duration(seconds: 8));
         }
 
         await _queueBox.delete(key);
-        debugPrint('[TaskRepository.syncPending] SUCCESS: $action for task ID: $id completed. Queue item removed.');
+        debugPrint(
+          '[TaskRepository.syncPending] SUCCESS: $action for task ID: $id completed. Queue item removed.',
+        );
       } catch (e) {
         allSuccess = false;
-        debugPrint('[TaskRepository.syncPending] FAILURE: Sync failed for task ID: $id. Error: $e');
-        debugPrint('[TaskRepository.syncPending] Item $key remains in queue box.');
+        debugPrint(
+          '[TaskRepository.syncPending] FAILURE: Sync failed for task ID: $id. Error: $e',
+        );
+        debugPrint(
+          '[TaskRepository.syncPending] Item $key remains in queue box.',
+        );
         break; // Stop loop and return false to preserve remaining items
       }
     }
@@ -126,11 +153,16 @@ class TaskRepository {
 
   Future<int> performEndOfDayCleanup({String? overrideDateStr}) async {
     final Box settingsBox = HiveService().getBox(HiveService.settingsBoxName);
-    final todayStr = overrideDateStr ?? DateTime.now().toIso8601String().substring(0, 10);
+    final todayStr =
+        overrideDateStr ?? DateTime.now().toIso8601String().substring(0, 10);
 
-    final lastCleanupDate = settingsBox.get('last_completed_tasks_cleanup_date');
+    final lastCleanupDate = settingsBox.get(
+      'last_completed_tasks_cleanup_date',
+    );
     if (lastCleanupDate == todayStr) {
-      debugPrint('End of day task cleanup already executed today ($todayStr). Skipping.');
+      debugPrint(
+        'End of day task cleanup already executed today ($todayStr). Skipping.',
+      );
       return 0;
     }
 
@@ -142,7 +174,9 @@ class TaskRepository {
     }
 
     await settingsBox.put('last_completed_tasks_cleanup_date', todayStr);
-    debugPrint('End of day task cleanup executed: $count completed tasks deleted.');
+    debugPrint(
+      'End of day task cleanup executed: $count completed tasks deleted.',
+    );
     return count;
   }
 }

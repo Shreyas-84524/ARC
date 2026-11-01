@@ -5,6 +5,7 @@ import 'package:arc/features/secret_notes/repositories/secret_notes_data_reposit
 import 'package:arc/features/secret_notes/services/secret_notes_security_service.dart';
 import 'package:arc/features/secret_notes/services/secret_notes_biometric_service.dart';
 import 'package:arc/features/secret_notes/services/secret_notes_window_privacy_service.dart';
+import 'package:arc/features/secret_notes/services/secret_notes_media_service.dart';
 
 // LOCAL-ONLY ARCHITECTURE RULE:
 // Secret Notes must NEVER sync with Firebase, Firestore, or any cloud service.
@@ -12,29 +13,38 @@ import 'package:arc/features/secret_notes/services/secret_notes_window_privacy_s
 
 final secretNotesWindowPrivacyServiceProvider =
     Provider<SecretNotesWindowPrivacyService>((ref) {
-  return SecretNotesWindowPrivacyService();
+      return SecretNotesWindowPrivacyService();
+    });
+
+final secretNotesMediaServiceProvider = Provider<SecretNotesMediaService>((
+  ref,
+) {
+  return SecretNotesMediaService();
 });
 
-final secretNotesLocalRepositoryProvider =
-    Provider<SecretNotesLocalRepository>((ref) {
-  return SecretNotesLocalRepository();
-});
+final secretNotesLocalRepositoryProvider = Provider<SecretNotesLocalRepository>(
+  (ref) {
+    return SecretNotesLocalRepository();
+  },
+);
 
-final secretNotesDataRepositoryProvider =
-    Provider<SecretNotesDataRepository>((ref) {
+final secretNotesDataRepositoryProvider = Provider<SecretNotesDataRepository>((
+  ref,
+) {
   return SecretNotesDataRepository();
 });
 
 final secretNotesBiometricServiceProvider =
     Provider<SecretNotesBiometricService>((ref) {
-  return SecretNotesBiometricService();
-});
+      return SecretNotesBiometricService();
+    });
 
-final secretNotesSecurityServiceProvider =
-    Provider<SecretNotesSecurityService>((ref) {
-  final repo = ref.watch(secretNotesLocalRepositoryProvider);
-  return SecretNotesSecurityService(repository: repo);
-});
+final secretNotesSecurityServiceProvider = Provider<SecretNotesSecurityService>(
+  (ref) {
+    final repo = ref.watch(secretNotesLocalRepositoryProvider);
+    return SecretNotesSecurityService(repository: repo);
+  },
+);
 
 /// Reactive notifier for biometric unlock toggle preference.
 class SecretNotesBiometricEnabledNotifier extends StateNotifier<bool> {
@@ -57,9 +67,9 @@ class SecretNotesBiometricEnabledNotifier extends StateNotifier<bool> {
 
 final secretNotesBiometricEnabledProvider =
     StateNotifierProvider<SecretNotesBiometricEnabledNotifier, bool>((ref) {
-  final service = ref.watch(secretNotesSecurityServiceProvider);
-  return SecretNotesBiometricEnabledNotifier(service);
-});
+      final service = ref.watch(secretNotesSecurityServiceProvider);
+      return SecretNotesBiometricEnabledNotifier(service);
+    });
 
 /// In-memory session state for whether Secret Notes is unlocked.
 /// Starts as `false` on every app process launch.
@@ -77,14 +87,15 @@ class SecretNotesSessionNotifier extends StateNotifier<bool> {
 
 final secretNotesSessionProvider =
     StateNotifierProvider<SecretNotesSessionNotifier, bool>((ref) {
-  return SecretNotesSessionNotifier();
-});
+      return SecretNotesSessionNotifier();
+    });
 
 /// Reactive notifier for whether Secret Notes is configured on this device.
 class SecretNotesConfiguredNotifier extends StateNotifier<AsyncValue<bool>> {
   final SecretNotesSecurityService _service;
 
-  SecretNotesConfiguredNotifier(this._service) : super(const AsyncValue.loading()) {
+  SecretNotesConfiguredNotifier(this._service)
+    : super(const AsyncValue.loading()) {
     checkConfiguration();
   }
 
@@ -103,10 +114,12 @@ class SecretNotesConfiguredNotifier extends StateNotifier<AsyncValue<bool>> {
 }
 
 final secretNotesConfiguredProvider =
-    StateNotifierProvider<SecretNotesConfiguredNotifier, AsyncValue<bool>>((ref) {
-  final service = ref.watch(secretNotesSecurityServiceProvider);
-  return SecretNotesConfiguredNotifier(service);
-});
+    StateNotifierProvider<SecretNotesConfiguredNotifier, AsyncValue<bool>>((
+      ref,
+    ) {
+      final service = ref.watch(secretNotesSecurityServiceProvider);
+      return SecretNotesConfiguredNotifier(service);
+    });
 
 /// Reactive state notifier managing the list of secret notes.
 class SecretNotesListNotifier
@@ -114,7 +127,7 @@ class SecretNotesListNotifier
   final SecretNotesDataRepository _repository;
 
   SecretNotesListNotifier(this._repository)
-      : super(const AsyncValue.loading()) {
+    : super(const AsyncValue.loading()) {
     loadNotes();
   }
 
@@ -139,8 +152,10 @@ class SecretNotesListNotifier
 }
 
 final secretNotesListProvider =
-    StateNotifierProvider<SecretNotesListNotifier, AsyncValue<List<SecretNote>>>(
-        (ref) {
-  final repository = ref.watch(secretNotesDataRepositoryProvider);
-  return SecretNotesListNotifier(repository);
-});
+    StateNotifierProvider<
+      SecretNotesListNotifier,
+      AsyncValue<List<SecretNote>>
+    >((ref) {
+      final repository = ref.watch(secretNotesDataRepositoryProvider);
+      return SecretNotesListNotifier(repository);
+    });

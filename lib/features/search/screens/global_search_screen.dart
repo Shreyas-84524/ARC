@@ -130,164 +130,173 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
               ),
             )
           : totalMatches == 0
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        LucideIcons.fileSearch,
-                        size: 48,
-                        color: isDark
-                            ? AppColors.textMutedDark
-                            : AppColors.textMutedLight,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No results found for "$_query"',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight,
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    LucideIcons.fileSearch,
+                    size: 48,
+                    color: isDark
+                        ? AppColors.textMutedDark
+                        : AppColors.textMutedLight,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No results found for "$_query"',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              children: [
+                // Matched Tasks
+                if (matchedTasks.isNotEmpty) ...[
+                  Text(
+                    'Tasks (${matchedTasks.length})',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...matchedTasks.map((task) {
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).dialogTheme.backgroundColor,
+                            builder: (context) =>
+                                TaskEditorSheet(taskToEdit: task),
+                          );
+                        },
+                        leading: const Icon(
+                          LucideIcons.checkSquare,
+                          color: AppColors.info,
+                          size: 20,
+                        ),
+                        title: Text(
+                          task.title,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          '${task.category} • Priority: ${task.displayPriority}',
                         ),
                       ),
-                    ],
+                    );
+                  }),
+                  const SizedBox(height: 16),
+                ],
+
+                // Matched Habits
+                if (matchedHabits.isNotEmpty) ...[
+                  Text(
+                    'Habits (${matchedHabits.length})',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                )
-              : ListView(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  children: [
-                    // Matched Tasks
-                    if (matchedTasks.isNotEmpty) ...[
-                      Text(
-                        'Tasks (${matchedTasks.length})',
-                        style: theme.textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                  const SizedBox(height: 8),
+                  ...matchedHabits.map((habit) {
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).dialogTheme.backgroundColor,
+                            builder: (context) =>
+                                HabitEditorSheet(habitToEdit: habit),
+                          );
+                        },
+                        leading: Icon(
+                          LucideIcons.zap,
+                          color: Color(habit.colorValue),
+                          size: 20,
+                        ),
+                        title: Text(
+                          habit.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(habit.category),
                       ),
-                      const SizedBox(height: 8),
-                      ...matchedTasks.map((task) {
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            onTap: () {
-                              showModalBottomSheet(
-                                context: context,
-                                isScrollControlled: true,
-                                backgroundColor: Theme.of(context)
-                                    .dialogTheme
-                                    .backgroundColor,
-                                builder: (context) =>
-                                    TaskEditorSheet(taskToEdit: task),
-                              );
-                            },
-                            leading: const Icon(LucideIcons.checkSquare,
-                                color: AppColors.info, size: 20),
-                            title: Text(
-                              task.title,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Text(
-                                '${task.category} • Priority: ${task.displayPriority}'),
-                          ),
-                        );
-                      }),
-                      const SizedBox(height: 16),
-                    ],
+                    );
+                  }),
+                  const SizedBox(height: 16),
+                ],
 
-                    // Matched Habits
-                    if (matchedHabits.isNotEmpty) ...[
-                      Text(
-                        'Habits (${matchedHabits.length})',
-                        style: theme.textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      ...matchedHabits.map((habit) {
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            onTap: () {
-                              showModalBottomSheet(
-                                context: context,
-                                isScrollControlled: true,
-                                backgroundColor: Theme.of(context)
-                                    .dialogTheme
-                                    .backgroundColor,
-                                builder: (context) =>
-                                    HabitEditorSheet(habitToEdit: habit),
-                              );
-                            },
-                            leading: Icon(LucideIcons.zap,
-                                color: Color(habit.colorValue), size: 20),
-                            title: Text(
-                              habit.name,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Text(habit.category),
+                // Matched Transactions
+                if (matchedTransactions.isNotEmpty) ...[
+                  Text(
+                    'Transactions (${matchedTransactions.length})',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...matchedTransactions.map((tx) {
+                    final isIncome = tx.type == 'Income';
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).dialogTheme.backgroundColor,
+                            builder: (context) =>
+                                TransactionDetailsSheet(transaction: tx),
+                          );
+                        },
+                        leading: Icon(
+                          isIncome
+                              ? LucideIcons.trendingUp
+                              : LucideIcons.trendingDown,
+                          color: isIncome
+                              ? AppColors.success
+                              : AppColors.danger,
+                          size: 20,
+                        ),
+                        title: Text(
+                          tx.category,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          tx.notes.isNotEmpty
+                              ? tx.notes
+                              : DateFormat('MMM d, yyyy').format(tx.date),
+                        ),
+                        trailing: Text(
+                          '${isIncome ? '+' : '-'}${CurrencyFormatter.format(tx.amount)}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isIncome
+                                ? AppColors.success
+                                : AppColors.danger,
                           ),
-                        );
-                      }),
-                      const SizedBox(height: 16),
-                    ],
-
-                    // Matched Transactions
-                    if (matchedTransactions.isNotEmpty) ...[
-                      Text(
-                        'Transactions (${matchedTransactions.length})',
-                        style: theme.textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      ...matchedTransactions.map((tx) {
-                        final isIncome = tx.type == 'Income';
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            onTap: () {
-                              showModalBottomSheet(
-                                context: context,
-                                isScrollControlled: true,
-                                backgroundColor: Theme.of(context)
-                                    .dialogTheme
-                                    .backgroundColor,
-                                builder: (context) =>
-                                    TransactionDetailsSheet(transaction: tx),
-                              );
-                            },
-                            leading: Icon(
-                              isIncome
-                                  ? LucideIcons.trendingUp
-                                  : LucideIcons.trendingDown,
-                              color: isIncome
-                                  ? AppColors.success
-                                  : AppColors.danger,
-                              size: 20,
-                            ),
-                            title: Text(
-                              tx.category,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Text(
-                              tx.notes.isNotEmpty
-                                  ? tx.notes
-                                  : DateFormat('MMM d, yyyy').format(tx.date),
-                            ),
-                            trailing: Text(
-                              '${isIncome ? '+' : '-'}${CurrencyFormatter.format(tx.amount)}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: isIncome
-                                    ? AppColors.success
-                                    : AppColors.danger,
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ],
-                  ],
-                ),
+                    );
+                  }),
+                ],
+              ],
+            ),
     );
   }
 }

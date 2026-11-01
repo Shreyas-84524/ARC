@@ -74,8 +74,12 @@ class Habit extends HiveObject {
       category: map['category'] ?? 'Other',
       colorValue: map['colorValue'] ?? 0xffffffff,
       reminderTime: map['reminderTime'],
-      createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : DateTime.now(),
-      updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : DateTime.now(),
+      createdAt: map['createdAt'] != null
+          ? DateTime.parse(map['createdAt'])
+          : DateTime.now(),
+      updatedAt: map['updatedAt'] != null
+          ? DateTime.parse(map['updatedAt'])
+          : DateTime.now(),
     );
   }
 

@@ -4,19 +4,19 @@ import 'package:arc/core/constants/app_constants.dart';
 import 'package:arc/core/theme/app_theme.dart';
 
 void main() {
-  group('Task Priority Renaming ("Much" -> "Must") & Backward Compatibility Tests', () {
-    test('TaskPriority enum uses Must as displayName and emoji', () {
-      expect(TaskPriority.must.displayName, equals('Must'));
+  group('Task Priority Medium naming and backward compatibility', () {
+    test('TaskPriority enum uses Medium as displayName and emoji', () {
+      expect(TaskPriority.must.displayName, equals('Medium'));
       expect(TaskPriority.must.emoji, equals('🟠'));
       expect(TaskPriority.must.color, equals(AppColors.priorityMust));
     });
 
-    test('New task with priority Must retains priority and displays as Must', () {
+    test('New task with priority Medium retains its display name', () {
       final task = Task(
         id: 'must_1',
-        title: 'New Must Task',
-        description: 'Testing Must priority',
-        priority: 'Must',
+        title: 'New Medium Task',
+        description: 'Testing Medium priority',
+        priority: 'Medium',
         category: 'Work',
         labels: [],
         completed: false,
@@ -24,11 +24,11 @@ void main() {
         updatedAt: DateTime.now(),
       );
 
-      expect(task.priority, equals('Must'));
-      expect(task.displayPriority, equals('Must'));
+      expect(task.priority, equals('Medium'));
+      expect(task.displayPriority, equals('Medium'));
     });
 
-    test('Existing legacy task with priority Much automatically displays as Must', () {
+    test('Existing legacy priority names automatically display as Medium', () {
       final legacyTask = Task(
         id: 'legacy_1',
         title: 'Legacy Much Task',
@@ -41,16 +41,14 @@ void main() {
         updatedAt: DateTime.now(),
       );
 
-      // Display priority should map "Much" -> "Must"
-      expect(legacyTask.displayPriority, equals('Must'));
+      expect(legacyTask.displayPriority, equals('Medium'));
 
-      // Copying / editing updates priority to "Must"
-      final updatedTask = legacyTask.copyWith(priority: 'Must');
-      expect(updatedTask.priority, equals('Must'));
-      expect(updatedTask.displayPriority, equals('Must'));
+      final updatedTask = legacyTask.copyWith(priority: 'Medium');
+      expect(updatedTask.priority, equals('Medium'));
+      expect(updatedTask.displayPriority, equals('Medium'));
     });
 
-    test('Task.fromMap maps legacy "Much" priority to "Must"', () {
+    test('Task.fromMap maps legacy "Much" priority to "Medium"', () {
       final map = {
         'id': 'map_1',
         'title': 'Map Task',
@@ -64,8 +62,8 @@ void main() {
       };
 
       final task = Task.fromMap(map);
-      expect(task.priority, equals('Must'));
-      expect(task.displayPriority, equals('Must'));
+      expect(task.priority, equals('Medium'));
+      expect(task.displayPriority, equals('Medium'));
     });
   });
 }

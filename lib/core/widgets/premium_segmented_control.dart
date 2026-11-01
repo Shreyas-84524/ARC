@@ -28,7 +28,9 @@ class PremiumSegmentedControl extends StatelessWidget {
         color: isDark ? const Color(0xFF1E1E22) : const Color(0xFFEAEAEF),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.black.withValues(alpha: 0.06),
           width: 1,
         ),
         boxShadow: [
@@ -48,7 +50,8 @@ class PremiumSegmentedControl extends StatelessWidget {
           return AnimatedBuilder(
             animation: controller.animation ?? controller,
             builder: (context, child) {
-              final double value = controller.animation?.value ?? controller.index.toDouble();
+              final double value =
+                  controller.animation?.value ?? controller.index.toDouble();
 
               return Stack(
                 children: [
@@ -78,11 +81,14 @@ class PremiumSegmentedControl extends StatelessWidget {
                   Row(
                     children: List.generate(tabCount, (index) {
                       final distance = (value - index).abs();
-                      final isSelectedFraction = (1.0 - distance).clamp(0.0, 1.0);
+                      final isSelectedFraction = (1.0 - distance).clamp(
+                        0.0,
+                        1.0,
+                      );
                       final isSelected = distance < 0.5;
 
-                      final unselectedTextColor = isDark 
-                          ? AppColors.textSecondaryDark 
+                      final unselectedTextColor = isDark
+                          ? AppColors.textSecondaryDark
                           : AppColors.textSecondaryLight;
                       final selectedTextColor = AppColors.textPrimaryLight;
 
@@ -107,7 +113,8 @@ class PremiumSegmentedControl extends StatelessWidget {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  if (icons != null && index < icons!.length) ...[
+                                  if (icons != null &&
+                                      index < icons!.length) ...[
                                     Icon(
                                       icons![index],
                                       size: 16,
@@ -119,7 +126,9 @@ class PremiumSegmentedControl extends StatelessWidget {
                                     tabs[index],
                                     style: TextStyle(
                                       fontSize: 14,
-                                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w700
+                                          : FontWeight.w600,
                                       color: currentColor,
                                       letterSpacing: 0.1,
                                     ),

@@ -35,7 +35,9 @@ class TaskCleanupService {
     }
 
     final duration = target.difference(now);
-    debugPrint('TaskCleanupService: Next auto cleanup scheduled in ${duration.inMinutes} minutes at $target.');
+    debugPrint(
+      'TaskCleanupService: Next auto cleanup scheduled in ${duration.inMinutes} minutes at $target.',
+    );
 
     _timer = Timer(duration, () async {
       await runCleanup();

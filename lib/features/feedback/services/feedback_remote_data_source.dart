@@ -37,7 +37,7 @@ class FeedbackRemoteDataSource implements IFeedbackRemoteDataSource {
   final FirebaseFirestore _firestore;
 
   FeedbackRemoteDataSource({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _collection =>
       _firestore.collection('feedback');
@@ -71,9 +71,11 @@ class FeedbackRemoteDataSource implements IFeedbackRemoteDataSource {
         .where('userId', isEqualTo: userId)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => FeedbackModel.fromFirestore(doc))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => FeedbackModel.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   @override
@@ -125,9 +127,7 @@ class FeedbackRemoteDataSource implements IFeedbackRemoteDataSource {
     DateTime? reviewedAt,
     DateTime? acknowledgedAt,
   }) async {
-    final Map<String, dynamic> updates = {
-      'status': status,
-    };
+    final Map<String, dynamic> updates = {'status': status};
 
     if (reviewedAt != null) {
       updates['reviewedAt'] = Timestamp.fromDate(reviewedAt);

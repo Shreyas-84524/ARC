@@ -17,59 +17,67 @@ import 'package:arc/features/money_tracker/services/money_transaction_parser.dar
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
 import 'package:arc/providers/global_providers.dart';
 
-final moneyAutomationRepositoryProvider = Provider<MoneyAutomationRepository>((ref) {
+final moneyAutomationRepositoryProvider = Provider<MoneyAutomationRepository>((
+  ref,
+) {
   return MoneyAutomationRepository();
 });
 
-final moneyAutomationPlatformBridgeProvider = Provider<MoneyAutomationPlatformBridge>((ref) {
-  return MethodChannelMoneyAutomationBridge();
-});
+final moneyAutomationPlatformBridgeProvider =
+    Provider<MoneyAutomationPlatformBridge>((ref) {
+      return MethodChannelMoneyAutomationBridge();
+    });
 
-final moneyAutomationListenerServiceProvider = Provider<MoneyAutomationListenerService>((ref) {
-  final bridge = ref.watch(moneyAutomationPlatformBridgeProvider);
-  final service = MoneyAutomationListenerService(bridge: bridge);
-  ref.onDispose(() => service.dispose());
-  return service;
-});
+final moneyAutomationListenerServiceProvider =
+    Provider<MoneyAutomationListenerService>((ref) {
+      final bridge = ref.watch(moneyAutomationPlatformBridgeProvider);
+      final service = MoneyAutomationListenerService(bridge: bridge);
+      ref.onDispose(() => service.dispose());
+      return service;
+    });
 
 final moneyTransactionParserProvider = Provider<MoneyTransactionParser>((ref) {
   return MoneyTransactionParser();
 });
 
-final moneyDeduplicationServiceProvider = Provider<MoneyDeduplicationService>((ref) {
+final moneyDeduplicationServiceProvider = Provider<MoneyDeduplicationService>((
+  ref,
+) {
   return MoneyDeduplicationService();
 });
 
 final moneyAutomationProvider =
     StateNotifierProvider<MoneyAutomationNotifier, MoneyAutomationState>((ref) {
-  final repo = ref.watch(moneyAutomationRepositoryProvider);
-  final listenerService = ref.watch(moneyAutomationListenerServiceProvider);
-  final parser = ref.watch(moneyTransactionParserProvider);
-  final deduplicationService = ref.watch(moneyDeduplicationServiceProvider);
-  MoneyRepository? moneyRepo;
-  try {
-    moneyRepo = ref.watch(moneyRepositoryProvider);
-  } catch (_) {
-    moneyRepo = null;
-  }
-  final userContext = ref.watch(userContextProvider);
-  final userId = userContext.userId;
-  return MoneyAutomationNotifier(
-    repo,
-    userId,
-    listenerService: listenerService,
-    parser: parser,
-    deduplicationService: deduplicationService,
-    moneyRepository: moneyRepo,
-    onTransactionCreated: (tx) {
+      final repo = ref.watch(moneyAutomationRepositoryProvider);
+      final listenerService = ref.watch(moneyAutomationListenerServiceProvider);
+      final parser = ref.watch(moneyTransactionParserProvider);
+      final deduplicationService = ref.watch(moneyDeduplicationServiceProvider);
+      MoneyRepository? moneyRepo;
       try {
-        ref.read(moneyProvider.notifier).refresh();
-      } catch (_) {}
-    },
-  );
-});
+        moneyRepo = ref.watch(moneyRepositoryProvider);
+      } catch (_) {
+        moneyRepo = null;
+      }
+      final userId = ref.watch(
+        userContextProvider.select((user) => user.userId),
+      );
+      return MoneyAutomationNotifier(
+        repo,
+        userId,
+        listenerService: listenerService,
+        parser: parser,
+        deduplicationService: deduplicationService,
+        moneyRepository: moneyRepo,
+        onTransactionCreated: (tx) {
+          try {
+            ref.read(moneyProvider.notifier).refresh();
+          } catch (_) {}
+        },
+      );
+    });
 
-class MoneyAutomationNotifier extends StateNotifier<MoneyAutomationState> with WidgetsBindingObserver {
+class MoneyAutomationNotifier extends StateNotifier<MoneyAutomationState>
+    with WidgetsBindingObserver {
   final MoneyAutomationRepository _repository;
   final String? _userId;
   final MoneyAutomationListenerService _listenerService;
@@ -84,6 +92,7 @@ class MoneyAutomationNotifier extends StateNotifier<MoneyAutomationState> with W
       StreamController<ParsedMoneyTransaction>.broadcast();
 
   bool _hasRecordedThisVisit = false;
+  final Set<String> _pendingTransactions = {};
 
   MoneyAutomationNotifier(
     this._repository,
@@ -93,12 +102,13 @@ class MoneyAutomationNotifier extends StateNotifier<MoneyAutomationState> with W
     MoneyDeduplicationService? deduplicationService,
     MoneyRepository? moneyRepository,
     void Function(Transaction tx)? onTransactionCreated,
-  })  : _listenerService = listenerService ?? MoneyAutomationListenerService(),
-        _parser = parser ?? MoneyTransactionParser(),
-        _deduplicationService = deduplicationService ?? MoneyDeduplicationService(),
-        _moneyRepository = moneyRepository,
-        _onTransactionCreated = onTransactionCreated,
-        super(const MoneyAutomationState()) {
+  }) : _listenerService = listenerService ?? MoneyAutomationListenerService(),
+       _parser = parser ?? MoneyTransactionParser(),
+       _deduplicationService =
+           deduplicationService ?? MoneyDeduplicationService(),
+       _moneyRepository = moneyRepository,
+       _onTransactionCreated = onTransactionCreated,
+       super(const MoneyAutomationState()) {
     try {
       WidgetsBinding.instance.addObserver(this);
     } catch (_) {}
@@ -130,7 +140,9 @@ class MoneyAutomationNotifier extends StateNotifier<MoneyAutomationState> with W
       checkListenerHealth();
     } else {
       _listenerService.stopListening();
-      state = state.copyWith(listenerStatus: MoneyAutomationListenerStatus.disabled);
+      state = state.copyWith(
+        listenerStatus: MoneyAutomationListenerStatus.disabled,
+      );
     }
   }
 
@@ -140,22 +152,28 @@ class MoneyAutomationNotifier extends StateNotifier<MoneyAutomationState> with W
     if (!state.isEnabled || _userId == null) {
       await _listenerService.stopListening();
       if (state.listenerStatus != MoneyAutomationListenerStatus.disabled) {
-        state = state.copyWith(listenerStatus: MoneyAutomationListenerStatus.disabled);
+        state = state.copyWith(
+          listenerStatus: MoneyAutomationListenerStatus.disabled,
+        );
       }
       return;
     }
 
-    final status = await _listenerService.checkHealth(isEnabled: state.isEnabled);
+    var status = await _listenerService.checkHealth(isEnabled: state.isEnabled);
+    if (!mounted || !state.isEnabled) return;
     if (status == MoneyAutomationListenerStatus.ready) {
-      await _listenerService.startListening(onEvent: _onRawEventReceived);
+      status = await _listenerService.startListening(
+        onEvent: _onRawEventReceived,
+      );
     }
+    if (!mounted || !state.isEnabled) return;
     state = state.copyWith(listenerStatus: status);
   }
 
   void _onRawEventReceived(MoneyAutomationRawEvent event) {
     // Multi-user safety & Opt-In enforcement:
     // Drop incoming events if the user logged out or disabled tracking.
-    if (_userId == null || _userId.isEmpty || !state.isEnabled) {
+    if (!mounted || _userId == null || _userId.isEmpty || !state.isEnabled) {
       return;
     }
     _eventController.add(event);
@@ -163,6 +181,8 @@ class MoneyAutomationNotifier extends StateNotifier<MoneyAutomationState> with W
   }
 
   Future<void> _processIncomingRawEvent(MoneyAutomationRawEvent event) async {
+    if (!mounted || !state.isEnabled) return;
+    final reservedKeys = <String>[];
     try {
       final parsed = _parser.parse(event);
       if (parsed.isConfirmedDebit) {
@@ -171,10 +191,28 @@ class MoneyAutomationNotifier extends StateNotifier<MoneyAutomationState> with W
           return;
         }
 
+        // Reserve both identities before the first await. Other purchases can
+        // still save locally while this purchase waits for repository sync.
+        final keys = [
+          'fp:${parsed.fingerprint}',
+          if (parsed.referenceId != null)
+            'ref:${parsed.referenceId!.trim().toUpperCase()}',
+        ];
+        if (keys.any(_pendingTransactions.contains)) return;
+        _pendingTransactions.addAll(keys);
+        reservedKeys.addAll(keys);
+
         // 1. Check duplicate
-        if (_deduplicationService.isDuplicate(parsed.fingerprint, referenceId: parsed.referenceId)) {
-          final shortFp = parsed.fingerprint.length > 8 ? '${parsed.fingerprint.substring(0, 8)}...' : parsed.fingerprint;
-          debugPrint('[MoneyAutomation] Duplicate transaction rejected (fp: $shortFp)');
+        if (_deduplicationService.isDuplicate(
+          parsed.fingerprint,
+          referenceId: parsed.referenceId,
+        )) {
+          final shortFp = parsed.fingerprint.length > 8
+              ? '${parsed.fingerprint.substring(0, 8)}...'
+              : parsed.fingerprint;
+          debugPrint(
+            '[MoneyAutomation] Duplicate transaction rejected (fp: $shortFp)',
+          );
           return;
         }
 
@@ -194,20 +232,37 @@ class MoneyAutomationNotifier extends StateNotifier<MoneyAutomationState> with W
         );
 
         // 3. Attempt Money Manager save
-        if (_moneyRepository != null) {
-          await _moneyRepository.saveTransaction(tx);
+        final repository = _moneyRepository;
+        if (repository == null) {
+          throw StateError('Money repository is unavailable');
         }
+        await repository.saveTransaction(tx);
+        if (!mounted || !state.isEnabled) return;
 
         // 4. ONLY AFTER successful creation, finalize the fingerprint as processed
-        await _deduplicationService.recordProcessed(parsed.fingerprint, referenceId: parsed.referenceId);
+        await _deduplicationService.recordProcessed(
+          parsed.fingerprint,
+          referenceId: parsed.referenceId,
+        );
         _acceptedCandidateController.add(parsed);
         _onTransactionCreated?.call(tx);
-        debugPrint('[MoneyAutomation] Auto-created expense: ₹${parsed.amount} (${parsed.fingerprint.substring(0, 8)}...)');
+        debugPrint('[MoneyAutomation] Auto-created expense');
       } else {
-        debugPrint('[MoneyAutomation] Event classified as ${parsed.classification.name}, rejected from auto-entry');
+        debugPrint(
+          '[MoneyAutomation] Stage: parsing, classification: ${parsed.classification.name}, confidence: ${parsed.confidence.name}, reason: ${parsed.parserReason}, hasAmount: ${parsed.amount > 0}, hasRef: ${parsed.referenceId != null}, hasMerchant: ${parsed.merchantOrDescription != null}',
+        );
       }
     } catch (e) {
-      debugPrint('[MoneyAutomation] Safe parsing / auto-creation failure caught: $e');
+      debugPrint(
+        '[MoneyAutomation] Safe parsing / auto-creation failure caught: $e',
+      );
+      if (mounted && state.isEnabled) {
+        state = state.copyWith(
+          listenerStatus: MoneyAutomationListenerStatus.error,
+        );
+      }
+    } finally {
+      _pendingTransactions.removeAll(reservedKeys);
     }
   }
 
@@ -272,14 +327,18 @@ class MoneyAutomationNotifier extends StateNotifier<MoneyAutomationState> with W
     final permResult = await _listenerService.bridge.requestPermission();
     if (permResult == 'granted') {
       await _repository.setAutomationEnabled(_userId, true);
-      await _listenerService.startListening(onEvent: _onRawEventReceived);
       state = state.copyWith(
         isEnabled: true,
         hasAcceptedInfoDialog: true,
         isPromptActiveThisVisit: false,
         listenerStatus: MoneyAutomationListenerStatus.ready,
       );
-      return true;
+      final status = await _listenerService.startListening(
+        onEvent: _onRawEventReceived,
+      );
+      if (!mounted) return false;
+      state = state.copyWith(listenerStatus: status);
+      return status == MoneyAutomationListenerStatus.ready;
     } else {
       await _repository.setAutomationEnabled(_userId, true);
       state = state.copyWith(
@@ -294,6 +353,7 @@ class MoneyAutomationNotifier extends StateNotifier<MoneyAutomationState> with W
 
   /// Toggling OFF reverts automation to disabled and immediately stops listener.
   Future<void> disableAutomation() async {
+    state = state.copyWith(isEnabled: false);
     await _repository.setAutomationEnabled(_userId, false);
     await _listenerService.stopListening();
     state = state.copyWith(
@@ -315,12 +375,17 @@ class MoneyAutomationNotifier extends StateNotifier<MoneyAutomationState> with W
   Future<void> requestPermissionAgain() async {
     final result = await _listenerService.bridge.requestPermission();
     if (result == 'granted') {
-      await _listenerService.startListening(onEvent: _onRawEventReceived);
-      state = state.copyWith(listenerStatus: MoneyAutomationListenerStatus.ready);
+      if (!mounted || !state.isEnabled) return;
+      final status = await _listenerService.startListening(
+        onEvent: _onRawEventReceived,
+      );
+      if (mounted) state = state.copyWith(listenerStatus: status);
     } else if (result == 'permanentlyDenied') {
       await _listenerService.bridge.openAppSettings();
     } else {
-      state = state.copyWith(listenerStatus: MoneyAutomationListenerStatus.permissionRequired);
+      state = state.copyWith(
+        listenerStatus: MoneyAutomationListenerStatus.permissionRequired,
+      );
     }
   }
 
@@ -335,9 +400,14 @@ class MoneyAutomationNotifier extends StateNotifier<MoneyAutomationState> with W
 
   /// Handles user logout: immediately stops listener processing, resets state, and clears cache.
   Future<void> onLogout() async {
+    state = const MoneyAutomationState(
+      listenerStatus: MoneyAutomationListenerStatus.disabled,
+    );
     await _listenerService.stopListening();
     _deduplicationService.clear();
-    state = const MoneyAutomationState(listenerStatus: MoneyAutomationListenerStatus.disabled);
+    state = const MoneyAutomationState(
+      listenerStatus: MoneyAutomationListenerStatus.disabled,
+    );
   }
 
   @override

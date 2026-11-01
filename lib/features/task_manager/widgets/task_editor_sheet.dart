@@ -11,10 +11,7 @@ import 'package:arc/providers/global_providers.dart';
 class TaskEditorSheet extends ConsumerStatefulWidget {
   final Task? taskToEdit;
 
-  const TaskEditorSheet({
-    super.key,
-    this.taskToEdit,
-  });
+  const TaskEditorSheet({super.key, this.taskToEdit});
 
   @override
   ConsumerState<TaskEditorSheet> createState() => _TaskEditorSheetState();
@@ -47,7 +44,9 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
     _labelsController = TextEditingController(text: labelString);
 
     _selectedPriority = editTask?.displayPriority ?? 'Low';
-    if (_selectedPriority == 'Much') _selectedPriority = 'Must';
+    if (_selectedPriority == 'Much' || _selectedPriority == 'Must') {
+      _selectedPriority = 'Medium';
+    }
     _selectedCategory = editTask?.category ?? 'Work';
     _selectedDueDate = editTask?.dueDate;
 
@@ -134,12 +133,40 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
     if (picked != null && picked != _selectedDueTime) {
       setState(() {
         _selectedDueTime = picked;
+        _selectedDueDate ??= DateTime.now();
       });
     }
   }
 
-  void _saveForm() {
+  Future<void> _saveForm() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_selectedDueTime == null) {
+      final continueWithoutTime = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Set a Time for Your Task?'),
+          content: Text(
+            'Add a time to ${_titleController.text.trim()} so we can remind you when it\'s time to get started.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Set Time'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Continue Without Time'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || continueWithoutTime == null) return;
+      if (!continueWithoutTime) {
+        await _selectDueTime(context);
+        return;
+      }
+    }
 
     final labels = _labelsController.text
         .split(',')
@@ -163,14 +190,6 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
           _selectedDueTime!.hour,
           _selectedDueTime!.minute,
         );
-      } else {
-        reminderDateTime = DateTime(
-          _selectedDueDate!.year,
-          _selectedDueDate!.month,
-          _selectedDueDate!.day,
-          9,
-          0,
-        );
       }
     }
 
@@ -193,12 +212,12 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
     );
 
     if (widget.taskToEdit == null) {
-      ref.read(tasksProvider.notifier).addTask(task);
+      await ref.read(tasksProvider.notifier).addTask(task);
     } else {
-      ref.read(tasksProvider.notifier).updateTask(task);
+      await ref.read(tasksProvider.notifier).updateTask(task);
     }
 
-    Navigator.of(context).pop();
+    if (mounted) Navigator.of(context).pop();
   }
 
   @override
@@ -221,202 +240,254 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
           key: _formKey,
           child: SingleChildScrollView(
             child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    widget.taskToEdit == null ? 'Create Task' : 'Edit Task',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(LucideIcons.x, size: 20),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Title Field
-              TextFormField(
-                controller: _titleController,
-                style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
-                decoration: const InputDecoration(
-                  hintText: 'Task Title',
-                ),
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Title cannot be empty';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-
-              // Description Field
-              TextFormField(
-                controller: _descController,
-                minLines: 2,
-                maxLines: 4,
-                style: theme.textTheme.bodyMedium,
-                decoration: const InputDecoration(
-                  hintText: 'Description',
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Category, Priority dropdowns
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _selectedCategory,
-                      decoration: const InputDecoration(
-                        labelText: 'Category',
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      widget.taskToEdit == null ? 'Create Task' : 'Edit Task',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
-                      items: AppConstants.taskCategories.map((c) {
-                        return DropdownMenuItem<String>(
-                          value: c,
-                          child: Text(c, style: theme.textTheme.bodyMedium),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => _selectedCategory = val);
-                      },
                     ),
+                    IconButton(
+                      icon: const Icon(LucideIcons.x, size: 20),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Title Field
+                TextFormField(
+                  controller: _titleController,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _selectedPriority,
-                      decoration: const InputDecoration(
-                        labelText: 'Priority',
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: const InputDecoration(hintText: 'Task Title'),
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Title cannot be empty';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                // Description Field
+                TextFormField(
+                  controller: _descController,
+                  minLines: 2,
+                  maxLines: 4,
+                  style: theme.textTheme.bodyMedium,
+                  decoration: const InputDecoration(hintText: 'Description'),
+                ),
+                const SizedBox(height: 16),
+
+                // Category, Priority dropdowns
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _selectedCategory,
+                        decoration: const InputDecoration(
+                          labelText: 'Category',
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                        ),
+                        items: AppConstants.taskCategories.map((c) {
+                          return DropdownMenuItem<String>(
+                            value: c,
+                            child: Text(c, style: theme.textTheme.bodyMedium),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _selectedCategory = val);
+                          }
+                        },
                       ),
-                      items: ['High', 'Must', 'Low'].map((p) {
-                        return DropdownMenuItem<String>(
-                          value: p,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _selectedPriority,
+                        decoration: const InputDecoration(
+                          labelText: 'Priority',
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                        ),
+                        items: ['High', 'Medium', 'Low'].map((p) {
+                          return DropdownMenuItem<String>(
+                            value: p,
+                            child: Row(
+                              children: [
+                                Text(
+                                  p == 'High'
+                                      ? '🔴'
+                                      : (p == 'Medium' ? '🟠' : '🟡'),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(p, style: theme.textTheme.bodyMedium),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _selectedPriority = val);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Labels field
+                TextFormField(
+                  controller: _labelsController,
+                  decoration: const InputDecoration(
+                    hintText: 'Labels (comma separated, e.g., work, urgent)',
+                    prefixIcon: Icon(LucideIcons.tag, size: 16),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Due Date & Due Time triggers
+                Row(
+                  children: [
+                    // Date Picker
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _selectDueDate(context),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.radiusInput,
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? AppColors.darkSurface
+                                : AppColors.lightBgSecondary,
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.radiusInput,
+                            ),
+                          ),
                           child: Row(
                             children: [
-                              Text(p == 'High' ? '🔴' : (p == 'Must' ? '🟠' : '🟡')),
-                              const SizedBox(width: 6),
-                              Text(p, style: theme.textTheme.bodyMedium),
+                              const Icon(
+                                LucideIcons.calendar,
+                                size: 18,
+                                color: AppColors.accent,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _selectedDueDate == null
+                                      ? 'Set Date'
+                                      : DateFormat(
+                                          'MMM d, yyyy',
+                                        ).format(_selectedDueDate!),
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: _selectedDueDate == null
+                                        ? (isDark
+                                              ? AppColors.textPlaceholderDark
+                                              : AppColors.textDisabledLight)
+                                        : (isDark
+                                              ? AppColors.textPrimaryDark
+                                              : AppColors.textPrimaryLight),
+                                    fontWeight: _selectedDueDate == null
+                                        ? FontWeight.normal
+                                        : FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => _selectedPriority = val);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Labels field
-              TextFormField(
-                controller: _labelsController,
-                decoration: const InputDecoration(
-                  hintText: 'Labels (comma separated, e.g., work, urgent)',
-                  prefixIcon: Icon(LucideIcons.tag, size: 16),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Due Date & Due Time triggers
-              Row(
-                children: [
-                  // Date Picker
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _selectDueDate(context),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusInput),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
-                          borderRadius: BorderRadius.circular(AppTheme.radiusInput),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(LucideIcons.calendar, size: 18, color: AppColors.accent),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _selectedDueDate == null
-                                    ? 'Set Date'
-                                    : DateFormat('MMM d, yyyy').format(_selectedDueDate!),
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: _selectedDueDate == null
-                                      ? (isDark ? AppColors.textPlaceholderDark : AppColors.textDisabledLight)
-                                      : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
-                                  fontWeight: _selectedDueDate == null ? FontWeight.normal : FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Time Picker
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _selectDueTime(context),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusInput),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
-                          borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+                    const SizedBox(width: 12),
+                    // Time Picker
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _selectDueTime(context),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.radiusInput,
                         ),
-                        child: Row(
-                          children: [
-                            const Icon(LucideIcons.clock, size: 18, color: AppColors.accent),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _selectedDueTime == null
-                                    ? 'Set Time'
-                                    : _selectedDueTime!.format(context),
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: _selectedDueTime == null
-                                      ? (isDark ? AppColors.textPlaceholderDark : AppColors.textDisabledLight)
-                                      : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
-                                  fontWeight: _selectedDueTime == null ? FontWeight.normal : FontWeight.bold,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? AppColors.darkSurface
+                                : AppColors.lightBgSecondary,
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.radiusInput,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                LucideIcons.clock,
+                                size: 18,
+                                color: AppColors.accent,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _selectedDueTime == null
+                                      ? 'Set Time'
+                                      : _selectedDueTime!.format(context),
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: _selectedDueTime == null
+                                        ? (isDark
+                                              ? AppColors.textPlaceholderDark
+                                              : AppColors.textDisabledLight)
+                                        : (isDark
+                                              ? AppColors.textPrimaryDark
+                                              : AppColors.textPrimaryLight),
+                                    fontWeight: _selectedDueTime == null
+                                        ? FontWeight.normal
+                                        : FontWeight.bold,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // Save Button
-              ElevatedButton(
-                onPressed: _saveForm,
-                child: Text(
-                  widget.taskToEdit == null ? 'Create Task' : 'Save Changes',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 24),
-            ],
+                const SizedBox(height: 24),
+
+                // Save Button
+                ElevatedButton(
+                  onPressed: _saveForm,
+                  child: Text(
+                    widget.taskToEdit == null ? 'Create Task' : 'Save Changes',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

@@ -15,7 +15,8 @@ class FeatureRequestScreen extends ConsumerStatefulWidget {
   const FeatureRequestScreen({super.key});
 
   @override
-  ConsumerState<FeatureRequestScreen> createState() => _FeatureRequestScreenState();
+  ConsumerState<FeatureRequestScreen> createState() =>
+      _FeatureRequestScreenState();
 }
 
 class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
@@ -75,16 +76,24 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
               children: [
                 Icon(LucideIcons.sparkles, color: Colors.black, size: 18),
                 SizedBox(width: 10),
-                Expanded(child: Text('Restored your previously saved feature suggestion.')),
+                Expanded(
+                  child: Text(
+                    'Restored your previously saved feature suggestion.',
+                  ),
+                ),
               ],
             ),
             behavior: SnackBarBehavior.floating,
             backgroundColor: AppColors.accent,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             duration: const Duration(seconds: 3),
           ),
         );
-      } else if (userEmail != null && userEmail.isNotEmpty && _emailController.text.isEmpty) {
+      } else if (userEmail != null &&
+          userEmail.isNotEmpty &&
+          _emailController.text.isEmpty) {
         setState(() {
           _emailController.text = userEmail;
         });
@@ -102,7 +111,9 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
     _draftDebounce = Timer(const Duration(milliseconds: 600), () {
       if (!mounted) return;
       final payload = _buildCurrentPayload();
-      ref.read(feedbackDraftServiceProvider).saveDraft(
+      ref
+          .read(feedbackDraftServiceProvider)
+          .saveDraft(
             category: FeedbackCategory.featureRequest,
             module: _selectedModule,
             message: payload.toSerializedMessage(),
@@ -119,8 +130,12 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
       module: _selectedModule,
       title: _titleController.text.trim(),
       description: _descriptionController.text.trim(),
-      benefit: _benefitController.text.trim().isNotEmpty ? _benefitController.text.trim() : null,
-      contactEmail: _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
+      benefit: _benefitController.text.trim().isNotEmpty
+          ? _benefitController.text.trim()
+          : null,
+      contactEmail: _emailController.text.trim().isNotEmpty
+          ? _emailController.text.trim()
+          : null,
     );
   }
 
@@ -175,7 +190,9 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
       ref.invalidate(currentUserFeedbackProvider);
 
       // Clear draft upon verified submission
-      await ref.read(feedbackDraftServiceProvider).clearDraft(FeedbackCategory.featureRequest);
+      await ref
+          .read(feedbackDraftServiceProvider)
+          .clearDraft(FeedbackCategory.featureRequest);
 
       if (mounted) {
         _showSuccessDialog(result);
@@ -183,7 +200,9 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
     } catch (e) {
       // Preserve draft on failure
       final payload = _buildCurrentPayload();
-      await ref.read(feedbackDraftServiceProvider).saveDraft(
+      await ref
+          .read(feedbackDraftServiceProvider)
+          .saveDraft(
             category: FeedbackCategory.featureRequest,
             module: _selectedModule,
             message: payload.toSerializedMessage(),
@@ -202,13 +221,19 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
 
   void _showErrorNotice(dynamic error) {
     if (!mounted) return;
-    final message = error is String ? error : 'Unable to submit suggestion. Your draft has been preserved locally.';
+    final message = error is String
+        ? error
+        : 'Unable to submit suggestion. Your draft has been preserved locally.';
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            const Icon(LucideIcons.alertTriangle, color: Colors.white, size: 20),
+            const Icon(
+              LucideIcons.alertTriangle,
+              color: Colors.white,
+              size: 20,
+            ),
             const SizedBox(width: 12),
             Expanded(child: Text(message)),
           ],
@@ -241,7 +266,11 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
                 color: AppColors.accent.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(LucideIcons.sparkles, color: AppColors.accent, size: 24),
+              child: const Icon(
+                LucideIcons.sparkles,
+                color: AppColors.accent,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -249,7 +278,9 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
                 'Idea Received!',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
                 ),
               ),
             ),
@@ -262,31 +293,44 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
             Text(
               'Thank you for sharing your vision for Arc! Your suggestion will be reviewed during product planning.',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
               ),
             ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
+                color: isDark
+                    ? AppColors.darkSurface
+                    : AppColors.lightBgSecondary,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
                 children: [
-                  const Icon(LucideIcons.hash, size: 16, color: AppColors.textMutedDark),
+                  const Icon(
+                    LucideIcons.hash,
+                    size: 16,
+                    color: AppColors.textMutedDark,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       'Ref: ${feedback.feedbackId.substring(0, 8)}...',
                       style: theme.textTheme.labelMedium?.copyWith(
                         fontFamily: 'monospace',
-                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                        color: isDark
+                            ? AppColors.textMutedDark
+                            : AppColors.textMutedLight,
                       ),
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.accent.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
@@ -356,14 +400,20 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
                 color: AppColors.accent.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(LucideIcons.sparkles, color: AppColors.accent, size: 18),
+              child: const Icon(
+                LucideIcons.sparkles,
+                color: AppColors.accent,
+                size: 18,
+              ),
             ),
             const SizedBox(width: 10),
             Text(
               'Suggest a Feature',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
               ),
             ),
           ],
@@ -404,11 +454,14 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
                   textInputAction: TextInputAction.next,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                   ),
                   decoration: _buildInputDecoration(
                     isDark: isDark,
-                    hintText: 'e.g. Smart Daily Time-blocking with Auto-Reschedule',
+                    hintText:
+                        'e.g. Smart Daily Time-blocking with Auto-Reschedule',
                     counterText: '${_titleController.text.length}/120',
                   ),
                   validator: (v) {
@@ -444,27 +497,37 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
                             size: 14,
                             color: isSelected
                                 ? Colors.black
-                                : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                                : (isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight),
                           ),
                           const SizedBox(width: 6),
                           Text(m.label),
                         ],
                       ),
                       selectedColor: AppColors.accent,
-                      backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
+                      backgroundColor: isDark
+                          ? AppColors.darkSurface
+                          : AppColors.lightBgSecondary,
                       labelStyle: TextStyle(
                         fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w500,
                         color: isSelected
                             ? Colors.black
-                            : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                            : (isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimaryLight),
                       ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(999),
                         side: BorderSide(
                           color: isSelected
                               ? AppColors.accent
-                              : (isDark ? AppColors.borderMedium : AppColors.borderMediumLight),
+                              : (isDark
+                                    ? AppColors.borderMedium
+                                    : AppColors.borderMediumLight),
                         ),
                       ),
                       onSelected: (selected) {
@@ -487,7 +550,8 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
               _buildIdeaCard(
                 isDark: isDark,
                 title: 'Tell Us About Your Idea',
-                subtitle: 'How should this feature work? Describe the workflow or interaction.',
+                subtitle:
+                    'How should this feature work? Describe the workflow or interaction.',
                 icon: LucideIcons.pencil,
                 iconColor: AppColors.info,
                 child: TextFormField(
@@ -499,7 +563,9 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     height: 1.5,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                   ),
                   decoration: _buildInputDecoration(
                     isDark: isDark,
@@ -521,7 +587,8 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
               _buildIdeaCard(
                 isDark: isDark,
                 title: 'Why is this valuable? (Optional)',
-                subtitle: 'Who does this help, and what specific problem does it solve?',
+                subtitle:
+                    'Who does this help, and what specific problem does it solve?',
                 icon: LucideIcons.heartHandshake,
                 iconColor: const Color(0xFFF472B6),
                 child: TextFormField(
@@ -532,11 +599,14 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
                   textInputAction: TextInputAction.next,
                   style: TextStyle(
                     fontSize: 14,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                   ),
                   decoration: _buildInputDecoration(
                     isDark: isDark,
-                    hintText: 'e.g. This saves 15 minutes of manual re-planning every evening...',
+                    hintText:
+                        'e.g. This saves 15 minutes of manual re-planning every evening...',
                   ),
                 ),
               ),
@@ -547,7 +617,8 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
               _buildIdeaCard(
                 isDark: isDark,
                 title: 'Stay in the Loop (Optional)',
-                subtitle: 'Provide your email if you’d like updates or early access to this feature.',
+                subtitle:
+                    'Provide your email if you’d like updates or early access to this feature.',
                 icon: LucideIcons.mail,
                 iconColor: AppColors.accent,
                 child: TextFormField(
@@ -555,7 +626,9 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
                   focusNode: _emailFocusNode,
                   keyboardType: TextInputType.emailAddress,
                   style: TextStyle(
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                   ),
                   decoration: _buildInputDecoration(
                     isDark: isDark,
@@ -583,7 +656,9 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                      color: isDark
+                          ? AppColors.textMutedDark
+                          : AppColors.textMutedLight,
                     ),
                   ),
                   Text(
@@ -594,7 +669,9 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
                       fontWeight: FontWeight.bold,
                       color: serializedLength > 5000
                           ? AppColors.danger
-                          : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+                          : (isDark
+                                ? AppColors.textMutedDark
+                                : AppColors.textMutedLight),
                     ),
                   ),
                 ],
@@ -607,7 +684,9 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accent,
                   foregroundColor: Colors.black,
-                  disabledBackgroundColor: AppColors.accent.withValues(alpha: 0.3),
+                  disabledBackgroundColor: AppColors.accent.withValues(
+                    alpha: 0.3,
+                  ),
                   elevation: 2,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -621,7 +700,9 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
                         width: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.black,
+                          ),
                         ),
                       )
                     : const Row(
@@ -631,7 +712,10 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
                           SizedBox(width: 8),
                           Text(
                             'Submit Suggestion',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       ),
@@ -665,7 +749,11 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
               color: AppColors.accent.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
-            child: const Icon(LucideIcons.sparkles, color: AppColors.accent, size: 26),
+            child: const Icon(
+              LucideIcons.sparkles,
+              color: AppColors.accent,
+              size: 26,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -675,7 +763,10 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.accent.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(999),
@@ -683,7 +774,9 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
                       child: Text(
                         'FEATURE LAB',
                         style: TextStyle(
-                          color: isDark ? AppColors.accent : AppColors.darkAccent,
+                          color: isDark
+                              ? AppColors.accent
+                              : AppColors.darkAccent,
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.8,
@@ -700,7 +793,9 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -708,7 +803,9 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
                   'We build Arc collaboratively with our users. Propose enhancements, workflow automations, or new views.',
                   style: TextStyle(
                     fontSize: 13,
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
                     height: 1.4,
                   ),
                 ),
@@ -758,7 +855,9 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                   ),
                 ),
               ),
@@ -769,7 +868,9 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
             subtitle,
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
             ),
           ),
           const SizedBox(height: 14),
@@ -807,10 +908,7 @@ class _FeatureRequestScreenState extends ConsumerState<FeatureRequestScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppTheme.radiusInput),
-        borderSide: const BorderSide(
-          color: AppColors.accent,
-          width: 1.5,
-        ),
+        borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     );

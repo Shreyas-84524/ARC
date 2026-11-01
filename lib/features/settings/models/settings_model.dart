@@ -59,8 +59,10 @@ class SettingsModel {
       masterNotificationsEnabled:
           masterNotificationsEnabled ?? this.masterNotificationsEnabled,
       taskRemindersEnabled: taskRemindersEnabled ?? this.taskRemindersEnabled,
-      habitRemindersEnabled: habitRemindersEnabled ?? this.habitRemindersEnabled,
-      moneyRemindersEnabled: moneyRemindersEnabled ?? this.moneyRemindersEnabled,
+      habitRemindersEnabled:
+          habitRemindersEnabled ?? this.habitRemindersEnabled,
+      moneyRemindersEnabled:
+          moneyRemindersEnabled ?? this.moneyRemindersEnabled,
       eveningCheckinTime: eveningCheckinTime ?? this.eveningCheckinTime,
       expenseReminderTime: expenseReminderTime ?? this.expenseReminderTime,
       remTime: remTime ?? this.remTime,

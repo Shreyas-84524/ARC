@@ -33,30 +33,24 @@ class RouterNotifier extends ChangeNotifier {
   final Ref _ref;
 
   RouterNotifier(this._ref) {
-    _ref.listen<UserContext>(
-      userContextProvider,
-      (previous, next) {
-        if (previous != next) {
-          notifyListeners();
-        }
-      },
-    );
-    _ref.listen<bool>(
-      secretNotesSessionProvider,
-      (previous, next) {
-        if (previous != next) {
-          notifyListeners();
-        }
-      },
-    );
-    _ref.listen<AsyncValue<bool>>(
-      secretNotesConfiguredProvider,
-      (previous, next) {
-        if (previous != next) {
-          notifyListeners();
-        }
-      },
-    );
+    _ref.listen<UserContext>(userContextProvider, (previous, next) {
+      if (previous != next) {
+        notifyListeners();
+      }
+    });
+    _ref.listen<bool>(secretNotesSessionProvider, (previous, next) {
+      if (previous != next) {
+        notifyListeners();
+      }
+    });
+    _ref.listen<AsyncValue<bool>>(secretNotesConfiguredProvider, (
+      previous,
+      next,
+    ) {
+      if (previous != next) {
+        notifyListeners();
+      }
+    });
   }
 
   String? redirect(BuildContext context, GoRouterState state) {
@@ -67,14 +61,14 @@ class RouterNotifier extends ChangeNotifier {
     final isForgotPassword = location == '/forgot-password';
     final isSplash = location == '/splash';
     final isAdminRoute = location == '/admin';
-    final isPublicAuthRoute =
-        isLoggingIn || isSignUp || isForgotPassword;
+    final isPublicAuthRoute = isLoggingIn || isSignUp || isForgotPassword;
     final isSecretNotesRoute = location.startsWith('/secret-notes');
     final isSecretNotesSetup = location == '/secret-notes/setup';
     final isSecretNotesUnlock = location == '/secret-notes/unlock';
 
     debugPrint(
-        '[RouterNotifier.redirect] path: $location, isInitializing: ${userContext.isInitializing}, isAuthenticated: ${userContext.isAuthenticated}, isAdmin: ${userContext.isAdmin}');
+      '[RouterNotifier.redirect] path: $location, isInitializing: ${userContext.isInitializing}, isAuthenticated: ${userContext.isAuthenticated}, isAdmin: ${userContext.isAdmin}',
+    );
 
     // 1. While auth state is initializing from Firebase Auth persistent storage
     if (userContext.isInitializing) {
@@ -104,15 +98,14 @@ class RouterNotifier extends ChangeNotifier {
 
     // 6. Secret Notes navigation and security gate
     if (isSecretNotesRoute) {
-      // Entering Secret Notes: enable secure window protection on supported platforms (Android)
-      _ref.read(secretNotesWindowPrivacyServiceProvider).enableSecureScreen();
-
       final securityService = _ref.read(secretNotesSecurityServiceProvider);
       final isConfigured = securityService.isConfiguredSync();
       final isUnlocked = _ref.read(secretNotesSessionProvider);
 
       if (!isConfigured) {
-        return isSecretNotesSetup ? null : '/secret-notes/setup';
+        // A PIN is optional. The setup route remains available from Settings.
+        if (isSecretNotesUnlock) return '/secret-notes';
+        return null;
       }
 
       if (!isUnlocked) {
@@ -123,12 +116,13 @@ class RouterNotifier extends ChangeNotifier {
         return '/secret-notes';
       }
     } else {
-      // Exiting Secret Notes: disable secure screen protection and automatically invalidate unlocked session
-      _ref.read(secretNotesWindowPrivacyServiceProvider).disableSecureScreen();
+      // Exiting protected Secret Notes automatically invalidates the session.
       final wasUnlocked = _ref.read(secretNotesSessionProvider);
       if (wasUnlocked) {
         _ref.read(secretNotesSessionProvider.notifier).lock();
-        debugPrint('[RouterNotifier] User navigated out of Secret Notes. Session automatically locked.');
+        debugPrint(
+          '[RouterNotifier] User navigated out of Secret Notes. Session automatically locked.',
+        );
       }
     }
 
@@ -149,9 +143,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: notifier,
     redirect: notifier.redirect,
     errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Text('Page not found: ${state.uri.path}'),
-      ),
+      body: Center(child: Text('Page not found: ${state.uri.path}')),
     ),
     routes: <RouteBase>[
       GoRoute(
@@ -250,7 +242,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             return const FeatureRequestScreen();
           } else if (category == FeedbackCategory.generalFeedback) {
             return const GeneralFeedbackScreen();
-          } else if (category == FeedbackCategory.appRating || category == 'rate_arc') {
+          } else if (category == FeedbackCategory.appRating ||
+              category == 'rate_arc') {
             return const RateArcScreen();
           }
           return const GeneralFeedbackScreen();
@@ -258,19 +251,23 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: 'bug',
-            builder: (BuildContext context, GoRouterState state) => const BugReportScreen(),
+            builder: (BuildContext context, GoRouterState state) =>
+                const BugReportScreen(),
           ),
           GoRoute(
             path: 'feature',
-            builder: (BuildContext context, GoRouterState state) => const FeatureRequestScreen(),
+            builder: (BuildContext context, GoRouterState state) =>
+                const FeatureRequestScreen(),
           ),
           GoRoute(
             path: 'general',
-            builder: (BuildContext context, GoRouterState state) => const GeneralFeedbackScreen(),
+            builder: (BuildContext context, GoRouterState state) =>
+                const GeneralFeedbackScreen(),
           ),
           GoRoute(
             path: 'rate',
-            builder: (BuildContext context, GoRouterState state) => const RateArcScreen(),
+            builder: (BuildContext context, GoRouterState state) =>
+                const RateArcScreen(),
           ),
         ],
       ),
@@ -349,10 +346,7 @@ GoRouter createAppRouter({String initialLocation = '/login'}) {
         path: '/forgot-password',
         builder: (context, state) => const ForgotPasswordScreen(),
       ),
-      GoRoute(
-        path: '/',
-        builder: (context, state) => const DashboardScreen(),
-      ),
+      GoRoute(path: '/', builder: (context, state) => const DashboardScreen()),
       GoRoute(
         path: '/secret-notes/setup',
         builder: (context, state) => const SecretNotesSetupScreen(),

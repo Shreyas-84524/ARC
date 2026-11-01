@@ -20,6 +20,10 @@ import 'package:arc/features/task_manager/models/task_model.dart';
 import 'package:arc/features/task_manager/repository/task_repository.dart';
 import 'package:arc/features/task_manager/screens/tasks_screen.dart';
 import 'package:arc/providers/global_providers.dart';
+import 'package:arc/routes/app_router.dart' show RouterNotifier, routerNotifierProvider;
+import 'package:arc/features/user_management/providers/user_context_provider.dart';
+import 'package:arc/features/user_management/models/user_context.dart';
+import 'secret_notes_phase5_test.dart' show UserContextNotifierTestHelper;
 
 class InMemoryTaskRepo implements TaskRepository {
   final List<Task> _tasks = [];
@@ -52,9 +56,11 @@ class FakeBioService extends SecretNotesBiometricService {
   Future<bool> isBiometricAvailable() async => false;
 }
 
-GoRouter createTestRouter({required String initialLocation}) {
+GoRouter createTestRouter({required String initialLocation, RouterNotifier? notifier}) {
   return GoRouter(
     initialLocation: initialLocation,
+    refreshListenable: notifier,
+    redirect: notifier?.redirect,
     routes: [
       GoRoute(
         path: '/tasks',
@@ -136,6 +142,36 @@ void main() {
   }
 
   group('Secret Notes Back Navigation - Tasks to Secret Notes and Back', () {
+    testWidgets('Production redirect preserves a successful first unlock after entry from Tasks', (tester) async {
+      await securityService.setupPin('123456');
+      await securityService.markIntroSeen();
+      final container = ProviderContainer(overrides: [
+        userContextProvider.overrideWith((ref) => UserContextNotifierTestHelper(
+          const UserContext(userId: 'test_user'),
+        )),
+        taskRepositoryProvider.overrideWithValue(taskRepo),
+        secretNotesLocalRepositoryProvider.overrideWithValue(localRepo),
+        secretNotesDataRepositoryProvider.overrideWithValue(dataRepo),
+        secretNotesSecurityServiceProvider.overrideWithValue(securityService),
+        secretNotesBiometricServiceProvider.overrideWithValue(FakeBioService()),
+      ]);
+      final router = createTestRouter(
+        initialLocation: '/tasks', notifier: container.read(routerNotifierProvider),
+      );
+      addTearDown(() { router.dispose(); container.dispose(); });
+      await tester.pumpWidget(createHarness(router: router, container: container));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(TasksScreen), const Offset(150, 0));
+      await tester.pumpAndSettle();
+      expect(find.byType(SecretNotesUnlockScreen), findsOneWidget);
+      // Authentication changes the session and refreshes the real route guard.
+      container.read(secretNotesSessionProvider.notifier).unlock();
+      await tester.pumpAndSettle();
+      expect(container.read(secretNotesSessionProvider), isTrue);
+      expect(find.byType(SecretNotesDashboardScreen), findsOneWidget);
+      expect(find.byType(SecretNotesUnlockScreen), findsNothing);
+    });
+
     testWidgets('Tasks -> swipe -> Secret Notes (unlocked) -> Back Button -> Tasks (and session locked)', (tester) async {
       await securityService.setupPin('123456');
       await securityService.markIntroSeen();

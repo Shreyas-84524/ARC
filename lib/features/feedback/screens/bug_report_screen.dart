@@ -84,16 +84,24 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
               children: [
                 Icon(LucideIcons.fileText, color: Colors.black, size: 18),
                 SizedBox(width: 10),
-                Expanded(child: Text('Restored your previously saved bug report draft.')),
+                Expanded(
+                  child: Text(
+                    'Restored your previously saved bug report draft.',
+                  ),
+                ),
               ],
             ),
             behavior: SnackBarBehavior.floating,
             backgroundColor: _diagnosticRed,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             duration: const Duration(seconds: 3),
           ),
         );
-      } else if (userEmail != null && userEmail.isNotEmpty && _emailController.text.isEmpty) {
+      } else if (userEmail != null &&
+          userEmail.isNotEmpty &&
+          _emailController.text.isEmpty) {
         setState(() {
           _emailController.text = userEmail;
         });
@@ -111,7 +119,9 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
     _draftDebounce = Timer(const Duration(milliseconds: 600), () {
       if (!mounted) return;
       final payload = _buildCurrentPayload();
-      ref.read(feedbackDraftServiceProvider).saveDraft(
+      ref
+          .read(feedbackDraftServiceProvider)
+          .saveDraft(
             category: FeedbackCategory.bugReport,
             module: _selectedModule,
             message: payload.toSerializedMessage(),
@@ -131,7 +141,9 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
       stepsToReproduce: _stepsController.text.trim(),
       expectedBehavior: _expectedController.text.trim(),
       actualBehavior: _actualController.text.trim(),
-      contactEmail: _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
+      contactEmail: _emailController.text.trim().isNotEmpty
+          ? _emailController.text.trim()
+          : null,
     );
   }
 
@@ -190,7 +202,9 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
       ref.invalidate(currentUserFeedbackProvider);
 
       // Clear draft upon verified submission
-      await ref.read(feedbackDraftServiceProvider).clearDraft(FeedbackCategory.bugReport);
+      await ref
+          .read(feedbackDraftServiceProvider)
+          .clearDraft(FeedbackCategory.bugReport);
 
       if (mounted) {
         _showSuccessDialog(result);
@@ -198,7 +212,9 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
     } catch (e) {
       // Preserve draft on failure
       final payload = _buildCurrentPayload();
-      await ref.read(feedbackDraftServiceProvider).saveDraft(
+      await ref
+          .read(feedbackDraftServiceProvider)
+          .saveDraft(
             category: FeedbackCategory.bugReport,
             module: _selectedModule,
             message: payload.toSerializedMessage(),
@@ -217,13 +233,19 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
 
   void _showErrorNotice(dynamic error) {
     if (!mounted) return;
-    final message = error is String ? error : 'Unable to submit bug report. Your draft has been preserved locally.';
+    final message = error is String
+        ? error
+        : 'Unable to submit bug report. Your draft has been preserved locally.';
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            const Icon(LucideIcons.alertTriangle, color: Colors.white, size: 20),
+            const Icon(
+              LucideIcons.alertTriangle,
+              color: Colors.white,
+              size: 20,
+            ),
             const SizedBox(width: 12),
             Expanded(child: Text(message)),
           ],
@@ -256,7 +278,11 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                 color: _diagnosticRedDim,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(LucideIcons.bug, color: _diagnosticRed, size: 24),
+              child: const Icon(
+                LucideIcons.bug,
+                color: _diagnosticRed,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -264,7 +290,9 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                 'Bug Report Submitted',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
                 ),
               ),
             ),
@@ -277,31 +305,44 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
             Text(
               'Your technical problem report has been dispatched to our engineering team for investigation.',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
               ),
             ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
+                color: isDark
+                    ? AppColors.darkSurface
+                    : AppColors.lightBgSecondary,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
                 children: [
-                  const Icon(LucideIcons.hash, size: 16, color: AppColors.textMutedDark),
+                  const Icon(
+                    LucideIcons.hash,
+                    size: 16,
+                    color: AppColors.textMutedDark,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       'Ticket: ${feedback.feedbackId.substring(0, 8)}...',
                       style: theme.textTheme.labelMedium?.copyWith(
                         fontFamily: 'monospace',
-                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                        color: isDark
+                            ? AppColors.textMutedDark
+                            : AppColors.textMutedLight,
                       ),
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: _diagnosticRedDim,
                       borderRadius: BorderRadius.circular(6),
@@ -371,14 +412,20 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                 color: _diagnosticRedDim,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(LucideIcons.bug, color: _diagnosticRed, size: 18),
+              child: const Icon(
+                LucideIcons.bug,
+                color: _diagnosticRed,
+                size: 18,
+              ),
             ),
             const SizedBox(width: 10),
             Text(
               'Report a Bug',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
               ),
             ),
           ],
@@ -430,7 +477,9 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                   maxLength: 150,
                   textInputAction: TextInputAction.next,
                   style: TextStyle(
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                     fontWeight: FontWeight.w600,
                   ),
                   decoration: _buildInputDecoration(
@@ -454,7 +503,8 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                 isDark: isDark,
                 sectionNumber: '03',
                 title: 'Problem Description',
-                description: 'Describe the symptoms, error popups, or abnormal behavior.',
+                description:
+                    'Describe the symptoms, error popups, or abnormal behavior.',
                 icon: LucideIcons.fileWarning,
                 child: TextFormField(
                   controller: _descriptionController,
@@ -463,7 +513,9 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                   minLines: 3,
                   textInputAction: TextInputAction.next,
                   style: TextStyle(
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                   ),
                   decoration: _buildInputDecoration(
                     isDark: isDark,
@@ -485,7 +537,8 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                 isDark: isDark,
                 sectionNumber: '04',
                 title: 'Steps to Reproduce',
-                description: 'Numbered steps our engineers can execute to reproduce the bug.',
+                description:
+                    'Numbered steps our engineers can execute to reproduce the bug.',
                 icon: LucideIcons.listOrdered,
                 child: TextFormField(
                   controller: _stepsController,
@@ -496,11 +549,14 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                   style: TextStyle(
                     fontFamily: 'monospace',
                     fontSize: 13,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                   ),
                   decoration: _buildInputDecoration(
                     isDark: isDark,
-                    hintText: '1. Open Task Manager\n2. Create recurring task\n3. Rotate device to landscape',
+                    hintText:
+                        '1. Open Task Manager\n2. Create recurring task\n3. Rotate device to landscape',
                   ),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {
@@ -518,7 +574,8 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                 isDark: isDark,
                 sectionNumber: '05',
                 title: 'Diagnostic Contrast',
-                description: 'Compare what you expected against what actually occurred.',
+                description:
+                    'Compare what you expected against what actually occurred.',
                 icon: LucideIcons.gitCompare,
                 child: Column(
                   children: [
@@ -530,13 +587,19 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                       minLines: 2,
                       textInputAction: TextInputAction.next,
                       style: TextStyle(
-                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
                       ),
                       decoration: _buildInputDecoration(
                         isDark: isDark,
                         labelText: 'Expected Behavior',
                         hintText: 'What did you expect to happen?',
-                        prefixIcon: const Icon(LucideIcons.checkCircle2, color: AppColors.accent, size: 18),
+                        prefixIcon: const Icon(
+                          LucideIcons.checkCircle2,
+                          color: AppColors.accent,
+                          size: 18,
+                        ),
                       ),
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) {
@@ -554,13 +617,19 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                       minLines: 2,
                       textInputAction: TextInputAction.next,
                       style: TextStyle(
-                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
                       ),
                       decoration: _buildInputDecoration(
                         isDark: isDark,
                         labelText: 'Actual Behavior',
                         hintText: 'What actually happened?',
-                        prefixIcon: const Icon(LucideIcons.xCircle, color: _diagnosticRed, size: 18),
+                        prefixIcon: const Icon(
+                          LucideIcons.xCircle,
+                          color: _diagnosticRed,
+                          size: 18,
+                        ),
                       ),
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) {
@@ -580,14 +649,17 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                 isDark: isDark,
                 sectionNumber: '06',
                 title: 'Follow-up Contact (Optional)',
-                description: 'Email address if we need additional diagnostic traces.',
+                description:
+                    'Email address if we need additional diagnostic traces.',
                 icon: LucideIcons.mail,
                 child: TextFormField(
                   controller: _emailController,
                   focusNode: _emailFocusNode,
                   keyboardType: TextInputType.emailAddress,
                   style: TextStyle(
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                   ),
                   decoration: _buildInputDecoration(
                     isDark: isDark,
@@ -615,7 +687,9 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                      color: isDark
+                          ? AppColors.textMutedDark
+                          : AppColors.textMutedLight,
                     ),
                   ),
                   Text(
@@ -626,7 +700,9 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                       fontWeight: FontWeight.bold,
                       color: serializedLength > 5000
                           ? _diagnosticRed
-                          : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+                          : (isDark
+                                ? AppColors.textMutedDark
+                                : AppColors.textMutedLight),
                     ),
                   ),
                 ],
@@ -639,7 +715,9 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _diagnosticRed,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: _diagnosticRed.withValues(alpha: 0.3),
+                  disabledBackgroundColor: _diagnosticRed.withValues(
+                    alpha: 0.3,
+                  ),
                   elevation: 2,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -653,7 +731,9 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                         width: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
                     : const Row(
@@ -663,7 +743,10 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                           SizedBox(width: 8),
                           Text(
                             'Submit Bug Report',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       ),
@@ -707,7 +790,10 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: _diagnosticRedDim,
                         borderRadius: BorderRadius.circular(4),
@@ -724,9 +810,14 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
+                        color: isDark
+                            ? AppColors.darkSurface
+                            : AppColors.lightBgSecondary,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: const Text(
@@ -747,7 +838,9 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -755,7 +848,9 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                   'Fill in reproduction steps and behavior contrast to enable rapid root-cause isolation.',
                   style: TextStyle(
                     fontSize: 12,
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
                     height: 1.4,
                   ),
                 ),
@@ -793,7 +888,9 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
+                  color: isDark
+                      ? AppColors.darkSurface
+                      : AppColors.lightBgSecondary,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -815,7 +912,9 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                   ),
                 ),
               ),
@@ -826,7 +925,9 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
             description,
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
             ),
           ),
           const SizedBox(height: 12),
@@ -863,7 +964,9 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
                     ),
                   ),
                 ],
@@ -916,10 +1019,7 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppTheme.radiusInput),
-        borderSide: const BorderSide(
-          color: _diagnosticRed,
-          width: 1.5,
-        ),
+        borderSide: const BorderSide(color: _diagnosticRed, width: 1.5),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     );

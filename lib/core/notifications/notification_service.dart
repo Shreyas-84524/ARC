@@ -28,6 +28,8 @@ abstract class LocalNotificationGateway {
 /// Business rules live in NotificationPolicy and orchestration lives in the
 /// notification controller.
 class FlutterLocalNotificationGateway implements LocalNotificationGateway {
+  static const String dismissTaskAction = 'task_dismiss';
+  static const String completeTaskAction = 'task_complete';
   final FlutterLocalNotificationsPlugin _plugin;
   final StreamController<ArcNotificationPayload> _tapController =
       StreamController<ArcNotificationPayload>.broadcast(sync: true);
@@ -36,7 +38,7 @@ class FlutterLocalNotificationGateway implements LocalNotificationGateway {
   String _timezoneName = 'Unknown';
 
   FlutterLocalNotificationGateway({FlutterLocalNotificationsPlugin? plugin})
-      : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+    : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   @override
   bool get isInitialized => _initialized;
@@ -45,8 +47,7 @@ class FlutterLocalNotificationGateway implements LocalNotificationGateway {
   String get timezoneName => _timezoneName;
 
   @override
-  Stream<ArcNotificationPayload> get notificationTaps =>
-      _tapController.stream;
+  Stream<ArcNotificationPayload> get notificationTaps => _tapController.stream;
 
   @override
   Future<void> initialize() async {
@@ -74,44 +75,56 @@ class FlutterLocalNotificationGateway implements LocalNotificationGateway {
       onDidReceiveNotificationResponse: _handleResponse,
     );
     if (initialized == false) {
-      throw StateError('Local notification plugin initialization returned false.');
+      throw StateError(
+        'Local notification plugin initialization returned false.',
+      );
     }
 
     if (Platform.isAndroid) {
-      final android = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
-      await android?.createNotificationChannel(const AndroidNotificationChannel(
-        'arc_tasks_channel',
-        'Task Reminders',
-        description: 'Task deadlines and upcoming task alerts',
-        importance: Importance.high,
-        playSound: true,
-        enableVibration: true,
-      ));
-      await android?.createNotificationChannel(const AndroidNotificationChannel(
-        'arc_habits_channel',
-        'Habit Reminders',
-        description: 'Habit times and daily habit check-ins',
-        importance: Importance.high,
-        playSound: true,
-        enableVibration: true,
-      ));
-      await android?.createNotificationChannel(const AndroidNotificationChannel(
-        'arc_money_channel',
-        'Money Reminders',
-        description: 'Daily prompts to record expenses',
-        importance: Importance.high,
-        playSound: true,
-        enableVibration: true,
-      ));
-      await android?.createNotificationChannel(const AndroidNotificationChannel(
-        'arc_feedback_channel',
-        'Feedback Updates',
-        description: 'Updates and thank-you notes for submitted feedback',
-        importance: Importance.high,
-        playSound: true,
-        enableVibration: true,
-      ));
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      await android?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'arc_tasks_channel',
+          'Task Reminders',
+          description: 'Task deadlines and upcoming task alerts',
+          importance: Importance.high,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+      await android?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'arc_habits_channel',
+          'Habit Reminders',
+          description: 'Habit times and daily habit check-ins',
+          importance: Importance.high,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+      await android?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'arc_money_channel',
+          'Money Reminders',
+          description: 'Daily prompts to record expenses',
+          importance: Importance.high,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+      await android?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'arc_feedback_channel',
+          'Feedback Updates',
+          description: 'Updates and thank-you notes for submitted feedback',
+          importance: Importance.high,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
     }
 
     _initialized = true;
@@ -129,16 +142,20 @@ class FlutterLocalNotificationGateway implements LocalNotificationGateway {
     if (kIsWeb) return ArcNotificationPermissionState.unsupported;
     try {
       if (Platform.isAndroid) {
-        final android = _plugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+        final android = _plugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
         final enabled = await android?.areNotificationsEnabled();
         return enabled == false
             ? ArcNotificationPermissionState.denied
             : ArcNotificationPermissionState.granted;
       }
       if (Platform.isIOS) {
-        final ios = _plugin.resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>();
+        final ios = _plugin
+            .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin
+            >();
         final settings = await ios?.checkPermissions();
         if (settings == null) return ArcNotificationPermissionState.unknown;
         return settings.isEnabled
@@ -157,12 +174,16 @@ class FlutterLocalNotificationGateway implements LocalNotificationGateway {
     try {
       bool? granted;
       if (Platform.isAndroid) {
-        final android = _plugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+        final android = _plugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
         granted = await android?.requestNotificationsPermission();
       } else if (Platform.isIOS) {
-        final ios = _plugin.resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>();
+        final ios = _plugin
+            .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin
+            >();
         granted = await ios?.requestPermissions(
           alert: true,
           badge: true,
@@ -183,10 +204,10 @@ class FlutterLocalNotificationGateway implements LocalNotificationGateway {
     if (kIsWeb) return const [];
     final pending = await _plugin.pendingNotificationRequests();
     return pending
-        .map((request) => ArcPendingNotification(
-              id: request.id,
-              payload: request.payload,
-            ))
+        .map(
+          (request) =>
+              ArcPendingNotification(id: request.id, payload: request.payload),
+        )
         .toList(growable: false);
   }
 
@@ -194,7 +215,9 @@ class FlutterLocalNotificationGateway implements LocalNotificationGateway {
   Future<void> schedule(ArcNotificationSpec spec) async {
     if (kIsWeb) return;
     if (!_initialized) {
-      throw StateError('Notification gateway must be initialized before scheduling.');
+      throw StateError(
+        'Notification gateway must be initialized before scheduling.',
+      );
     }
 
     final channel = _channelDetails(spec.channel);
@@ -209,6 +232,18 @@ class FlutterLocalNotificationGateway implements LocalNotificationGateway {
         enableVibration: true,
         visibility: NotificationVisibility.public,
         category: AndroidNotificationCategory.reminder,
+        ongoing: spec.persistent,
+        autoCancel: !spec.persistent,
+        actions: spec.actions
+            .map(
+              (action) => AndroidNotificationAction(
+                action.id,
+                action.title,
+                showsUserInterface: true,
+                cancelNotification: true,
+              ),
+            )
+            .toList(growable: false),
       ),
       iOS: const DarwinNotificationDetails(
         presentAlert: true,
@@ -229,8 +264,8 @@ class FlutterLocalNotificationGateway implements LocalNotificationGateway {
       payload: spec.payload,
       matchDateTimeComponents:
           spec.recurrence == ArcNotificationRecurrence.daily
-              ? DateTimeComponents.time
-              : null,
+          ? DateTimeComponents.time
+          : null,
     );
   }
 
@@ -253,6 +288,18 @@ class FlutterLocalNotificationGateway implements LocalNotificationGateway {
         enableVibration: true,
         visibility: NotificationVisibility.public,
         category: AndroidNotificationCategory.reminder,
+        ongoing: spec.persistent,
+        autoCancel: !spec.persistent,
+        actions: spec.actions
+            .map(
+              (action) => AndroidNotificationAction(
+                action.id,
+                action.title,
+                showsUserInterface: true,
+                cancelNotification: true,
+              ),
+            )
+            .toList(growable: false),
       ),
       iOS: const DarwinNotificationDetails(
         presentAlert: true,
@@ -284,34 +331,37 @@ class FlutterLocalNotificationGateway implements LocalNotificationGateway {
   void _handleResponse(NotificationResponse response) {
     final payload = ArcNotificationPayload.tryParse(response.payload);
     if (payload != null && !_tapController.isClosed) {
-      _tapController.add(payload);
+      _tapController.add(
+        payload.withResponse(
+          actionId: response.actionId,
+          notificationId: response.id,
+        ),
+      );
     }
   }
 
-  (String, String, String) _channelDetails(
-    ArcNotificationChannel channel,
-  ) {
+  (String, String, String) _channelDetails(ArcNotificationChannel channel) {
     return switch (channel) {
       ArcNotificationChannel.tasks => (
-          'arc_tasks_channel',
-          'Task Reminders',
-          'Task deadlines and upcoming task alerts',
-        ),
+        'arc_tasks_channel',
+        'Task Reminders',
+        'Task deadlines and upcoming task alerts',
+      ),
       ArcNotificationChannel.habits => (
-          'arc_habits_channel',
-          'Habit Reminders',
-          'Habit times and daily habit check-ins',
-        ),
+        'arc_habits_channel',
+        'Habit Reminders',
+        'Habit times and daily habit check-ins',
+      ),
       ArcNotificationChannel.money => (
-          'arc_money_channel',
-          'Money Reminders',
-          'Daily prompts to record expenses',
-        ),
+        'arc_money_channel',
+        'Money Reminders',
+        'Daily prompts to record expenses',
+      ),
       ArcNotificationChannel.feedback => (
-          'arc_feedback_channel',
-          'Feedback Updates',
-          'Updates and thank-you notes for submitted feedback',
-        ),
+        'arc_feedback_channel',
+        'Feedback Updates',
+        'Updates and thank-you notes for submitted feedback',
+      ),
     };
   }
 

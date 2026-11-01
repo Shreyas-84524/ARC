@@ -84,8 +84,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     final cardBgColor = isDark ? AppColors.darkCard : AppColors.lightCard;
-    final primaryTextColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final primaryTextColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final secondaryTextColor = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
     final buttonBgColor = AppColors.accent;
     const buttonTextColor = Colors.black;
 
@@ -93,16 +97,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 32.0,
+            ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 28.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 28.0,
+                ),
                 decoration: BoxDecoration(
                   color: cardBgColor,
                   borderRadius: BorderRadius.circular(AppTheme.radiusCard),
                   border: Border.all(
-                    color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                    color: isDark
+                        ? AppColors.borderMedium
+                        : AppColors.borderMediumLight,
                   ),
                   boxShadow: isDark
                       ? [
@@ -115,8 +127,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       : [AppColors.cardShadowLight],
                 ),
                 child: _emailSent
-                    ? _buildSuccessView(primaryTextColor, secondaryTextColor, buttonBgColor, buttonTextColor, isDark)
-                    : _buildFormView(theme, primaryTextColor, secondaryTextColor, buttonBgColor, buttonTextColor, isDark),
+                    ? _buildSuccessView(
+                        primaryTextColor,
+                        secondaryTextColor,
+                        buttonBgColor,
+                        buttonTextColor,
+                        isDark,
+                      )
+                    : _buildFormView(
+                        theme,
+                        primaryTextColor,
+                        secondaryTextColor,
+                        buttonBgColor,
+                        buttonTextColor,
+                        isDark,
+                      ),
               ),
             ),
           ),
@@ -240,14 +265,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 color: secondaryTextColor,
               ),
               hintStyle: TextStyle(
-                color: isDark ? AppColors.textPlaceholderDark : AppColors.textPlaceholderLight,
+                color: isDark
+                    ? AppColors.textPlaceholderDark
+                    : AppColors.textPlaceholderLight,
               ),
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
                 return 'Please enter your email';
               }
-              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value.trim())) {
+              if (!RegExp(
+                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+              ).hasMatch(value.trim())) {
                 return 'Please enter a valid email address';
               }
               return null;
@@ -259,12 +288,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           SizedBox(
             height: 50,
             child: ElevatedButton(
-              onPressed: (_isLoading || !_isFormValid) ? null : _handleSendResetEmail,
+              onPressed: (_isLoading || !_isFormValid)
+                  ? null
+                  : _handleSendResetEmail,
               style: ElevatedButton.styleFrom(
                 backgroundColor: buttonBgColor,
                 foregroundColor: buttonTextColor,
-                disabledBackgroundColor: isDark ? Colors.grey[800] : Colors.grey[300],
-                disabledForegroundColor: isDark ? Colors.grey[600] : Colors.grey[500],
+                disabledBackgroundColor: isDark
+                    ? Colors.grey[800]
+                    : Colors.grey[300],
+                disabledForegroundColor: isDark
+                    ? Colors.grey[600]
+                    : Colors.grey[500],
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppTheme.radiusButton),
                 ),
@@ -299,9 +334,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 'Back to Sign In',
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
-              style: TextButton.styleFrom(
-                foregroundColor: secondaryTextColor,
-              ),
+              style: TextButton.styleFrom(foregroundColor: secondaryTextColor),
             ),
           ),
         ],
@@ -394,10 +427,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
             child: const Text(
               'Back to Sign In',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
         ),

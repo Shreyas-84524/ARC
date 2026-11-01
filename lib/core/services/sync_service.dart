@@ -55,13 +55,16 @@ class SyncService {
     required MoneyRepository moneyRepository,
     required SettingsRepository settingsRepository,
     fs.FirebaseFirestore? firestore,
-  })  : _userId = userId,
-        _taskRepository = taskRepository,
-        _habitRepository = habitRepository,
-        _moneyRepository = moneyRepository,
-        _settingsRepository = settingsRepository,
-        _firestore = firestore {
-    _settingsBox = HiveService().getUserBox(HiveService.settingsBoxName, _userId);
+  }) : _userId = userId,
+       _taskRepository = taskRepository,
+       _habitRepository = habitRepository,
+       _moneyRepository = moneyRepository,
+       _settingsRepository = settingsRepository,
+       _firestore = firestore {
+    _settingsBox = HiveService().getUserBox(
+      HiveService.settingsBoxName,
+      _userId,
+    );
   }
 
   String? get userId => _userId;
@@ -79,21 +82,35 @@ class SyncService {
     final firestore = _firestore ?? fs.FirebaseFirestore.instance;
     final uid = _userId;
     if (uid != null && uid.isNotEmpty) {
-      return firestore.collection('users').doc(uid).collection('settings').doc('profile');
+      return firestore
+          .collection('users')
+          .doc(uid)
+          .collection('settings')
+          .doc('profile');
     }
     return firestore.collection('settings').doc('global');
   }
 
   bool isInitialSyncCompleted() {
-    return _settingsBox.get('initial_sync_completed', defaultValue: false) as bool;
+    return _settingsBox.get('initial_sync_completed', defaultValue: false)
+        as bool;
   }
 
   bool isFirstInstallAndEmpty() {
     if (_userId == null || _userId.isEmpty) return false;
     if (isInitialSyncCompleted()) return false;
-    final taskBox = HiveService().getUserBox<Task>(HiveService.tasksBoxName, _userId);
-    final habitBox = HiveService().getUserBox<Habit>(HiveService.habitsBoxName, _userId);
-    final moneyBox = HiveService().getUserBox<Transaction>(HiveService.moneyBoxName, _userId);
+    final taskBox = HiveService().getUserBox<Task>(
+      HiveService.tasksBoxName,
+      _userId,
+    );
+    final habitBox = HiveService().getUserBox<Habit>(
+      HiveService.habitsBoxName,
+      _userId,
+    );
+    final moneyBox = HiveService().getUserBox<Transaction>(
+      HiveService.moneyBoxName,
+      _userId,
+    );
     return taskBox.isEmpty && habitBox.isEmpty && moneyBox.isEmpty;
   }
 
@@ -102,7 +119,9 @@ class SyncService {
       _isSyncing = true;
 
       try {
-        debugPrint('[SyncService.syncAllPending] Starting synchronized pending queue flush for UID: $_userId');
+        debugPrint(
+          '[SyncService.syncAllPending] Starting synchronized pending queue flush for UID: $_userId',
+        );
         final taskOk = await _taskRepository.syncPending();
         final habitOk = await _habitRepository.syncPending();
         final moneyOk = await _moneyRepository.syncPending();
@@ -110,13 +129,19 @@ class SyncService {
 
         final allOk = taskOk && habitOk && moneyOk && settingsOk;
         if (allOk) {
-          debugPrint('[SyncService.syncAllPending] All pending queues flushed successfully.');
+          debugPrint(
+            '[SyncService.syncAllPending] All pending queues flushed successfully.',
+          );
         } else {
-          debugPrint('[SyncService.syncAllPending] Pending synchronization incomplete due to unsynced items.');
+          debugPrint(
+            '[SyncService.syncAllPending] Pending synchronization incomplete due to unsynced items.',
+          );
         }
         return allOk;
       } catch (e) {
-        debugPrint('[SyncService.syncAllPending] Error during background sync: $e');
+        debugPrint(
+          '[SyncService.syncAllPending] Error during background sync: $e',
+        );
         return false;
       } finally {
         _isSyncing = false;
@@ -124,33 +149,66 @@ class SyncService {
     });
   }
 
-  Future<void> pullInitialDataFromFirestore({VoidCallback? onRefreshState}) async {
+  Future<void> pullInitialDataFromFirestore({
+    VoidCallback? onRefreshState,
+  }) async {
     if (_userId == null || _userId.isEmpty) {
-      debugPrint('SyncService: Skipping Firestore pull for unauthenticated session.');
+      debugPrint(
+        'SyncService: Skipping Firestore pull for unauthenticated session.',
+      );
       return;
     }
 
     return _synchronized<void>(() async {
       _isSyncing = true;
       try {
-        debugPrint('SyncService: Parallel downloading Cloud Firestore data to local database...');
+        debugPrint(
+          'SyncService: Parallel downloading Cloud Firestore data to local database...',
+        );
 
-        final taskBox = HiveService().getUserBox<Task>(HiveService.tasksBoxName, _userId);
-        final taskQueue = HiveService().getUserBox(HiveService.tasksSyncQueueBoxName, _userId);
-        final habitBox = HiveService().getUserBox<Habit>(HiveService.habitsBoxName, _userId);
-        final habitQueue = HiveService().getUserBox(HiveService.habitsSyncQueueBoxName, _userId);
-        final entryBox = HiveService().getUserBox<HabitEntry>(HiveService.habitEntriesBoxName, _userId);
-        final txBox = HiveService().getUserBox<Transaction>(HiveService.moneyBoxName, _userId);
-        final moneyQueue = HiveService().getUserBox(HiveService.moneySyncQueueBoxName, _userId);
+        final taskBox = HiveService().getUserBox<Task>(
+          HiveService.tasksBoxName,
+          _userId,
+        );
+        final taskQueue = HiveService().getUserBox(
+          HiveService.tasksSyncQueueBoxName,
+          _userId,
+        );
+        final habitBox = HiveService().getUserBox<Habit>(
+          HiveService.habitsBoxName,
+          _userId,
+        );
+        final habitQueue = HiveService().getUserBox(
+          HiveService.habitsSyncQueueBoxName,
+          _userId,
+        );
+        final entryBox = HiveService().getUserBox<HabitEntry>(
+          HiveService.habitEntriesBoxName,
+          _userId,
+        );
+        final txBox = HiveService().getUserBox<Transaction>(
+          HiveService.moneyBoxName,
+          _userId,
+        );
+        final moneyQueue = HiveService().getUserBox(
+          HiveService.moneySyncQueueBoxName,
+          _userId,
+        );
 
         // Execute all 7 Cloud Firestore queries concurrently in parallel
         final results = await Future.wait([
           _collectionRef('tasks').get().timeout(const Duration(seconds: 10)),
           _collectionRef('habits').get().timeout(const Duration(seconds: 10)),
-          _collectionRef('habitEntries').get().timeout(const Duration(seconds: 10)),
-          _collectionRef('transactions').get().timeout(const Duration(seconds: 10)),
+          _collectionRef(
+            'habitEntries',
+          ).get().timeout(const Duration(seconds: 10)),
+          _collectionRef(
+            'transactions',
+          ).get().timeout(const Duration(seconds: 10)),
           _collectionRef('budgets').get().timeout(const Duration(seconds: 10)),
-          _collectionRef('monthlySummaries').get().timeout(const Duration(seconds: 10)),
+          _collectionRef(
+            'monthlySummaries',
+          ).get().timeout(const Duration(seconds: 10)),
           _settingsDocRef().get().timeout(const Duration(seconds: 10)),
         ]);
 
@@ -159,8 +217,10 @@ class SyncService {
         final entryDocs = results[2] as fs.QuerySnapshot<Map<String, dynamic>>;
         final txDocs = results[3] as fs.QuerySnapshot<Map<String, dynamic>>;
         final budgetDocs = results[4] as fs.QuerySnapshot<Map<String, dynamic>>;
-        final summaryDocs = results[5] as fs.QuerySnapshot<Map<String, dynamic>>;
-        final settingsDoc = results[6] as fs.DocumentSnapshot<Map<String, dynamic>>;
+        final summaryDocs =
+            results[5] as fs.QuerySnapshot<Map<String, dynamic>>;
+        final settingsDoc =
+            results[6] as fs.DocumentSnapshot<Map<String, dynamic>>;
 
         // 1. Process tasks collection
         for (final doc in taskDocs.docs) {
@@ -169,7 +229,9 @@ class SyncService {
           final localTask = taskBox.get(remoteTask.id);
           if (taskQueue.containsKey(remoteTask.id)) continue;
 
-          if (localTask == null || remoteTask.updatedAt.isAfter(localTask.updatedAt) || remoteTask.updatedAt.isAtSameMomentAs(localTask.updatedAt)) {
+          if (localTask == null ||
+              remoteTask.updatedAt.isAfter(localTask.updatedAt) ||
+              remoteTask.updatedAt.isAtSameMomentAs(localTask.updatedAt)) {
             await taskBox.put(remoteTask.id, remoteTask);
           }
         }
@@ -181,7 +243,9 @@ class SyncService {
           final localHabit = habitBox.get(remoteHabit.id);
           if (habitQueue.containsKey('habit_${remoteHabit.id}')) continue;
 
-          if (localHabit == null || remoteHabit.updatedAt.isAfter(localHabit.updatedAt) || remoteHabit.updatedAt.isAtSameMomentAs(localHabit.updatedAt)) {
+          if (localHabit == null ||
+              remoteHabit.updatedAt.isAfter(localHabit.updatedAt) ||
+              remoteHabit.updatedAt.isAtSameMomentAs(localHabit.updatedAt)) {
             await habitBox.put(remoteHabit.id, remoteHabit);
           }
         }
@@ -224,7 +288,9 @@ class SyncService {
         // 7. Process settings document
         if (settingsDoc.exists && settingsDoc.data() != null) {
           final data = settingsDoc.data()!;
-          final isQueued = _settingsBox.get('settings_sync_queued', defaultValue: false) as bool;
+          final isQueued =
+              _settingsBox.get('settings_sync_queued', defaultValue: false)
+                  as bool;
           if (!isQueued) {
             await _settingsBox.put(SettingsRepository.settingsHiveKey, data);
           }
@@ -237,7 +303,9 @@ class SyncService {
         await _settingsRepository.syncPending();
 
         await _settingsBox.put('initial_sync_completed', true);
-        debugPrint('SyncService: Parallel download from Firestore completed successfully.');
+        debugPrint(
+          'SyncService: Parallel download from Firestore completed successfully.',
+        );
 
         if (onRefreshState != null) {
           onRefreshState();
@@ -256,140 +324,205 @@ class SyncService {
     stopRealTimeSync();
 
     if (_userId == null || _userId.isEmpty) {
-      debugPrint('SyncService: Real-time listeners skipped for unauthenticated user.');
+      debugPrint(
+        'SyncService: Real-time listeners skipped for unauthenticated user.',
+      );
       return;
     }
 
     try {
       // 1. Tasks Listener
       _subscriptions.add(
-        _collectionRef('tasks').snapshots().listen((snapshot) async {
-          final taskBox = HiveService().getUserBox<Task>(HiveService.tasksBoxName, _userId);
-          final taskQueue = HiveService().getUserBox(HiveService.tasksSyncQueueBoxName, _userId);
+        _collectionRef('tasks').snapshots().listen(
+          (snapshot) async {
+            final taskBox = HiveService().getUserBox<Task>(
+              HiveService.tasksBoxName,
+              _userId,
+            );
+            final taskQueue = HiveService().getUserBox(
+              HiveService.tasksSyncQueueBoxName,
+              _userId,
+            );
 
-          for (final change in snapshot.docChanges) {
-            final id = change.doc.id;
-            if (taskQueue.containsKey(id)) continue;
+            for (final change in snapshot.docChanges) {
+              final id = change.doc.id;
+              if (taskQueue.containsKey(id)) continue;
 
-            if (change.type == fs.DocumentChangeType.removed) {
-              await taskBox.delete(id);
-            } else if (change.doc.data() != null) {
-              final remoteTask = Task.fromMap(change.doc.data()!);
-              final localTask = taskBox.get(id);
-              if (localTask == null || remoteTask.updatedAt.isAfter(localTask.updatedAt) || remoteTask.updatedAt.isAtSameMomentAs(localTask.updatedAt)) {
-                await taskBox.put(id, remoteTask);
+              if (change.type == fs.DocumentChangeType.removed) {
+                await taskBox.delete(id);
+              } else if (change.doc.data() != null) {
+                final remoteTask = Task.fromMap(change.doc.data()!);
+                final localTask = taskBox.get(id);
+                if (localTask == null ||
+                    remoteTask.updatedAt.isAfter(localTask.updatedAt) ||
+                    remoteTask.updatedAt.isAtSameMomentAs(
+                      localTask.updatedAt,
+                    )) {
+                  await taskBox.put(id, remoteTask);
+                }
               }
             }
-          }
-          if (onRefreshState != null) onRefreshState();
-        }, onError: (e) {
-          debugPrint('SyncService real-time tasks listener notice: $e');
-        }),
+            if (onRefreshState != null) onRefreshState();
+          },
+          onError: (e) {
+            debugPrint('SyncService real-time tasks listener notice: $e');
+          },
+        ),
       );
 
       // 2. Habits Listener
       _subscriptions.add(
-        _collectionRef('habits').snapshots().listen((snapshot) async {
-          final habitBox = HiveService().getUserBox<Habit>(HiveService.habitsBoxName, _userId);
-          final habitQueue = HiveService().getUserBox(HiveService.habitsSyncQueueBoxName, _userId);
+        _collectionRef('habits').snapshots().listen(
+          (snapshot) async {
+            final habitBox = HiveService().getUserBox<Habit>(
+              HiveService.habitsBoxName,
+              _userId,
+            );
+            final habitQueue = HiveService().getUserBox(
+              HiveService.habitsSyncQueueBoxName,
+              _userId,
+            );
 
-          for (final change in snapshot.docChanges) {
-            final id = change.doc.id;
-            if (habitQueue.containsKey('habit_$id')) continue;
+            for (final change in snapshot.docChanges) {
+              final id = change.doc.id;
+              if (habitQueue.containsKey('habit_$id')) continue;
 
-            if (change.type == fs.DocumentChangeType.removed) {
-              await habitBox.delete(id);
-            } else if (change.doc.data() != null) {
-              final remoteHabit = Habit.fromMap(change.doc.data()!);
-              final localHabit = habitBox.get(id);
-              if (localHabit == null || remoteHabit.updatedAt.isAfter(localHabit.updatedAt) || remoteHabit.updatedAt.isAtSameMomentAs(localHabit.updatedAt)) {
-                await habitBox.put(id, remoteHabit);
+              if (change.type == fs.DocumentChangeType.removed) {
+                await habitBox.delete(id);
+              } else if (change.doc.data() != null) {
+                final remoteHabit = Habit.fromMap(change.doc.data()!);
+                final localHabit = habitBox.get(id);
+                if (localHabit == null ||
+                    remoteHabit.updatedAt.isAfter(localHabit.updatedAt) ||
+                    remoteHabit.updatedAt.isAtSameMomentAs(
+                      localHabit.updatedAt,
+                    )) {
+                  await habitBox.put(id, remoteHabit);
+                }
               }
             }
-          }
-          if (onRefreshState != null) onRefreshState();
-        }, onError: (e) {
-          debugPrint('SyncService real-time habits listener notice: $e');
-        }),
+            if (onRefreshState != null) onRefreshState();
+          },
+          onError: (e) {
+            debugPrint('SyncService real-time habits listener notice: $e');
+          },
+        ),
       );
 
       // 3. Habit Entries Listener
       _subscriptions.add(
-        _collectionRef('habitEntries').snapshots().listen((snapshot) async {
-          final entryBox = HiveService().getUserBox<HabitEntry>(HiveService.habitEntriesBoxName, _userId);
-          final habitQueue = HiveService().getUserBox(HiveService.habitsSyncQueueBoxName, _userId);
+        _collectionRef('habitEntries').snapshots().listen(
+          (snapshot) async {
+            final entryBox = HiveService().getUserBox<HabitEntry>(
+              HiveService.habitEntriesBoxName,
+              _userId,
+            );
+            final habitQueue = HiveService().getUserBox(
+              HiveService.habitsSyncQueueBoxName,
+              _userId,
+            );
 
-          for (final change in snapshot.docChanges) {
-            final id = change.doc.id;
-            if (habitQueue.containsKey('entry_$id')) continue;
+            for (final change in snapshot.docChanges) {
+              final id = change.doc.id;
+              if (habitQueue.containsKey('entry_$id')) continue;
 
-            if (change.type == fs.DocumentChangeType.removed) {
-              await entryBox.delete(id);
-            } else if (change.doc.data() != null) {
-              final entry = HabitEntry.fromMap(change.doc.data()!);
-              await entryBox.put(id, entry);
+              if (change.type == fs.DocumentChangeType.removed) {
+                await entryBox.delete(id);
+              } else if (change.doc.data() != null) {
+                final entry = HabitEntry.fromMap(change.doc.data()!);
+                await entryBox.put(id, entry);
+              }
             }
-          }
-          if (onRefreshState != null) onRefreshState();
-        }, onError: (e) {
-          debugPrint('SyncService real-time habitEntries listener notice: $e');
-        }),
+            if (onRefreshState != null) onRefreshState();
+          },
+          onError: (e) {
+            debugPrint(
+              'SyncService real-time habitEntries listener notice: $e',
+            );
+          },
+        ),
       );
 
       // 4. Money Transactions Listener
       _subscriptions.add(
-        _collectionRef('transactions').snapshots().listen((snapshot) async {
-          final txBox = HiveService().getUserBox<Transaction>(HiveService.moneyBoxName, _userId);
-          final moneyQueue = HiveService().getUserBox(HiveService.moneySyncQueueBoxName, _userId);
+        _collectionRef('transactions').snapshots().listen(
+          (snapshot) async {
+            final txBox = HiveService().getUserBox<Transaction>(
+              HiveService.moneyBoxName,
+              _userId,
+            );
+            final moneyQueue = HiveService().getUserBox(
+              HiveService.moneySyncQueueBoxName,
+              _userId,
+            );
 
-          for (final change in snapshot.docChanges) {
-            final id = change.doc.id;
-            if (moneyQueue.containsKey('tx_$id')) continue;
+            for (final change in snapshot.docChanges) {
+              final id = change.doc.id;
+              if (moneyQueue.containsKey('tx_$id')) continue;
 
-            if (change.type == fs.DocumentChangeType.removed) {
-              await txBox.delete(id);
-            } else if (change.doc.data() != null) {
-              final tx = Transaction.fromMap(change.doc.data()!);
-              await txBox.put(id, tx);
+              if (change.type == fs.DocumentChangeType.removed) {
+                await txBox.delete(id);
+              } else if (change.doc.data() != null) {
+                final tx = Transaction.fromMap(change.doc.data()!);
+                await txBox.put(id, tx);
+              }
             }
-          }
-          if (onRefreshState != null) onRefreshState();
-        }, onError: (e) {
-          debugPrint('SyncService real-time transactions listener notice: $e');
-        }),
+            if (onRefreshState != null) onRefreshState();
+          },
+          onError: (e) {
+            debugPrint(
+              'SyncService real-time transactions listener notice: $e',
+            );
+          },
+        ),
       );
 
       // 5. Monthly Budgets Listener
       _subscriptions.add(
-        _collectionRef('budgets').snapshots().listen((snapshot) async {
-          final moneyQueue = HiveService().getUserBox(HiveService.moneySyncQueueBoxName, _userId);
-          for (final change in snapshot.docChanges) {
-            final month = change.doc.id;
-            if (moneyQueue.containsKey('budget_$month')) continue;
-            if (change.type == fs.DocumentChangeType.removed) {
-              await _settingsBox.delete('budget_$month');
-            } else if (change.doc.data() != null) {
-              final val = (change.doc.data()!['amount'] as num?)?.toDouble() ?? 0.0;
-              await _settingsBox.put('budget_$month', val);
+        _collectionRef('budgets').snapshots().listen(
+          (snapshot) async {
+            final moneyQueue = HiveService().getUserBox(
+              HiveService.moneySyncQueueBoxName,
+              _userId,
+            );
+            for (final change in snapshot.docChanges) {
+              final month = change.doc.id;
+              if (moneyQueue.containsKey('budget_$month')) continue;
+              if (change.type == fs.DocumentChangeType.removed) {
+                await _settingsBox.delete('budget_$month');
+              } else if (change.doc.data() != null) {
+                final val =
+                    (change.doc.data()!['amount'] as num?)?.toDouble() ?? 0.0;
+                await _settingsBox.put('budget_$month', val);
+              }
             }
-          }
-          if (onRefreshState != null) onRefreshState();
-        }, onError: (e) {
-          debugPrint('SyncService real-time budgets listener notice: $e');
-        }),
+            if (onRefreshState != null) onRefreshState();
+          },
+          onError: (e) {
+            debugPrint('SyncService real-time budgets listener notice: $e');
+          },
+        ),
       );
 
       // 6. Settings Listener
       _subscriptions.add(
-        _settingsDocRef().snapshots().listen((snapshot) async {
-          final isQueued = _settingsBox.get('settings_sync_queued', defaultValue: false) as bool;
-          if (!isQueued && snapshot.exists && snapshot.data() != null) {
-            await _settingsBox.put(SettingsRepository.settingsHiveKey, snapshot.data()!);
-            if (onRefreshState != null) onRefreshState();
-          }
-        }, onError: (e) {
-          debugPrint('SyncService real-time settings listener notice: $e');
-        }),
+        _settingsDocRef().snapshots().listen(
+          (snapshot) async {
+            final isQueued =
+                _settingsBox.get('settings_sync_queued', defaultValue: false)
+                    as bool;
+            if (!isQueued && snapshot.exists && snapshot.data() != null) {
+              await _settingsBox.put(
+                SettingsRepository.settingsHiveKey,
+                snapshot.data()!,
+              );
+              if (onRefreshState != null) onRefreshState();
+            }
+          },
+          onError: (e) {
+            debugPrint('SyncService real-time settings listener notice: $e');
+          },
+        ),
       );
 
       debugPrint('SyncService: Real-time Firestore listeners started.');

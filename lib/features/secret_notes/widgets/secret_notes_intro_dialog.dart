@@ -24,7 +24,9 @@ class SecretNotesIntroDialog extends ConsumerWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTheme.radiusCard),
           side: BorderSide(
-            color: isDark ? AppColors.borderStrong : AppColors.borderMediumLight,
+            color: isDark
+                ? AppColors.borderStrong
+                : AppColors.borderMediumLight,
           ),
         ),
         titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
@@ -64,7 +66,9 @@ class SecretNotesIntroDialog extends ConsumerWidget {
               Text(
                 'Welcome to your private vault. Please review the essential rules:',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
                 ),
               ),
               const SizedBox(height: 16),
@@ -82,7 +86,7 @@ class SecretNotesIntroDialog extends ConsumerWidget {
                 index: '2',
                 title: 'Separate PIN',
                 description:
-                    'Your Secret Notes PIN is separate from your ARC account password or Google sign-in.',
+                    'A Secret Notes PIN is optional and separate from your ARC account password or Google sign-in. You can add or remove it in Secret Notes settings.',
                 icon: LucideIcons.keyRound,
               ),
               const SizedBox(height: 12),
@@ -129,7 +133,9 @@ class SecretNotesIntroDialog extends ConsumerWidget {
                 elevation: 0,
               ),
               onPressed: () async {
-                final securityService = ref.read(secretNotesSecurityServiceProvider);
+                final securityService = ref.read(
+                  secretNotesSecurityServiceProvider,
+                );
                 await securityService.markIntroSeen();
                 if (context.mounted) {
                   Navigator.of(context).pop();
@@ -137,10 +143,7 @@ class SecretNotesIntroDialog extends ConsumerWidget {
               },
               child: const Text(
                 'I Understand',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
             ),
           ),
@@ -162,11 +165,7 @@ class SecretNotesIntroDialog extends ConsumerWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          icon,
-          size: 18,
-          color: AppColors.accent,
-        ),
+        Icon(icon, size: 18, color: AppColors.accent),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -176,14 +175,18 @@ class SecretNotesIntroDialog extends ConsumerWidget {
                 '$index. $title',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 description,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
                   height: 1.3,
                 ),
               ),

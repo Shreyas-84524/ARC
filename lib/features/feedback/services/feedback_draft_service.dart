@@ -6,9 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class FeedbackDraftService {
   final SharedPreferences? _prefs;
 
-  FeedbackDraftService({
-    SharedPreferences? prefs,
-  }) : _prefs = prefs;
+  FeedbackDraftService({SharedPreferences? prefs}) : _prefs = prefs;
 
   static const String _prefix = 'arc_feedback_draft_';
 
@@ -29,8 +27,11 @@ class FeedbackDraftService {
     String? contactEmail,
     Map<String, dynamic>? extraFields,
   }) async {
-    final hasExtraContent = extraFields != null &&
-        extraFields.values.any((v) => v != null && v.toString().trim().isNotEmpty);
+    final hasExtraContent =
+        extraFields != null &&
+        extraFields.values.any(
+          (v) => v != null && v.toString().trim().isNotEmpty,
+        );
 
     // Don't save empty drafts
     if (message.trim().isEmpty &&

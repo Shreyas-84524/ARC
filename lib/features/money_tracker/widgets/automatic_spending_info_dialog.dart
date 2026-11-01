@@ -89,7 +89,9 @@ class AutomaticSpendingInfoDialog extends StatelessWidget {
           child: Text(
             'Cancel',
             style: TextStyle(
-              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+              color: isDark
+                  ? AppColors.textMutedDark
+                  : AppColors.textMutedLight,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -154,14 +156,18 @@ class AutomaticSpendingInfoDialog extends StatelessWidget {
                 title,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
                 ),
               ),
               const SizedBox(height: 3),
               Text(
                 description,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                  color: isDark
+                      ? AppColors.textMutedDark
+                      : AppColors.textMutedLight,
                   height: 1.35,
                 ),
               ),

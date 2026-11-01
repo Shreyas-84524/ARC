@@ -22,7 +22,8 @@ class HabitsScreen extends ConsumerStatefulWidget {
   ConsumerState<HabitsScreen> createState() => _HabitsScreenState();
 }
 
-class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerProviderStateMixin {
+class _HabitsScreenState extends ConsumerState<HabitsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _selectedAnalyticsGoalType = 'Daily';
   String _selectedIndividualFilter = 'Weekly';
@@ -77,7 +78,9 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
       if (longest > maxLongestStreak) maxLongestStreak = longest;
       totalRateSum += rate;
     }
-    final double avgCompletionRate = habits.isNotEmpty ? totalRateSum / habits.length : 0.0;
+    final double avgCompletionRate = habits.isNotEmpty
+        ? totalRateSum / habits.length
+        : 0.0;
     final String completionRateStr = '${(avgCompletionRate * 100).toInt()}%';
 
     // Analytics Calculations (Based on Daily Completion History for All Habits)
@@ -89,23 +92,37 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
     final todayStr = DateFormat('yyyy-MM-dd').format(now);
 
     if (_selectedAnalyticsGoalType == 'Daily') {
-      completedCount = entries.where((e) => e.dateStr == todayStr && e.completed).length;
+      completedCount = entries
+          .where((e) => e.dateStr == todayStr && e.completed)
+          .length;
       remainingCount = (habits.length - completedCount).clamp(0, habits.length);
-      completionPercent = habits.isNotEmpty ? completedCount / habits.length : 0.0;
+      completionPercent = habits.isNotEmpty
+          ? completedCount / habits.length
+          : 0.0;
     } else if (_selectedAnalyticsGoalType == 'Weekly') {
-      final last7Days = _getLast7Days().map((d) => DateFormat('yyyy-MM-dd').format(d)).toSet();
-      completedCount = entries.where((e) => last7Days.contains(e.dateStr) && e.completed).length;
+      final last7Days = _getLast7Days()
+          .map((d) => DateFormat('yyyy-MM-dd').format(d))
+          .toSet();
+      completedCount = entries
+          .where((e) => last7Days.contains(e.dateStr) && e.completed)
+          .length;
       final totalPossible = habits.length * 7;
       remainingCount = (totalPossible - completedCount).clamp(0, totalPossible);
-      completionPercent = totalPossible > 0 ? (completedCount / totalPossible).clamp(0.0, 1.0) : 0.0;
+      completionPercent = totalPossible > 0
+          ? (completedCount / totalPossible).clamp(0.0, 1.0)
+          : 0.0;
     } else {
       // Monthly
       final currentMonthStr = DateFormat('yyyy-MM').format(now);
-      completedCount = entries.where((e) => e.dateStr.startsWith(currentMonthStr) && e.completed).length;
+      completedCount = entries
+          .where((e) => e.dateStr.startsWith(currentMonthStr) && e.completed)
+          .length;
       final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
       final totalPossible = habits.length * daysInMonth;
       remainingCount = (totalPossible - completedCount).clamp(0, totalPossible);
-      completionPercent = totalPossible > 0 ? (completedCount / totalPossible).clamp(0.0, 1.0) : 0.0;
+      completionPercent = totalPossible > 0
+          ? (completedCount / totalPossible).clamp(0.0, 1.0)
+          : 0.0;
     }
 
     int analyticsCurrentStreak = maxCurrentStreak;
@@ -144,223 +161,306 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
                       vertical: 12,
                     ),
                     child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Overview metrics
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _buildStatColumn(
-                                context,
-                                title: 'Current Streak',
-                                value: '$maxCurrentStreak Days',
-                                icon: LucideIcons.zap,
-                                color: AppColors.accent,
-                              ),
-                              Container(
-                                height: 40,
-                                width: 1,
-                                color: isDark ? AppColors.borderStrong : AppColors.borderStrongLight,
-                              ),
-                              _buildStatColumn(
-                                context,
-                                title: 'Longest Streak',
-                                value: '$maxLongestStreak Days',
-                                icon: LucideIcons.trophy,
-                                color: AppColors.warning,
-                              ),
-                              Container(
-                                height: 40,
-                                width: 1,
-                                color: isDark ? AppColors.borderStrong : AppColors.borderStrongLight,
-                              ),
-                              _buildStatColumn(
-                                context,
-                                title: 'Completion Rate',
-                                value: completionRateStr,
-                                icon: LucideIcons.award,
-                                color: AppColors.success,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ).animate().fade(duration: 200.ms),
-
-                      const SizedBox(height: 24),
-                      Text(
-                        "Weekly Check-in",
-                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Habits weekly matrix grid
-                      if (habits.isEmpty)
-                        _buildEmptyState(context)
-                      else
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Overview metrics
                         Card(
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                            child: Column(
+                            padding: const EdgeInsets.all(20.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
-                                // Header: Dates
-                                Row(
-                                  children: [
-                                    const Expanded(flex: 3, child: SizedBox()),
-                                    ..._getLast7Days().map((date) {
-                                      final dayLabel = DateFormat('E').format(date).substring(0, 1);
-                                      final isToday = DateFormat('yyyy-MM-dd').format(date) ==
-                                          DateFormat('yyyy-MM-dd').format(DateTime.now());
-
-                                      return Expanded(
-                                        flex: 2,
-                                        child: Column(
-                                          children: [
-                                            Text(
-                                              dayLabel,
-                                              style: theme.textTheme.labelLarge?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                                color: isToday
-                                                    ? AppColors.accent
-                                                    : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              date.day.toString(),
-                                              style: theme.textTheme.labelLarge?.copyWith(
-                                                fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                                                color: isToday
-                                                    ? AppColors.accent
-                                                    : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    }),
-                                  ],
+                                _buildStatColumn(
+                                  context,
+                                  title: 'Current Streak',
+                                  value: '$maxCurrentStreak Days',
+                                  icon: LucideIcons.zap,
+                                  color: AppColors.accent,
                                 ),
-                                const SizedBox(height: 12),
-                                const Divider(height: 1),
-                                const SizedBox(height: 12),
-
-                                // Habits List Rows
-                                ListView.separated(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: habits.length,
-                                  separatorBuilder: (context, index) => const SizedBox(height: 16),
-                                  itemBuilder: (context, index) {
-                                    final habit = habits[index];
-                                    return Row(
-                                      children: [
-                                        Expanded(
-                                          flex: 3,
-                                          child: InkWell(
-                                            onTap: () => _showHabitEditor(context, habit),
-                                            borderRadius: BorderRadius.circular(8),
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Row(
-                                                  children: [
-                                                    Container(
-                                                      height: 8,
-                                                      width: 8,
-                                                      decoration: BoxDecoration(
-                                                        shape: BoxShape.circle,
-                                                        color: Color(habit.colorValue),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                    Expanded(
-                                                      child: Text(
-                                                        habit.name,
-                                                        style: theme.textTheme.bodyLarge?.copyWith(
-                                                          fontWeight: FontWeight.bold,
-                                                        ),
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow.ellipsis,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                 Text(
-                                                   habit.category,
-                                                   style: theme.textTheme.labelLarge?.copyWith(
-                                                     color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-                                                   ),
-                                                   maxLines: 1,
-                                                   overflow: TextOverflow.ellipsis,
-                                                 ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                        ..._getLast7Days().map((date) {
-                                          final dateStr = DateFormat('yyyy-MM-dd').format(date);
-                                          final isCompleted = entries.any(
-                                            (e) => e.habitId == habit.id && e.dateStr == dateStr && e.completed,
-                                          );
-
-                                          return Expanded(
-                                            flex: 2,
-                                            child: Center(
-                                              child: InkWell(
-                                                onTap: () {
-                                                  AppHaptics.lightImpact();
-                                                  ref.read(habitEntriesProvider.notifier).toggleEntry(
-                                                        habit.id,
-                                                        dateStr,
-                                                        !isCompleted,
-                                                      );
-                                                },
-                                                borderRadius: BorderRadius.circular(100),
-                                                child: Container(
-                                                  height: 28,
-                                                  width: 28,
-                                                  decoration: BoxDecoration(
-                                                    shape: BoxShape.circle,
-                                                    color: isCompleted
-                                                        ? Color(habit.colorValue)
-                                                        : Colors.transparent,
-                                                    border: Border.all(
-                                                      color: isCompleted
-                                                          ? Colors.transparent
-                                                          : (isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight),
-                                                      width: 1.5,
-                                                    ),
-                                                  ),
-                                                  alignment: Alignment.center,
-                                                  child: isCompleted
-                                                      ? Icon(
-                                                          LucideIcons.check,
-                                                          size: 14,
-                                                          color: habit.colorValue == 0xffccff00
-                                                              ? Colors.black
-                                                              : Colors.white,
-                                                        )
-                                                      : null,
-                                                ),
-                                              ),
-                                            ),
-                                          );
-                                        }),
-                                      ],
-                                    );
-                                  },
+                                Container(
+                                  height: 40,
+                                  width: 1,
+                                  color: isDark
+                                      ? AppColors.borderStrong
+                                      : AppColors.borderStrongLight,
+                                ),
+                                _buildStatColumn(
+                                  context,
+                                  title: 'Longest Streak',
+                                  value: '$maxLongestStreak Days',
+                                  icon: LucideIcons.trophy,
+                                  color: AppColors.warning,
+                                ),
+                                Container(
+                                  height: 40,
+                                  width: 1,
+                                  color: isDark
+                                      ? AppColors.borderStrong
+                                      : AppColors.borderStrongLight,
+                                ),
+                                _buildStatColumn(
+                                  context,
+                                  title: 'Completion Rate',
+                                  value: completionRateStr,
+                                  icon: LucideIcons.award,
+                                  color: AppColors.success,
                                 ),
                               ],
                             ),
                           ),
+                        ).animate().fade(duration: 200.ms),
+
+                        const SizedBox(height: 24),
+                        Text(
+                          "Weekly Check-in",
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                    ],
+                        const SizedBox(height: 16),
+
+                        // Habits weekly matrix grid
+                        if (habits.isEmpty)
+                          _buildEmptyState(context)
+                        else
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 12,
+                              ),
+                              child: Column(
+                                children: [
+                                  // Header: Dates
+                                  Row(
+                                    children: [
+                                      const Expanded(
+                                        flex: 3,
+                                        child: SizedBox(),
+                                      ),
+                                      ..._getLast7Days().map((date) {
+                                        final dayLabel = DateFormat(
+                                          'E',
+                                        ).format(date).substring(0, 1);
+                                        final isToday =
+                                            DateFormat(
+                                              'yyyy-MM-dd',
+                                            ).format(date) ==
+                                            DateFormat(
+                                              'yyyy-MM-dd',
+                                            ).format(DateTime.now());
+
+                                        return Expanded(
+                                          flex: 2,
+                                          child: Column(
+                                            children: [
+                                              Text(
+                                                dayLabel,
+                                                style: theme
+                                                    .textTheme
+                                                    .labelLarge
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: isToday
+                                                          ? AppColors.accent
+                                                          : (isDark
+                                                                ? AppColors
+                                                                      .textMutedDark
+                                                                : AppColors
+                                                                      .textMutedLight),
+                                                    ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                date.day.toString(),
+                                                style: theme
+                                                    .textTheme
+                                                    .labelLarge
+                                                    ?.copyWith(
+                                                      fontWeight: isToday
+                                                          ? FontWeight.bold
+                                                          : FontWeight.normal,
+                                                      color: isToday
+                                                          ? AppColors.accent
+                                                          : (isDark
+                                                                ? AppColors
+                                                                      .textSecondaryDark
+                                                                : AppColors
+                                                                      .textSecondaryLight),
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Divider(height: 1),
+                                  const SizedBox(height: 12),
+
+                                  // Habits List Rows
+                                  ListView.separated(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    itemCount: habits.length,
+                                    separatorBuilder: (context, index) =>
+                                        const SizedBox(height: 16),
+                                    itemBuilder: (context, index) {
+                                      final habit = habits[index];
+                                      return Row(
+                                        children: [
+                                          Expanded(
+                                            flex: 3,
+                                            child: InkWell(
+                                              onTap: () => _showHabitEditor(
+                                                context,
+                                                habit,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    children: [
+                                                      Container(
+                                                        height: 8,
+                                                        width: 8,
+                                                        decoration:
+                                                            BoxDecoration(
+                                                              shape: BoxShape
+                                                                  .circle,
+                                                              color: Color(
+                                                                habit
+                                                                    .colorValue,
+                                                              ),
+                                                            ),
+                                                      ),
+                                                      const SizedBox(width: 6),
+                                                      Expanded(
+                                                        child: Text(
+                                                          habit.name,
+                                                          style: theme
+                                                              .textTheme
+                                                              .bodyLarge
+                                                              ?.copyWith(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  Text(
+                                                    habit.category,
+                                                    style: theme
+                                                        .textTheme
+                                                        .labelLarge
+                                                        ?.copyWith(
+                                                          color: isDark
+                                                              ? AppColors
+                                                                    .textMutedDark
+                                                              : AppColors
+                                                                    .textMutedLight,
+                                                        ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                          ..._getLast7Days().map((date) {
+                                            final dateStr = DateFormat(
+                                              'yyyy-MM-dd',
+                                            ).format(date);
+                                            final isCompleted = entries.any(
+                                              (e) =>
+                                                  e.habitId == habit.id &&
+                                                  e.dateStr == dateStr &&
+                                                  e.completed,
+                                            );
+
+                                            return Expanded(
+                                              flex: 2,
+                                              child: Center(
+                                                child: InkWell(
+                                                  onTap: () {
+                                                    AppHaptics.lightImpact();
+                                                    ref
+                                                        .read(
+                                                          habitEntriesProvider
+                                                              .notifier,
+                                                        )
+                                                        .toggleEntry(
+                                                          habit.id,
+                                                          dateStr,
+                                                          !isCompleted,
+                                                        );
+                                                  },
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                        100,
+                                                      ),
+                                                  child: Container(
+                                                    height: 28,
+                                                    width: 28,
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      color: isCompleted
+                                                          ? Color(
+                                                              habit.colorValue,
+                                                            )
+                                                          : Colors.transparent,
+                                                      border: Border.all(
+                                                        color: isCompleted
+                                                            ? Colors.transparent
+                                                            : (isDark
+                                                                  ? AppColors
+                                                                        .borderSubtle
+                                                                  : AppColors
+                                                                        .borderSubtleLight),
+                                                        width: 1.5,
+                                                      ),
+                                                    ),
+                                                    alignment: Alignment.center,
+                                                    child: isCompleted
+                                                        ? Icon(
+                                                            LucideIcons.check,
+                                                            size: 14,
+                                                            color:
+                                                                habit.colorValue ==
+                                                                    0xffccff00
+                                                                ? Colors.black
+                                                                : Colors.white,
+                                                          )
+                                                        : null,
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          }),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
                 // ------------------ ANALYTICS VIEW ------------------
                 RefreshIndicator(
@@ -369,249 +469,350 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
                   },
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
                     child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Goal Filter Dropdown
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Filter Goal Type',
-                            style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              color: isDark ? AppColors.darkCard : AppColors.lightCard,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Goal Filter Dropdown
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Filter Goal Type',
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                            child: DropdownButton<String>(
-                              value: _selectedAnalyticsGoalType,
-                              underline: const SizedBox(),
-                              dropdownColor: isDark ? AppColors.darkModal : Colors.white,
-                              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-                              items: ['Daily', 'Weekly', 'Monthly'].map((g) {
-                                return DropdownMenuItem<String>(
-                                  value: g,
-                                  child: Text(g),
-                                );
-                              }).toList(),
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setState(() => _selectedAnalyticsGoalType = val);
-                                }
-                              },
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? AppColors.darkCard
+                                    : AppColors.lightCard,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isDark
+                                      ? AppColors.borderSubtle
+                                      : AppColors.borderSubtleLight,
+                                ),
+                              ),
+                              child: DropdownButton<String>(
+                                value: _selectedAnalyticsGoalType,
+                                underline: const SizedBox(),
+                                dropdownColor: isDark
+                                    ? AppColors.darkModal
+                                    : Colors.white,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                items: ['Daily', 'Weekly', 'Monthly'].map((g) {
+                                  return DropdownMenuItem<String>(
+                                    value: g,
+                                    child: Text(g),
+                                  );
+                                }).toList(),
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setState(
+                                      () => _selectedAnalyticsGoalType = val,
+                                    );
+                                  }
+                                },
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Chart Card (Pie Chart)
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: Column(
-                            children: [
-                              Text(
-                                "$_selectedAnalyticsGoalType Goal Compliance",
-                                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 24),
-                              
-                              // Animated Pie Chart
-                              SizedBox(
-                                height: 160,
-                                child: habits.isEmpty
-                                    ? Center(
-                                        child: Text(
-                                          "No Habits Created Yet",
-                                          style: theme.textTheme.bodyMedium?.copyWith(
-                                            color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-                                          ),
-                                        ),
-                                      )
-                                    : PieChart(
-                                        PieChartData(
-                                          sectionsSpace: 4,
-                                          centerSpaceRadius: 40,
-                                          sections: [
-                                            if (completedCount > 0)
-                                              PieChartSectionData(
-                                                color: AppColors.success,
-                                                value: completedCount.toDouble(),
-                                                title: '$completedCount',
-                                                radius: 46,
-                                                titleStyle: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.black,
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                            if (remainingCount > 0)
-                                              PieChartSectionData(
-                                                color: isDark ? AppColors.darkBgSecondary : AppColors.lightBgSecondary,
-                                                value: remainingCount.toDouble(),
-                                                title: '$remainingCount',
-                                                radius: 36,
-                                                titleStyle: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                        duration: const Duration(milliseconds: 300),
-                                        curve: Curves.easeInOut,
-                                      ),
-                              ),
-                              const SizedBox(height: 20),
-
-                              // Legends & Fractions
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                children: [
-                                  _buildLegendRow('Completed', completedCount, AppColors.success),
-                                  _buildLegendRow('Remaining', remainingCount, isDark ? AppColors.borderStrong : AppColors.borderStrongLight),
-                                  Column(
-                                    children: [
-                                      Text(
-                                        '${(completionPercent * 100).toInt()}%',
-                                        style: theme.textTheme.bodyLarge?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.accent,
-                                        ),
-                                      ),
-                                      const Text('Completion %', style: TextStyle(fontSize: 11)),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                          ],
                         ),
-                      ).animate().fade(duration: 200.ms),
+                        const SizedBox(height: 20),
 
-                      const SizedBox(height: 20),
-
-                      // Streaks & metrics for selected type
-                      Text(
-                        "Goal Group Performance",
-                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 12),
-                      
-                      GridView.count(
-                        crossAxisCount: 2,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 1.6,
-                        children: [
-                          _buildSmallMetricCard(context, 'Current Streak', '$analyticsCurrentStreak Days', AppColors.accent),
-                          _buildSmallMetricCard(context, 'Longest Streak', '$analyticsLongestStreak Days', AppColors.warning),
-                          _buildSmallMetricCard(context, 'Completion Rate', '${(avgAnalyticsRate * 100).toInt()}%', AppColors.success),
-                          _buildSmallMetricCard(context, 'Total Habits', '${habits.length}', AppColors.info),
-                        ],
-                      ).animate().fade(delay: 100.ms, duration: 250.ms),
-
-                      const SizedBox(height: 24),
-
-                      // Individual Goal Performance Section
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "Individual Goal Performance",
-                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              color: isDark ? AppColors.darkCard : AppColors.lightCard,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight,
-                              ),
-                            ),
-                            child: DropdownButton<String>(
-                              value: _selectedIndividualFilter,
-                              underline: const SizedBox(),
-                              dropdownColor: isDark ? AppColors.darkModal : Colors.white,
-                              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-                              items: const [
-                                DropdownMenuItem<String>(value: 'Weekly', child: Text('Weekly')),
-                                DropdownMenuItem<String>(value: 'Monthly', child: Text('Monthly')),
-                              ],
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setState(() => _selectedIndividualFilter = val);
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      if (habits.isEmpty)
+                        // Chart Card (Pie Chart)
                         Card(
                           child: Padding(
                             padding: const EdgeInsets.all(20.0),
-                            child: Center(
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    LucideIcons.checkSquare,
-                                    size: 36,
-                                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                            child: Column(
+                              children: [
+                                Text(
+                                  "$_selectedAnalyticsGoalType Goal Compliance",
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    "No habits created yet",
-                                    style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    "Create habits to track individual performance.",
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                                ),
+                                const SizedBox(height: 24),
+
+                                // Animated Pie Chart
+                                SizedBox(
+                                  height: 160,
+                                  child: habits.isEmpty
+                                      ? Center(
+                                          child: Text(
+                                            "No Habits Created Yet",
+                                            style: theme.textTheme.bodyMedium
+                                                ?.copyWith(
+                                                  color: isDark
+                                                      ? AppColors.textMutedDark
+                                                      : AppColors
+                                                            .textMutedLight,
+                                                ),
+                                          ),
+                                        )
+                                      : PieChart(
+                                          PieChartData(
+                                            sectionsSpace: 4,
+                                            centerSpaceRadius: 40,
+                                            sections: [
+                                              if (completedCount > 0)
+                                                PieChartSectionData(
+                                                  color: AppColors.success,
+                                                  value: completedCount
+                                                      .toDouble(),
+                                                  title: '$completedCount',
+                                                  radius: 46,
+                                                  titleStyle: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.black,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              if (remainingCount > 0)
+                                                PieChartSectionData(
+                                                  color: isDark
+                                                      ? AppColors
+                                                            .darkBgSecondary
+                                                      : AppColors
+                                                            .lightBgSecondary,
+                                                  value: remainingCount
+                                                      .toDouble(),
+                                                  title: '$remainingCount',
+                                                  radius: 36,
+                                                  titleStyle: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: isDark
+                                                        ? AppColors
+                                                              .textSecondaryDark
+                                                        : AppColors
+                                                              .textSecondaryLight,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                          duration: const Duration(
+                                            milliseconds: 300,
+                                          ),
+                                          curve: Curves.easeInOut,
+                                        ),
+                                ),
+                                const SizedBox(height: 20),
+
+                                // Legends & Fractions
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceAround,
+                                  children: [
+                                    _buildLegendRow(
+                                      'Completed',
+                                      completedCount,
+                                      AppColors.success,
                                     ),
-                                  ),
-                                ],
-                              ),
+                                    _buildLegendRow(
+                                      'Remaining',
+                                      remainingCount,
+                                      isDark
+                                          ? AppColors.borderStrong
+                                          : AppColors.borderStrongLight,
+                                    ),
+                                    Column(
+                                      children: [
+                                        Text(
+                                          '${(completionPercent * 100).toInt()}%',
+                                          style: theme.textTheme.bodyLarge
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.accent,
+                                              ),
+                                        ),
+                                        const Text(
+                                          'Completion %',
+                                          style: TextStyle(fontSize: 11),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
-                        ).animate().fade(duration: 200.ms)
-                      else
-                        ListView.separated(
+                        ).animate().fade(duration: 200.ms),
+
+                        const SizedBox(height: 20),
+
+                        // Streaks & metrics for selected type
+                        Text(
+                          "Goal Group Performance",
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        GridView.count(
+                          crossAxisCount: 2,
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: habits.length,
-                          separatorBuilder: (context, index) => const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final habit = habits[index];
-                            return _buildIndividualHabitCard(
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 1.6,
+                          children: [
+                            _buildSmallMetricCard(
                               context,
-                              habit,
-                              entries,
-                              _selectedIndividualFilter,
-                            );
-                          },
+                              'Current Streak',
+                              '$analyticsCurrentStreak Days',
+                              AppColors.accent,
+                            ),
+                            _buildSmallMetricCard(
+                              context,
+                              'Longest Streak',
+                              '$analyticsLongestStreak Days',
+                              AppColors.warning,
+                            ),
+                            _buildSmallMetricCard(
+                              context,
+                              'Completion Rate',
+                              '${(avgAnalyticsRate * 100).toInt()}%',
+                              AppColors.success,
+                            ),
+                            _buildSmallMetricCard(
+                              context,
+                              'Total Habits',
+                              '${habits.length}',
+                              AppColors.info,
+                            ),
+                          ],
                         ).animate().fade(delay: 100.ms, duration: 250.ms),
 
-                      const SizedBox(height: 80),
-                    ],
+                        const SizedBox(height: 24),
+
+                        // Individual Goal Performance Section
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Individual Goal Performance",
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? AppColors.darkCard
+                                    : AppColors.lightCard,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isDark
+                                      ? AppColors.borderSubtle
+                                      : AppColors.borderSubtleLight,
+                                ),
+                              ),
+                              child: DropdownButton<String>(
+                                value: _selectedIndividualFilter,
+                                underline: const SizedBox(),
+                                dropdownColor: isDark
+                                    ? AppColors.darkModal
+                                    : Colors.white,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                items: const [
+                                  DropdownMenuItem<String>(
+                                    value: 'Weekly',
+                                    child: Text('Weekly'),
+                                  ),
+                                  DropdownMenuItem<String>(
+                                    value: 'Monthly',
+                                    child: Text('Monthly'),
+                                  ),
+                                ],
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setState(
+                                      () => _selectedIndividualFilter = val,
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        if (habits.isEmpty)
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(20.0),
+                              child: Center(
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      LucideIcons.checkSquare,
+                                      size: 36,
+                                      color: isDark
+                                          ? AppColors.textMutedDark
+                                          : AppColors.textMutedLight,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      "No habits created yet",
+                                      style: theme.textTheme.bodyLarge
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "Create habits to track individual performance.",
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: isDark
+                                                ? AppColors.textMutedDark
+                                                : AppColors.textMutedLight,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ).animate().fade(duration: 200.ms)
+                        else
+                          ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: habits.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final habit = habits[index];
+                              return _buildIndividualHabitCard(
+                                context,
+                                habit,
+                                entries,
+                                _selectedIndividualFilter,
+                              );
+                            },
+                          ).animate().fade(delay: 100.ms, duration: 250.ms),
+
+                        const SizedBox(height: 80),
+                      ],
+                    ),
                   ),
                 ),
-              ),
               ],
             ),
           ),
@@ -648,7 +849,12 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildSmallMetricCard(BuildContext context, String title, String value, Color color) {
+  Widget _buildSmallMetricCard(
+    BuildContext context,
+    String title,
+    String value,
+    Color color,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Card(
       child: Padding(
@@ -660,17 +866,19 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
             Text(
               value,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               title,
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-                    fontWeight: FontWeight.bold,
-                  ),
+                color: isDark
+                    ? AppColors.textMutedDark
+                    : AppColors.textMutedLight,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -682,7 +890,8 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
     return EmptyStateWidget(
       icon: LucideIcons.zap,
       title: 'No habits tracking yet',
-      description: 'Create habits to build consistent routines and track progress over time.',
+      description:
+          'Create habits to build consistent routines and track progress over time.',
       actionLabel: 'Create Habit',
       onAction: () => _showHabitEditor(context),
     );
@@ -709,7 +918,9 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
               value,
               style: theme.textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
               ),
             ),
           ),
@@ -719,7 +930,9 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
             child: Text(
               title,
               style: theme.textTheme.labelLarge?.copyWith(
-                color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                color: isDark
+                    ? AppColors.textMutedDark
+                    : AppColors.textMutedLight,
               ),
             ),
           ),
@@ -747,9 +960,16 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
 
     if (filterPeriod == 'Weekly') {
       expectedCount = 7;
-      final last7Days = _getLast7Days().map((d) => DateFormat('yyyy-MM-dd').format(d)).toSet();
+      final last7Days = _getLast7Days()
+          .map((d) => DateFormat('yyyy-MM-dd').format(d))
+          .toSet();
       completedCount = entries
-          .where((e) => e.habitId == habit.id && last7Days.contains(e.dateStr) && e.completed)
+          .where(
+            (e) =>
+                e.habitId == habit.id &&
+                last7Days.contains(e.dateStr) &&
+                e.completed,
+          )
           .length;
     } else {
       // Monthly
@@ -757,11 +977,18 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
       expectedCount = daysInMonth;
       final currentMonthStr = DateFormat('yyyy-MM').format(now);
       completedCount = entries
-          .where((e) => e.habitId == habit.id && e.dateStr.startsWith(currentMonthStr) && e.completed)
+          .where(
+            (e) =>
+                e.habitId == habit.id &&
+                e.dateStr.startsWith(currentMonthStr) &&
+                e.completed,
+          )
           .length;
     }
 
-    final double completionRateVal = expectedCount > 0 ? (completedCount / expectedCount) : 0.0;
+    final double completionRateVal = expectedCount > 0
+        ? (completedCount / expectedCount)
+        : 0.0;
     final int completionPercentage = (completionRateVal * 100).round();
 
     return Card(
@@ -793,15 +1020,22 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+                    color: (isDark ? Colors.white : Colors.black).withValues(
+                      alpha: 0.05,
+                    ),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     habit.category,
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                      color: isDark
+                          ? AppColors.textMutedDark
+                          : AppColors.textMutedLight,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -895,7 +1129,9 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> with SingleTickerPr
           Text(
             title,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+              color: isDark
+                  ? AppColors.textMutedDark
+                  : AppColors.textMutedLight,
               fontSize: 10,
             ),
             maxLines: 1,

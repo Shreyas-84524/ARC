@@ -110,11 +110,16 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
     final draftService = ref.read(feedbackDraftServiceProvider);
     final payload = RateArcPayload(
       rating: _rating ?? 0,
-      writtenReview: _reviewController.text.trim().isEmpty ? null : _reviewController.text.trim(),
-      contactEmail: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+      writtenReview: _reviewController.text.trim().isEmpty
+          ? null
+          : _reviewController.text.trim(),
+      contactEmail: _emailController.text.trim().isEmpty
+          ? null
+          : _emailController.text.trim(),
     );
 
-    if (payload.rating == 0 && (payload.writtenReview == null || payload.writtenReview!.isEmpty)) {
+    if (payload.rating == 0 &&
+        (payload.writtenReview == null || payload.writtenReview!.isEmpty)) {
       await draftService.clearDraft(FeedbackCategory.appRating);
     } else {
       await draftService.saveDraft(
@@ -143,7 +148,9 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
       AppHaptics.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please tap a star to choose a rating before submitting.'),
+          content: Text(
+            'Please tap a star to choose a rating before submitting.',
+          ),
           backgroundColor: AppColors.danger,
           behavior: SnackBarBehavior.floating,
         ),
@@ -153,8 +160,12 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
 
     final payload = RateArcPayload(
       rating: _rating!,
-      writtenReview: _reviewController.text.trim().isEmpty ? null : _reviewController.text.trim(),
-      contactEmail: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+      writtenReview: _reviewController.text.trim().isEmpty
+          ? null
+          : _reviewController.text.trim(),
+      contactEmail: _emailController.text.trim().isEmpty
+          ? null
+          : _emailController.text.trim(),
     );
 
     final error = payload.validate();
@@ -200,7 +211,9 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              e is ArgumentError ? e.message.toString() : 'Failed to submit rating. Your selection has been preserved.',
+              e is ArgumentError
+                  ? e.message.toString()
+                  : 'Failed to submit rating. Your selection has been preserved.',
             ),
             backgroundColor: AppColors.danger,
             behavior: SnackBarBehavior.floating,
@@ -229,7 +242,9 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
 
         return AlertDialog(
           backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Row(
             children: [
               Container(
@@ -238,7 +253,11 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
                   color: Color(0x33FFB800),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(LucideIcons.award, color: _starGold, size: 26),
+                child: const Icon(
+                  LucideIcons.award,
+                  color: _starGold,
+                  size: 26,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -246,7 +265,9 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
                   'Rating Submitted!',
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                   ),
                 ),
               ),
@@ -265,7 +286,11 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
                     child: Icon(
                       LucideIcons.star,
                       size: 24,
-                      color: isFilled ? _starGold : (isDark ? const Color(0xFF404040) : const Color(0xFFE5E7EB)),
+                      color: isFilled
+                          ? _starGold
+                          : (isDark
+                                ? const Color(0xFF404040)
+                                : const Color(0xFFE5E7EB)),
                     ),
                   );
                 }),
@@ -274,18 +299,27 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
               Text(
                 'Thank you for rating Arc! Your honest score guides our roadmap and development priorities.',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
                   height: 1.45,
                 ),
               ),
               const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
+                  color: isDark
+                      ? AppColors.darkSurface
+                      : AppColors.lightBgSecondary,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight,
+                    color: isDark
+                        ? AppColors.borderSubtle
+                        : AppColors.borderSubtleLight,
                   ),
                 ),
                 child: Row(
@@ -293,7 +327,9 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
                     Text(
                       'Ref: ',
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                        color: isDark
+                            ? AppColors.textMutedDark
+                            : AppColors.textMutedLight,
                       ),
                     ),
                     Expanded(
@@ -321,7 +357,9 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
               child: Text(
                 'Done',
                 style: TextStyle(
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
                 ),
               ),
             ),
@@ -329,7 +367,9 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: _starGold,
                 foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               onPressed: () {
                 Navigator.of(dialogContext).pop();
@@ -337,7 +377,10 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
                   context.pushReplacement('/feedback/my-feedback');
                 }
               },
-              child: const Text('View Status', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                'View Status',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         );
@@ -410,9 +453,7 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : AppColors.lightCard,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: _starGold.withValues(alpha: 0.25),
-        ),
+        border: Border.all(color: _starGold.withValues(alpha: 0.25)),
         boxShadow: isDark
             ? []
             : [
@@ -438,7 +479,9 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
             'Your Opinion Matters',
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
             ),
           ),
           const SizedBox(height: 4),
@@ -446,7 +489,9 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
             'How well is Arc helping you achieve daily momentum and focus?',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
               height: 1.4,
             ),
           ),
@@ -456,7 +501,9 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
   }
 
   Widget _buildStarRatingComponent(ThemeData theme, bool isDark) {
-    final inactiveColor = isDark ? const Color(0xFF383838) : const Color(0xFFE5E7EB);
+    final inactiveColor = isDark
+        ? const Color(0xFF383838)
+        : const Color(0xFFE5E7EB);
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
@@ -464,7 +511,9 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
         color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: _rating != null ? _starGold.withValues(alpha: 0.4) : (isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight),
+          color: _rating != null
+              ? _starGold.withValues(alpha: 0.4)
+              : (isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight),
         ),
       ),
       child: Column(
@@ -483,7 +532,10 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
                   onTap: () => _setRating(starNumber),
                   borderRadius: BorderRadius.circular(999),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 8,
+                    ),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 250),
                       curve: Curves.easeOutBack,
@@ -509,10 +561,14 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
               key: ValueKey(_rating),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
-                color: _rating != null ? _starGold.withValues(alpha: 0.15) : Colors.transparent,
+                color: _rating != null
+                    ? _starGold.withValues(alpha: 0.15)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: _rating != null ? _starGold.withValues(alpha: 0.4) : Colors.transparent,
+                  color: _rating != null
+                      ? _starGold.withValues(alpha: 0.4)
+                      : Colors.transparent,
                 ),
               ),
               child: Text(
@@ -523,7 +579,9 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
                   letterSpacing: 0.5,
                   color: _rating != null
                       ? _starGold
-                      : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+                      : (isDark
+                            ? AppColors.textMutedDark
+                            : AppColors.textMutedLight),
                 ),
               ),
             ),
@@ -540,41 +598,41 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
 
     final (color, title, desc, icon) = switch (_rating) {
       5 => (
-          AppColors.accent,
-          'Loved it — Arc is indispensable!',
-          'We\'re thrilled Arc is a vital part of your routine. Thank you for your support!',
-          LucideIcons.heartHandshake,
-        ),
+        AppColors.accent,
+        'Loved it — Arc is indispensable!',
+        'We\'re thrilled Arc is a vital part of your routine. Thank you for your support!',
+        LucideIcons.heartHandshake,
+      ),
       4 => (
-          const Color(0xFF38BDF8),
-          'Great — Very satisfied',
-          'We\'re glad Arc is working well for you! Let us know if anything would make it a 5-star experience.',
-          LucideIcons.thumbsUp,
-        ),
+        const Color(0xFF38BDF8),
+        'Great — Very satisfied',
+        'We\'re glad Arc is working well for you! Let us know if anything would make it a 5-star experience.',
+        LucideIcons.thumbsUp,
+      ),
       3 => (
-          const Color(0xFFF59E0B),
-          'Good — Does the job',
-          'Good to know! We\'d love to learn what would make your experience even better.',
-          LucideIcons.lightbulb,
-        ),
+        const Color(0xFFF59E0B),
+        'Good — Does the job',
+        'Good to know! We\'d love to learn what would make your experience even better.',
+        LucideIcons.lightbulb,
+      ),
       2 => (
-          const Color(0xFFFB923C),
-          'Fair — Missing key features',
-          'We want to do better. Tell us below what felt frustrating or missing.',
-          LucideIcons.wrench,
-        ),
+        const Color(0xFFFB923C),
+        'Fair — Missing key features',
+        'We want to do better. Tell us below what felt frustrating or missing.',
+        LucideIcons.wrench,
+      ),
       1 => (
-          AppColors.danger,
-          'Poor — Needs major work',
-          'We\'re really sorry Arc hasn\'t met your expectations. Please tell us what went wrong.',
-          LucideIcons.alertTriangle,
-        ),
+        AppColors.danger,
+        'Poor — Needs major work',
+        'We\'re really sorry Arc hasn\'t met your expectations. Please tell us what went wrong.',
+        LucideIcons.alertTriangle,
+      ),
       _ => (
-          _starGold,
-          'Rate Your Experience',
-          'Select your rating above.',
-          LucideIcons.star,
-        ),
+        _starGold,
+        'Rate Your Experience',
+        'Select your rating above.',
+        LucideIcons.star,
+      ),
     };
 
     return AnimatedContainer(
@@ -608,7 +666,9 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
                 Text(
                   desc,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
                     height: 1.35,
                   ),
                 ),
@@ -625,7 +685,8 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
       5 => 'What do you love most about using Arc? (Optional)',
       4 => 'What\'s working great, and what could be even better? (Optional)',
       3 => 'What would make Arc a 5-star tool for you? (Optional)',
-      1 || 2 => 'What caused friction or fell short of expectations? (Optional)',
+      1 ||
+      2 => 'What caused friction or fell short of expectations? (Optional)',
       _ => 'Tell us about your experience with Arc... (Optional)',
     };
 
@@ -640,13 +701,17 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
               style: theme.textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 letterSpacing: 0.8,
-                color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                color: isDark
+                    ? AppColors.textMutedDark
+                    : AppColors.textMutedLight,
               ),
             ),
             Text(
               '${_reviewController.text.length} / 4,500',
               style: theme.textTheme.labelSmall?.copyWith(
-                color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                color: isDark
+                    ? AppColors.textMutedDark
+                    : AppColors.textMutedLight,
                 fontFamily: 'monospace',
                 fontSize: 10,
               ),
@@ -659,7 +724,9 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
             color: isDark ? AppColors.darkCard : AppColors.lightCard,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+              color: isDark
+                  ? AppColors.borderMedium
+                  : AppColors.borderMediumLight,
             ),
           ),
           child: TextFormField(
@@ -668,12 +735,16 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
             minLines: 3,
             maxLines: 6,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
             ),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: TextStyle(
-                color: isDark ? AppColors.textPlaceholderDark : AppColors.textPlaceholderLight,
+                color: isDark
+                    ? AppColors.textPlaceholderDark
+                    : AppColors.textPlaceholderLight,
                 fontSize: 13,
               ),
               border: InputBorder.none,
@@ -713,13 +784,18 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
           decoration: InputDecoration(
             hintText: 'name@example.com',
             prefixIcon: const Icon(LucideIcons.mail, size: 18),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 12,
+            ),
             filled: true,
             fillColor: isDark ? AppColors.darkCard : AppColors.lightCard,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                color: isDark
+                    ? AppColors.borderMedium
+                    : AppColors.borderMediumLight,
               ),
             ),
           ),
@@ -736,17 +812,28 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
       height: 52,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: hasRating ? _starGold : (isDark ? const Color(0xFF383838) : const Color(0xFFD1D5DB)),
-          foregroundColor: hasRating ? Colors.black : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+          backgroundColor: hasRating
+              ? _starGold
+              : (isDark ? const Color(0xFF383838) : const Color(0xFFD1D5DB)),
+          foregroundColor: hasRating
+              ? Colors.black
+              : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
           elevation: hasRating ? 3 : 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
-        onPressed: (_isSubmitting || !hasRating) ? (_isSubmitting ? null : _submitRating) : _submitRating,
+        onPressed: (_isSubmitting || !hasRating)
+            ? (_isSubmitting ? null : _submitRating)
+            : _submitRating,
         child: _isSubmitting
             ? const SizedBox(
                 height: 22,
                 width: 22,
-                child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.black),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: Colors.black,
+                ),
               )
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -754,16 +841,26 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
                   Icon(
                     LucideIcons.award,
                     size: 18,
-                    color: hasRating ? Colors.black : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+                    color: hasRating
+                        ? Colors.black
+                        : (isDark
+                              ? AppColors.textMutedDark
+                              : AppColors.textMutedLight),
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    hasRating ? 'Submit $_rating-Star Rating' : 'Tap a Star to Rate',
+                    hasRating
+                        ? 'Submit $_rating-Star Rating'
+                        : 'Tap a Star to Rate',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.2,
-                      color: hasRating ? Colors.black : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+                      color: hasRating
+                          ? Colors.black
+                          : (isDark
+                                ? AppColors.textMutedDark
+                                : AppColors.textMutedLight),
                     ),
                   ),
                 ],

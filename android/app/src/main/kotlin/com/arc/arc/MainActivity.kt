@@ -6,15 +6,14 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.provider.Settings
-import android.view.WindowManager
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterFragmentActivity() {
-    private val SECURE_CHANNEL = "com.arc.arc/secure_window"
     private val HAPTICS_CHANNEL = "com.arc.arc/haptics"
+    private var secretNotesMediaBridge: SecretNotesMediaBridge? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -26,21 +25,10 @@ class MainActivity : FlutterFragmentActivity() {
             methodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, MoneyAutomationBridge.METHOD_CHANNEL),
             eventChannel = EventChannel(flutterEngine.dartExecutor.binaryMessenger, MoneyAutomationBridge.EVENT_CHANNEL)
         )
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SECURE_CHANNEL).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "enableSecure" -> {
-                    window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-                    result.success(true)
-                }
-                "disableSecure" -> {
-                    window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
-                    result.success(true)
-                }
-                else -> {
-                    result.notImplemented()
-                }
-            }
-        }
+        secretNotesMediaBridge = SecretNotesMediaBridge(
+            this,
+            MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SecretNotesMediaBridge.CHANNEL),
+        )
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, HAPTICS_CHANNEL).setMethodCallHandler { call, result ->
             if (call.method != "vibrate") {
@@ -100,6 +88,7 @@ class MainActivity : FlutterFragmentActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         MoneyAutomationBridge.handleRequestPermissionsResult(this, requestCode, permissions, grantResults)
+        secretNotesMediaBridge?.handlePermissionResult(requestCode, grantResults)
     }
 
     private data class HapticPulse(val durationMs: Long, val amplitude: Int)

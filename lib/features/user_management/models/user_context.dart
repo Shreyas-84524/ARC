@@ -7,19 +7,21 @@ class UserContext {
   final UserProfile? profile;
   final bool isInitializing;
 
-  const UserContext({
-    this.userId,
-    this.profile,
-    this.isInitializing = false,
-  });
+  const UserContext({this.userId, this.profile, this.isInitializing = false});
 
   /// Initializing state during app launch while Firebase Auth restores persistent session
-  static const UserContext initializing =
-      UserContext(userId: null, profile: null, isInitializing: true);
+  static const UserContext initializing = UserContext(
+    userId: null,
+    profile: null,
+    isInitializing: true,
+  );
 
   /// Default unauthenticated context representing legacy single-user mode
-  static const UserContext legacy =
-      UserContext(userId: null, profile: null, isInitializing: false);
+  static const UserContext legacy = UserContext(
+    userId: null,
+    profile: null,
+    isInitializing: false,
+  );
 
   bool get isAuthenticated =>
       userId != null && userId!.isNotEmpty && !isInitializing;

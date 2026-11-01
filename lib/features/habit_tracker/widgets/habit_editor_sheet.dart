@@ -10,10 +10,7 @@ import 'package:arc/providers/global_providers.dart';
 class HabitEditorSheet extends ConsumerStatefulWidget {
   final Habit? habitToEdit;
 
-  const HabitEditorSheet({
-    super.key,
-    this.habitToEdit,
-  });
+  const HabitEditorSheet({super.key, this.habitToEdit});
 
   @override
   ConsumerState<HabitEditorSheet> createState() => _HabitEditorSheetState();
@@ -44,7 +41,9 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
     final editHabit = widget.habitToEdit;
 
     _nameController = TextEditingController(text: editHabit?.name ?? '');
-    _categoryController = TextEditingController(text: editHabit?.category ?? 'Health');
+    _categoryController = TextEditingController(
+      text: editHabit?.category ?? 'Health',
+    );
     _selectedColorValue = editHabit?.colorValue ?? 0xffccff00;
 
     if (editHabit?.reminderTime != null) {
@@ -98,8 +97,35 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
     }
   }
 
-  void _saveForm() {
+  Future<void> _saveForm() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_selectedReminderTime == null) {
+      final continueWithoutTime = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('When Will You Do It?'),
+          content: Text(
+            'Add a time for ${_nameController.text.trim()} in your daily routine.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Set Time'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Continue Without Time'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || continueWithoutTime == null) return;
+      if (!continueWithoutTime) {
+        await _selectReminderTime(context);
+        return;
+      }
+    }
 
     String? timeString;
     if (_selectedReminderTime != null) {
@@ -114,7 +140,9 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
     final habit = Habit(
       id: id,
       name: _nameController.text.trim(),
-      category: _categoryController.text.trim().isEmpty ? 'Other' : _categoryController.text.trim(),
+      category: _categoryController.text.trim().isEmpty
+          ? 'Other'
+          : _categoryController.text.trim(),
       colorValue: _selectedColorValue,
       reminderTime: timeString,
       createdAt: widget.habitToEdit?.createdAt ?? now,
@@ -122,12 +150,12 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
     );
 
     if (widget.habitToEdit == null) {
-      ref.read(habitsProvider.notifier).addHabit(habit);
+      await ref.read(habitsProvider.notifier).addHabit(habit);
     } else {
-      ref.read(habitsProvider.notifier).updateHabit(habit);
+      await ref.read(habitsProvider.notifier).updateHabit(habit);
     }
 
-    Navigator.of(context).pop();
+    if (mounted) Navigator.of(context).pop();
   }
 
   Future<void> _deleteHabit() async {
@@ -136,7 +164,9 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Delete Habit'),
-          content: Text('Are you sure you want to delete "${widget.habitToEdit!.name}"? This will also remove all check-in history for this habit.'),
+          content: Text(
+            'Are you sure you want to delete "${widget.habitToEdit!.name}"? This will also remove all check-in history for this habit.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -192,182 +222,210 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
           key: _formKey,
           child: SingleChildScrollView(
             child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    widget.habitToEdit == null ? 'Create Habit' : 'Edit Habit',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(LucideIcons.x, size: 20),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Name Field
-              TextFormField(
-                controller: _nameController,
-                style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
-                decoration: const InputDecoration(
-                  hintText: 'Habit Name',
-                ),
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Name cannot be empty';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Category Field
-              TextFormField(
-                controller: _categoryController,
-                decoration: const InputDecoration(
-                  labelText: 'Category',
-                  hintText: 'e.g., Mind, Fitness',
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Color Preset Picker
-              Text(
-                'Color Tag',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 48,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _presetColors.length,
-                  separatorBuilder: (context, index) => const SizedBox(width: 12),
-                  itemBuilder: (context, index) {
-                    final colorVal = _presetColors[index];
-                    final isSelected = colorVal == _selectedColorValue;
-                    return InkWell(
-                      onTap: () => setState(() => _selectedColorValue = colorVal),
-                      borderRadius: BorderRadius.circular(100),
-                      child: Container(
-                        height: 38,
-                        width: 38,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Color(colorVal),
-                          border: Border.all(
-                            color: isSelected ? Colors.white : Colors.transparent,
-                            width: 2.0,
-                          ),
-                          boxShadow: isSelected
-                              ? [
-                                  BoxShadow(
-                                    color: Color(colorVal).withValues(alpha: 0.4),
-                                    blurRadius: 8,
-                                    spreadRadius: 2,
-                                  )
-                                ]
-                              : null,
-                        ),
-                        alignment: Alignment.center,
-                        child: isSelected
-                            ? Icon(
-                                LucideIcons.check,
-                                size: 16,
-                                color: colorVal == 0xffccff00 ? Colors.black : Colors.white,
-                              )
-                            : null,
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      widget.habitToEdit == null
+                          ? 'Create Habit'
+                          : 'Edit Habit',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
-                    );
+                    ),
+                    IconButton(
+                      icon: const Icon(LucideIcons.x, size: 20),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Name Field
+                TextFormField(
+                  controller: _nameController,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  decoration: const InputDecoration(hintText: 'Habit Name'),
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Name cannot be empty';
+                    }
+                    return null;
                   },
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Reminder Time picker
-              InkWell(
-                onTap: () => _selectReminderTime(context),
-                borderRadius: BorderRadius.circular(AppTheme.radiusInput),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusInput),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(LucideIcons.bell, size: 18, color: AppColors.accent),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _selectedReminderTime == null
-                              ? 'Set Daily Reminder Time (Optional)'
-                              : 'Reminder scheduled for ${_selectedReminderTime!.format(context)}',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: _selectedReminderTime == null
-                                ? (isDark ? AppColors.textPlaceholderDark : AppColors.textDisabledLight)
-                                : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
-                          ),
-                        ),
-                      ),
-                      if (_selectedReminderTime != null)
-                        IconButton(
-                          icon: const Icon(LucideIcons.x, size: 16),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () => setState(() => _selectedReminderTime = null),
-                        ),
-                    ],
+                // Category Field
+                TextFormField(
+                  controller: _categoryController,
+                  decoration: const InputDecoration(
+                    labelText: 'Category',
+                    hintText: 'e.g., Mind, Fitness',
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
-              // Action buttons (Save & optional Delete)
-              Row(
-                children: [
-                  if (widget.habitToEdit != null) ...[
-                    Expanded(
-                      child: TextButton.icon(
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.danger,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                // Color Preset Picker
+                Text(
+                  'Color Tag',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 48,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _presetColors.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(width: 12),
+                    itemBuilder: (context, index) {
+                      final colorVal = _presetColors[index];
+                      final isSelected = colorVal == _selectedColorValue;
+                      return InkWell(
+                        onTap: () =>
+                            setState(() => _selectedColorValue = colorVal),
+                        borderRadius: BorderRadius.circular(100),
+                        child: Container(
+                          height: 38,
+                          width: 38,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(colorVal),
+                            border: Border.all(
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.transparent,
+                              width: 2.0,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: Color(
+                                        colorVal,
+                                      ).withValues(alpha: 0.4),
+                                      blurRadius: 8,
+                                      spreadRadius: 2,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          alignment: Alignment.center,
+                          child: isSelected
+                              ? Icon(
+                                  LucideIcons.check,
+                                  size: 16,
+                                  color: colorVal == 0xffccff00
+                                      ? Colors.black
+                                      : Colors.white,
+                                )
+                              : null,
                         ),
-                        onPressed: _deleteHabit,
-                        icon: const Icon(LucideIcons.trash2, size: 18),
-                        label: const Text('Delete'),
-                      ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Reminder Time picker
+                InkWell(
+                  onTap: () => _selectReminderTime(context),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
                     ),
-                    const SizedBox(width: 12),
-                  ],
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: _saveForm,
-                      child: Text(
-                        widget.habitToEdit == null ? 'Create Habit' : 'Save Changes',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppColors.darkSurface
+                          : AppColors.lightBgSecondary,
+                      borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          LucideIcons.bell,
+                          size: 18,
+                          color: AppColors.accent,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _selectedReminderTime == null
+                                ? 'Set Daily Reminder Time (Optional)'
+                                : 'Reminder scheduled for ${_selectedReminderTime!.format(context)}',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: _selectedReminderTime == null
+                                  ? (isDark
+                                        ? AppColors.textPlaceholderDark
+                                        : AppColors.textDisabledLight)
+                                  : (isDark
+                                        ? AppColors.textPrimaryDark
+                                        : AppColors.textPrimaryLight),
+                            ),
+                          ),
+                        ),
+                        if (_selectedReminderTime != null)
+                          IconButton(
+                            icon: const Icon(LucideIcons.x, size: 16),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () =>
+                                setState(() => _selectedReminderTime = null),
+                          ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 24),
-            ],
+                ),
+                const SizedBox(height: 24),
+
+                // Action buttons (Save & optional Delete)
+                Row(
+                  children: [
+                    if (widget.habitToEdit != null) ...[
+                      Expanded(
+                        child: TextButton.icon(
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.danger,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed: _deleteHabit,
+                          icon: const Icon(LucideIcons.trash2, size: 18),
+                          label: const Text('Delete'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        onPressed: _saveForm,
+                        child: Text(
+                          widget.habitToEdit == null
+                              ? 'Create Habit'
+                              : 'Save Changes',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

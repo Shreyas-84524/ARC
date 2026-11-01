@@ -153,7 +153,8 @@ class _SecretNotesSettingsScreenState
                     backgroundColor: AppColors.accent,
                     foregroundColor: AppColors.textPrimaryLight,
                   ),
-                  onPressed: (isSubmitting ||
+                  onPressed:
+                      (isSubmitting ||
                           currentPinController.text.length < 3 ||
                           newPinController.text.length < 3 ||
                           confirmPinController.text.length < 3)
@@ -164,25 +165,32 @@ class _SecretNotesSettingsScreenState
                           final confirmPin = confirmPinController.text.trim();
 
                           final currentValError =
-                              SecretNotesSecurityService.validatePin(currentPin);
+                              SecretNotesSecurityService.validatePin(
+                                currentPin,
+                              );
                           if (currentValError != null) {
-                            setDialogState(() => dialogError = 'Current PIN: $currentValError');
+                            setDialogState(
+                              () =>
+                                  dialogError = 'Current PIN: $currentValError',
+                            );
                             return;
                           }
 
                           final confirmValError =
                               SecretNotesSecurityService.validatePinConfirmation(
-                            newPin,
-                            confirmPin,
-                          );
+                                newPin,
+                                confirmPin,
+                              );
                           if (confirmValError != null) {
                             setDialogState(() => dialogError = confirmValError);
                             return;
                           }
 
                           if (newPin == currentPin) {
-                            setDialogState(() => dialogError =
-                                'Your new PIN must be different from your current PIN.');
+                            setDialogState(
+                              () => dialogError =
+                                  'Your new PIN must be different from your current PIN.',
+                            );
                             return;
                           }
 
@@ -191,10 +199,13 @@ class _SecretNotesSettingsScreenState
                             dialogError = null;
                           });
 
-                          final scaffoldMessenger = ScaffoldMessenger.of(context);
+                          final scaffoldMessenger = ScaffoldMessenger.of(
+                            context,
+                          );
                           final navigator = Navigator.of(dialogContext);
-                          final secService =
-                              ref.read(secretNotesSecurityServiceProvider);
+                          final secService = ref.read(
+                            secretNotesSecurityServiceProvider,
+                          );
                           final error = await secService.changePin(
                             currentPin: currentPin,
                             newPin: newPin,
@@ -239,6 +250,83 @@ class _SecretNotesSettingsScreenState
     );
   }
 
+  Future<void> _openRemovePinDialog() async {
+    final controller = TextEditingController();
+    String? error;
+    bool submitting = false;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Remove Secret PIN?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Your notes will remain on this device and will open without verification.',
+              ),
+              const SizedBox(height: 16),
+              SecretNotesPinField(
+                controller: controller,
+                label: 'Current PIN',
+                onChanged: (_) => setDialogState(() => error = null),
+              ),
+              if (error != null) ...[
+                const SizedBox(height: 10),
+                Text(error!, style: const TextStyle(color: AppColors.danger)),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: submitting ? null : () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+              onPressed: submitting
+                  ? null
+                  : () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      setDialogState(() => submitting = true);
+                      final result = await ref
+                          .read(secretNotesSecurityServiceProvider)
+                          .removePin(controller.text.trim());
+                      if (result != null) {
+                        setDialogState(() {
+                          submitting = false;
+                          error = result;
+                        });
+                        return;
+                      }
+                      ref
+                          .read(secretNotesConfiguredProvider.notifier)
+                          .setConfigured(false);
+                      ref.read(secretNotesSessionProvider.notifier).unlock();
+                      await ref
+                          .read(secretNotesBiometricEnabledProvider.notifier)
+                          .setEnabled(false);
+                      if (dialogContext.mounted) Navigator.pop(dialogContext);
+                      if (mounted) {
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'PIN removed. Secret Notes now opens directly.',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+              child: const Text('Remove PIN'),
+            ),
+          ],
+        ),
+      ),
+    );
+    controller.dispose();
+  }
+
   // ---------------------------------------------------------------------------
   // Biometric Toggle Handler
   // ---------------------------------------------------------------------------
@@ -249,7 +337,8 @@ class _SecretNotesSettingsScreenState
     if (enable) {
       // Must verify identity before enabling
       final success = await bioService.authenticate(
-        reason: 'Verify biometric identity to enable biometric unlock for Secret Notes',
+        reason:
+            'Verify biometric identity to enable biometric unlock for Secret Notes',
       );
 
       if (!success) {
@@ -277,9 +366,7 @@ class _SecretNotesSettingsScreenState
       await bioNotifier.setEnabled(false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Biometric unlock disabled.'),
-          ),
+          const SnackBar(content: Text('Biometric unlock disabled.')),
         );
       }
     }
@@ -289,6 +376,9 @@ class _SecretNotesSettingsScreenState
   // Danger Zone: Permanently Delete Secret Notes
   // ---------------------------------------------------------------------------
   Future<void> _openPermanentDeleteDialog() async {
+    final isPinConfigured = ref
+        .read(secretNotesSecurityServiceProvider)
+        .isConfiguredSync();
     final pinController = TextEditingController();
     final confirmTextController = TextEditingController();
 
@@ -308,7 +398,11 @@ class _SecretNotesSettingsScreenState
               ),
               title: Row(
                 children: const [
-                  Icon(LucideIcons.alertTriangle, color: AppColors.danger, size: 24),
+                  Icon(
+                    LucideIcons.alertTriangle,
+                    color: AppColors.danger,
+                    size: 24,
+                  ),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -355,16 +449,18 @@ class _SecretNotesSettingsScreenState
                         ),
                         const SizedBox(height: 14),
                       ],
-                      SecretNotesPinField(
-                        controller: pinController,
-                        label: 'Enter your Secret PIN to authorize',
-                        onChanged: (_) {
-                          if (dialogError != null) {
-                            setDialogState(() => dialogError = null);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 16),
+                      if (isPinConfigured) ...[
+                        SecretNotesPinField(
+                          controller: pinController,
+                          label: 'Enter your Secret PIN to authorize',
+                          onChanged: (_) {
+                            if (dialogError != null) {
+                              setDialogState(() => dialogError = null);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       TextField(
                         controller: confirmTextController,
                         decoration: InputDecoration(
@@ -403,8 +499,10 @@ class _SecretNotesSettingsScreenState
                           final confirmText = confirmTextController.text.trim();
 
                           if (confirmText != 'DELETE') {
-                            setDialogState(() => dialogError =
-                                'Please type "DELETE" exactly to confirm.');
+                            setDialogState(
+                              () => dialogError =
+                                  'Please type "DELETE" exactly to confirm.',
+                            );
                             return;
                           }
 
@@ -413,32 +511,47 @@ class _SecretNotesSettingsScreenState
                             dialogError = null;
                           });
 
-                          final scaffoldMessenger = ScaffoldMessenger.of(context);
+                          final scaffoldMessenger = ScaffoldMessenger.of(
+                            context,
+                          );
                           final navigator = Navigator.of(dialogContext);
-                          final secService =
-                              ref.read(secretNotesSecurityServiceProvider);
-                          final isPinValid = await secService.verifyPin(pin);
+                          final secService = ref.read(
+                            secretNotesSecurityServiceProvider,
+                          );
+                          final isPinValid =
+                              !isPinConfigured ||
+                              await secService.verifyPin(pin);
 
                           if (!isPinValid) {
                             setDialogState(() {
                               isDeleting = false;
-                              dialogError = 'Incorrect Secret PIN authorization.';
+                              dialogError =
+                                  'Incorrect Secret PIN authorization.';
                             });
                             return;
                           }
 
                           // Atomic wipe: clear data repo, security repo, preferences, session, and reload
-                          final dataRepo =
-                              ref.read(secretNotesDataRepositoryProvider);
-                          final localRepo =
-                              ref.read(secretNotesLocalRepositoryProvider);
+                          final dataRepo = ref.read(
+                            secretNotesDataRepositoryProvider,
+                          );
+                          final localRepo = ref.read(
+                            secretNotesLocalRepositoryProvider,
+                          );
 
                           await dataRepo.clearAll();
+                          await ref
+                              .read(secretNotesMediaServiceProvider)
+                              .clearAllMedia();
                           await localRepo.clearAll();
 
-                          ref.read(secretNotesConfiguredProvider.notifier).setConfigured(false);
+                          ref
+                              .read(secretNotesConfiguredProvider.notifier)
+                              .setConfigured(false);
                           ref.read(secretNotesSessionProvider.notifier).lock();
-                          await ref.read(secretNotesListProvider.notifier).loadNotes();
+                          await ref
+                              .read(secretNotesListProvider.notifier)
+                              .loadNotes();
 
                           if (dialogContext.mounted) {
                             navigator.pop();
@@ -492,14 +605,19 @@ class _SecretNotesSettingsScreenState
     final isDark = theme.brightness == Brightness.dark;
 
     final isBioEnabled = ref.watch(secretNotesBiometricEnabledProvider);
+    final isPinConfigured =
+        ref.watch(secretNotesConfiguredProvider).valueOrNull ??
+        ref.read(secretNotesSecurityServiceProvider).isConfiguredSync();
     final notesAsync = ref.watch(secretNotesListProvider);
 
     // Compute summary stats
     final notes = notesAsync.valueOrNull ?? [];
     final totalNotes = notes.length;
     final checklistNotes = notes.where((n) => n.checklist.isNotEmpty).length;
-    final totalChecklistItems =
-        notes.fold<int>(0, (sum, n) => sum + n.checklist.length);
+    final totalChecklistItems = notes.fold<int>(
+      0,
+      (sum, n) => sum + n.checklist.length,
+    );
     final completedChecklistItems = notes.fold<int>(
       0,
       (sum, n) => sum + n.checklist.where((i) => i.isCompleted).length,
@@ -525,138 +643,248 @@ class _SecretNotesSettingsScreenState
             onPressed: _handleBack,
           ),
         ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 680),
-            child: ListView(
-              padding: EdgeInsets.symmetric(
-                horizontal: ResponsiveLayout.horizontalPadding(context),
-                vertical: 16,
-              ),
-              children: [
-                // -------------------------------------------------------------
-                // 1. SECURITY SECTION
-                // -------------------------------------------------------------
-                _buildSectionHeader('Security', LucideIcons.shield),
-                const SizedBox(height: 8),
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-                    side: BorderSide(
-                      color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(LucideIcons.keyRound, color: AppColors.accent),
-                        title: const Text(
-                          'Change Secret PIN',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: const Text(
-                          'Update your 3–6 digit Secret Notes PIN',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                        trailing: const Icon(LucideIcons.chevronRight, size: 18),
-                        onTap: _openChangePinDialog,
-                      ),
-                      Divider(
-                        height: 1,
-                        indent: 16,
-                        endIndent: 16,
-                        color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
-                      ),
-                      SwitchListTile(
-                        secondary: const Icon(LucideIcons.fingerprint, color: AppColors.accent),
-                        title: const Text(
-                          'Biometric Unlock',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Text(
-                          _isCheckingHardware
-                              ? 'Checking device hardware...'
-                              : _isHardwareBiometricAvailable
-                                  ? 'Unlock using your fingerprint or face authentication'
-                                  : 'Biometric hardware unavailable on this device or platform',
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                        value: isBioEnabled && _isHardwareBiometricAvailable,
-                        onChanged: (_isHardwareBiometricAvailable && !_isCheckingHardware)
-                            ? (val) => _handleBiometricToggle(val)
-                            : null,
-                      ),
-                    ],
-                  ),
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 680),
+              child: ListView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: ResponsiveLayout.horizontalPadding(context),
+                  vertical: 16,
                 ),
-
-                const SizedBox(height: 24),
-
-                // -------------------------------------------------------------
-                // 2. SECRET NOTES SUMMARY SECTION
-                // -------------------------------------------------------------
-                _buildSectionHeader('Secret Notes Summary', LucideIcons.fileText),
-                const SizedBox(height: 8),
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-                    side: BorderSide(
-                      color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                children: [
+                  // -------------------------------------------------------------
+                  // 1. SECURITY SECTION
+                  // -------------------------------------------------------------
+                  _buildSectionHeader('Security', LucideIcons.shield),
+                  const SizedBox(height: 8),
+                  Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+                      side: BorderSide(
+                        color: isDark
+                            ? AppColors.borderMedium
+                            : AppColors.borderMediumLight,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(
+                            LucideIcons.keyRound,
+                            color: AppColors.accent,
+                          ),
+                          title: Text(
+                            isPinConfigured
+                                ? 'Change Secret PIN'
+                                : 'Set Secret PIN',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(
+                            isPinConfigured
+                                ? 'Update your 3–6 digit Secret Notes PIN'
+                                : 'Optional: require a PIN when opening Secret Notes',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          trailing: const Icon(
+                            LucideIcons.chevronRight,
+                            size: 18,
+                          ),
+                          onTap: isPinConfigured
+                              ? _openChangePinDialog
+                              : () => context.push('/secret-notes/setup'),
+                        ),
+                        if (isPinConfigured) ...[
+                          Divider(
+                            height: 1,
+                            indent: 16,
+                            endIndent: 16,
+                            color: isDark
+                                ? AppColors.borderMedium
+                                : AppColors.borderMediumLight,
+                          ),
+                          ListTile(
+                            leading: const Icon(
+                              LucideIcons.lockOpen,
+                              color: AppColors.danger,
+                            ),
+                            title: const Text('Remove PIN'),
+                            subtitle: const Text(
+                              'Keep notes, but open them without verification',
+                            ),
+                            onTap: _openRemovePinDialog,
+                          ),
+                        ],
+                        Divider(
+                          height: 1,
+                          indent: 16,
+                          endIndent: 16,
+                          color: isDark
+                              ? AppColors.borderMedium
+                              : AppColors.borderMediumLight,
+                        ),
+                        SwitchListTile(
+                          secondary: const Icon(
+                            LucideIcons.fingerprint,
+                            color: AppColors.accent,
+                          ),
+                          title: const Text(
+                            'Biometric Unlock',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(
+                            _isCheckingHardware
+                                ? 'Checking device hardware...'
+                                : _isHardwareBiometricAvailable
+                                ? 'Unlock using your fingerprint or face authentication'
+                                : 'Biometric hardware unavailable on this device or platform',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          value: isBioEnabled && _isHardwareBiometricAvailable,
+                          onChanged:
+                              (isPinConfigured &&
+                                  _isHardwareBiometricAvailable &&
+                                  !_isCheckingHardware)
+                              ? (val) => _handleBiometricToggle(val)
+                              : null,
+                        ),
+                      ],
                     ),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _buildSummaryRow(
-                          label: 'Total Notes',
-                          value: '$totalNotes',
-                          icon: LucideIcons.stickyNote,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildSummaryRow(
-                          label: 'Checklist Notes',
-                          value: '$checklistNotes',
-                          icon: LucideIcons.checkSquare,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildSummaryRow(
-                          label: 'Checklist Items',
-                          value: '$completedChecklistItems of $totalChecklistItems done',
-                          icon: LucideIcons.listTodo,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildSummaryRow(
-                          label: 'Last Updated',
-                          value: lastUpdatedStr,
-                          icon: LucideIcons.clock,
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: AppColors.accent.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: AppColors.accent.withValues(alpha: 0.3),
+
+                  const SizedBox(height: 24),
+
+                  // -------------------------------------------------------------
+                  // 2. SECRET NOTES SUMMARY SECTION
+                  // -------------------------------------------------------------
+                  _buildSectionHeader(
+                    'Secret Notes Summary',
+                    LucideIcons.fileText,
+                  ),
+                  const SizedBox(height: 8),
+                  Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+                      side: BorderSide(
+                        color: isDark
+                            ? AppColors.borderMedium
+                            : AppColors.borderMediumLight,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildSummaryRow(
+                            label: 'Total Notes',
+                            value: '$totalNotes',
+                            icon: LucideIcons.stickyNote,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildSummaryRow(
+                            label: 'Checklist Notes',
+                            value: '$checklistNotes',
+                            icon: LucideIcons.checkSquare,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildSummaryRow(
+                            label: 'Checklist Items',
+                            value:
+                                '$completedChecklistItems of $totalChecklistItems done',
+                            icon: LucideIcons.listTodo,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildSummaryRow(
+                            label: 'Last Updated',
+                            value: lastUpdatedStr,
+                            icon: LucideIcons.clock,
+                          ),
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.accent.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: AppColors.accent.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: const [
+                                Icon(
+                                  LucideIcons.database,
+                                  size: 16,
+                                  color: AppColors.accent,
+                                ),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Storage: Isolated Local Device Only (Hive)',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.accent,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          child: Row(
-                            children: const [
-                              Icon(LucideIcons.database, size: 16, color: AppColors.accent),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Storage: Isolated Local Device Only (Hive)',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.accent,
-                                  ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // -------------------------------------------------------------
+                  // 3. MANDATORY PRIVACY DISCLAIMER
+                  // -------------------------------------------------------------
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey[900] : Colors.grey[100],
+                      borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+                      border: Border.all(
+                        color: isDark
+                            ? AppColors.borderMedium
+                            : AppColors.borderMediumLight,
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          LucideIcons.shieldCheck,
+                          size: 22,
+                          color: AppColors.accent,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Privacy & Local Storage Guarantee',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Secret Notes is stored entirely on this device. It is never synced to Firebase, Firestore, or cloud servers. ARC cannot recover your Secret PIN if forgotten.',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight,
+                                  height: 1.4,
                                 ),
                               ),
                             ],
@@ -665,130 +893,90 @@ class _SecretNotesSettingsScreenState
                       ],
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 24),
+                  const SizedBox(height: 32),
 
-                // -------------------------------------------------------------
-                // 3. MANDATORY PRIVACY DISCLAIMER
-                // -------------------------------------------------------------
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.grey[900] : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-                    border: Border.all(
-                      color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
-                    ),
+                  // -------------------------------------------------------------
+                  // 4. DANGER ZONE
+                  // -------------------------------------------------------------
+                  _buildSectionHeader(
+                    'Danger Zone',
+                    LucideIcons.alertTriangle,
+                    isDanger: true,
                   ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        LucideIcons.shieldCheck,
-                        size: 22,
-                        color: AppColors.accent,
+                  const SizedBox(height: 8),
+                  Card(
+                    elevation: 0,
+                    color: isDark
+                        ? Colors.red.withValues(alpha: 0.05)
+                        : Colors.red.withValues(alpha: 0.02),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+                      side: BorderSide(
+                        color: AppColors.danger.withValues(alpha: 0.3),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Privacy & Local Storage Guarantee',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Secret Notes is stored entirely on this device. It is never synced to Firebase, Firestore, or cloud servers. ARC cannot recover your Secret PIN if forgotten.',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: isDark
-                                    ? AppColors.textSecondaryDark
-                                    : AppColors.textSecondaryLight,
-                                height: 1.4,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // -------------------------------------------------------------
-                // 4. DANGER ZONE
-                // -------------------------------------------------------------
-                _buildSectionHeader('Danger Zone', LucideIcons.alertTriangle, isDanger: true),
-                const SizedBox(height: 8),
-                Card(
-                  elevation: 0,
-                  color: isDark ? Colors.red.withValues(alpha: 0.05) : Colors.red.withValues(alpha: 0.02),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-                    side: BorderSide(
-                      color: AppColors.danger.withValues(alpha: 0.3),
                     ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Text(
-                          'Permanently Delete Secret Notes',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            color: AppColors.danger,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Erase all notes, checklists, preferences, and your Secret PIN from this device. Secret Notes will return to unconfigured first-time state.',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.danger,
-                            side: const BorderSide(color: AppColors.danger),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppTheme.radiusButton),
-                            ),
-                          ),
-                          onPressed: _openPermanentDeleteDialog,
-                          icon: const Icon(LucideIcons.trash2, size: 18),
-                          label: const Text(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
                             'Permanently Delete Secret Notes',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: AppColors.danger,
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 6),
+                          Text(
+                            'Erase all notes, checklists, preferences, and your Secret PIN from this device. Secret Notes will return to unconfigured first-time state.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.danger,
+                              side: const BorderSide(color: AppColors.danger),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.radiusButton,
+                                ),
+                              ),
+                            ),
+                            onPressed: _openPermanentDeleteDialog,
+                            icon: const Icon(LucideIcons.trash2, size: 18),
+                            label: const Text(
+                              'Permanently Delete Secret Notes',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 48),
-              ],
+                  const SizedBox(height: 48),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ),
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon, {bool isDanger = false}) {
+  Widget _buildSectionHeader(
+    String title,
+    IconData icon, {
+    bool isDanger = false,
+  }) {
     return Row(
       children: [
         Icon(

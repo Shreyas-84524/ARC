@@ -25,12 +25,7 @@ class FeedbackStatus {
   static const String reviewed = 'reviewed';
   static const String acknowledged = 'acknowledged';
 
-  static const List<String> all = [
-    submitted,
-    emailed,
-    reviewed,
-    acknowledged,
-  ];
+  static const List<String> all = [submitted, emailed, reviewed, acknowledged];
 
   static bool isValid(String status) => all.contains(status);
 }
@@ -107,8 +102,9 @@ class FeedbackModel {
       'status': status,
       'emailedAt': emailedAt != null ? Timestamp.fromDate(emailedAt!) : null,
       'reviewedAt': reviewedAt != null ? Timestamp.fromDate(reviewedAt!) : null,
-      'acknowledgedAt':
-          acknowledgedAt != null ? Timestamp.fromDate(acknowledgedAt!) : null,
+      'acknowledgedAt': acknowledgedAt != null
+          ? Timestamp.fromDate(acknowledgedAt!)
+          : null,
       'notificationDelivered': notificationDelivered,
     };
   }
@@ -119,7 +115,9 @@ class FeedbackModel {
   ) {
     final data = snapshot.data();
     if (data == null) {
-      throw StateError('Cannot create FeedbackModel from empty document snapshot');
+      throw StateError(
+        'Cannot create FeedbackModel from empty document snapshot',
+      );
     }
     return FeedbackModel.fromMap(data, snapshot.id);
   }
@@ -131,14 +129,16 @@ class FeedbackModel {
   ]) {
     final id = (map['feedbackId'] as String?) ?? documentId ?? '';
     final uid = (map['userId'] as String?) ?? '';
-    final category = (map['category'] as String?) ?? FeedbackCategory.generalFeedback;
+    final category =
+        (map['category'] as String?) ?? FeedbackCategory.generalFeedback;
     final module = (map['module'] as String?) ?? 'general';
     final message = (map['message'] as String?) ?? '';
     final rating = (map['rating'] as num?)?.toInt();
     final contactEmail = map['contactEmail'] as String?;
     final appVersion = (map['appVersion'] as String?) ?? '1.3.5';
     final status = (map['status'] as String?) ?? FeedbackStatus.submitted;
-    final notificationDelivered = (map['notificationDelivered'] as bool?) ?? false;
+    final notificationDelivered =
+        (map['notificationDelivered'] as bool?) ?? false;
 
     final createdAt = _parseDateTime(map['createdAt']);
     final emailedAt = _parseNullableDateTime(map['emailedAt']);
@@ -242,21 +242,21 @@ class FeedbackModel {
 
   @override
   int get hashCode => Object.hash(
-        feedbackId,
-        userId,
-        category,
-        module,
-        message,
-        rating,
-        contactEmail,
-        appVersion,
-        createdAt,
-        status,
-        emailedAt,
-        reviewedAt,
-        acknowledgedAt,
-        notificationDelivered,
-      );
+    feedbackId,
+    userId,
+    category,
+    module,
+    message,
+    rating,
+    contactEmail,
+    appVersion,
+    createdAt,
+    status,
+    emailedAt,
+    reviewedAt,
+    acknowledgedAt,
+    notificationDelivered,
+  );
 
   @override
   String toString() {

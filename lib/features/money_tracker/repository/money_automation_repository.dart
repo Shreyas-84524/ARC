@@ -15,7 +15,8 @@ class MoneyAutomationRepository {
   static const String prefEnabledKey = 'automatic_spending_tracking_enabled';
   static const String prefPromptMonthKey = 'automation_prompt_month';
   static const String prefPromptCountKey = 'automation_prompt_count';
-  static const String prefInfoDialogAcceptedKey = 'automation_info_dialog_accepted';
+  static const String prefInfoDialogAcceptedKey =
+      'automation_info_dialog_accepted';
 
   final Box? _box;
   final Map<String, dynamic> _inMemoryStore = {};
@@ -24,7 +25,9 @@ class MoneyAutomationRepository {
   MoneyAutomationRepository({Box? box, this.inMemoryOnly = false}) : _box = box;
 
   String _scopedKey(String? userId, String key) {
-    final effectiveUid = (userId != null && userId.isNotEmpty) ? userId : 'anonymous';
+    final effectiveUid = (userId != null && userId.isNotEmpty)
+        ? userId
+        : 'anonymous';
     return '${effectiveUid}_$key';
   }
 
@@ -50,10 +53,22 @@ class MoneyAutomationRepository {
     try {
       final box = _getBox(userId);
       if (box != null && box.isOpen) {
-        final enabled = box.get(_scopedKey(userId, prefEnabledKey), defaultValue: false) as bool;
-        final month = box.get(_scopedKey(userId, prefPromptMonthKey), defaultValue: '') as String;
-        final count = (box.get(_scopedKey(userId, prefPromptCountKey), defaultValue: 0) as num).toInt();
-        final accepted = box.get(_scopedKey(userId, prefInfoDialogAcceptedKey), defaultValue: false) as bool;
+        final enabled =
+            box.get(_scopedKey(userId, prefEnabledKey), defaultValue: false)
+                as bool;
+        final month =
+            box.get(_scopedKey(userId, prefPromptMonthKey), defaultValue: '')
+                as String;
+        final count =
+            (box.get(_scopedKey(userId, prefPromptCountKey), defaultValue: 0)
+                    as num)
+                .toInt();
+        final accepted =
+            box.get(
+                  _scopedKey(userId, prefInfoDialogAcceptedKey),
+                  defaultValue: false,
+                )
+                as bool;
 
         return MoneyAutomationState(
           isEnabled: enabled,
@@ -63,10 +78,20 @@ class MoneyAutomationRepository {
           isDismissedForSession: false,
         );
       } else {
-        final enabled = (_inMemoryStore[_scopedKey(userId, prefEnabledKey)] ?? false) as bool;
-        final month = (_inMemoryStore[_scopedKey(userId, prefPromptMonthKey)] ?? '') as String;
-        final count = ((_inMemoryStore[_scopedKey(userId, prefPromptCountKey)] ?? 0) as num).toInt();
-        final accepted = (_inMemoryStore[_scopedKey(userId, prefInfoDialogAcceptedKey)] ?? false) as bool;
+        final enabled =
+            (_inMemoryStore[_scopedKey(userId, prefEnabledKey)] ?? false)
+                as bool;
+        final month =
+            (_inMemoryStore[_scopedKey(userId, prefPromptMonthKey)] ?? '')
+                as String;
+        final count =
+            ((_inMemoryStore[_scopedKey(userId, prefPromptCountKey)] ?? 0)
+                    as num)
+                .toInt();
+        final accepted =
+            (_inMemoryStore[_scopedKey(userId, prefInfoDialogAcceptedKey)] ??
+                    false)
+                as bool;
 
         return MoneyAutomationState(
           isEnabled: enabled,
@@ -77,7 +102,9 @@ class MoneyAutomationRepository {
         );
       }
     } catch (e) {
-      debugPrint('MoneyAutomationRepository: failed to load state ($e), using defaults.');
+      debugPrint(
+        'MoneyAutomationRepository: failed to load state ($e), using defaults.',
+      );
       return const MoneyAutomationState();
     }
   }
@@ -108,7 +135,10 @@ class MoneyAutomationRepository {
   ///
   /// If the recorded month does not match [currentMonth], the counter is reset to 1
   /// and the month is updated. If it matches, the count increments by 1.
-  Future<void> recordPromptAppearance(String? userId, String currentMonth) async {
+  Future<void> recordPromptAppearance(
+    String? userId,
+    String currentMonth,
+  ) async {
     final box = _getBox(userId);
     final monthKey = _scopedKey(userId, prefPromptMonthKey);
     final countKey = _scopedKey(userId, prefPromptCountKey);

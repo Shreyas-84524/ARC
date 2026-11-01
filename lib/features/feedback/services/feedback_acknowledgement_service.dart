@@ -16,7 +16,8 @@ abstract class IFeedbackAcknowledgementService {
   bool isAcknowledgedLocally(String userId, String feedbackId);
 }
 
-class FeedbackAcknowledgementService implements IFeedbackAcknowledgementService {
+class FeedbackAcknowledgementService
+    implements IFeedbackAcknowledgementService {
   final LocalNotificationGateway _gateway;
   final Box? _boxOverride;
   final Duration recentGraceWindow;
@@ -29,9 +30,9 @@ class FeedbackAcknowledgementService implements IFeedbackAcknowledgementService 
     this.recentGraceWindow = const Duration(hours: 24),
     this.maxRecentFirstRunNotifications = 2,
     DateTime Function()? nowOverride,
-  })  : _gateway = gateway ?? FlutterLocalNotificationGateway(),
-        _boxOverride = boxOverride,
-        _nowOverride = nowOverride;
+  }) : _gateway = gateway ?? FlutterLocalNotificationGateway(),
+       _boxOverride = boxOverride,
+       _nowOverride = nowOverride;
 
   Box get _box {
     if (_boxOverride != null) return _boxOverride;
@@ -61,28 +62,30 @@ class FeedbackAcknowledgementService implements IFeedbackAcknowledgementService 
   }
 
   /// Category-specific notification copy matching Phase 4 & 5 requirements exactly
-  static (String title, String message) getNotificationContent(String category) {
+  static (String title, String message) getNotificationContent(
+    String category,
+  ) {
     return switch (category) {
       FeedbackCategory.bugReport => (
-          'Thank You!',
-          'Thanks for reporting the bug! Your feedback has been reviewed.',
-        ),
+        'Thank You!',
+        'Thanks for reporting the bug! Your feedback has been reviewed.',
+      ),
       FeedbackCategory.featureRequest => (
-          'Thank You!',
-          'Thanks for your suggestion! We appreciate your ideas for improving Arc.',
-        ),
+        'Thank You!',
+        'Thanks for your suggestion! We appreciate your ideas for improving Arc.',
+      ),
       FeedbackCategory.generalFeedback => (
-          'Thank You!',
-          'Thanks for sharing your feedback! Your input means a lot to us.',
-        ),
+        'Thank You!',
+        'Thanks for sharing your feedback! Your input means a lot to us.',
+      ),
       FeedbackCategory.appRating => (
-          'Thank You!',
-          'Thanks for rating Arc! We appreciate your support.',
-        ),
+        'Thank You!',
+        'Thanks for rating Arc! We appreciate your support.',
+      ),
       _ => (
-          'Thank You!',
-          'Thanks for your feedback! Your input means a lot to us.',
-        ),
+        'Thank You!',
+        'Thanks for your feedback! Your input means a lot to us.',
+      ),
     };
   }
 
@@ -112,9 +115,12 @@ class FeedbackAcknowledgementService implements IFeedbackAcknowledgementService 
 
         final ackKey = formatAckKey(userId, item.feedbackId);
         final ackTime = item.acknowledgedAt;
-        final isRecent = ackTime != null && now.difference(ackTime).abs() <= recentGraceWindow;
+        final isRecent =
+            ackTime != null &&
+            now.difference(ackTime).abs() <= recentGraceWindow;
 
-        if (isRecent && recentToNotify.length < maxRecentFirstRunNotifications) {
+        if (isRecent &&
+            recentToNotify.length < maxRecentFirstRunNotifications) {
           recentToNotify.add(item);
         } else {
           // Historical or beyond cap: seed directly into Hive
@@ -164,7 +170,9 @@ class FeedbackAcknowledgementService implements IFeedbackAcknowledgementService 
     final (title, body) = getNotificationContent(item.category);
 
     // Deterministic 31-bit positive notification ID scoped to feedback range
-    final notificationId = NotificationPolicy().getFeedbackNotificationId(item.feedbackId);
+    final notificationId = NotificationPolicy().getFeedbackNotificationId(
+      item.feedbackId,
+    );
 
     final spec = ArcNotificationSpec(
       id: notificationId,
@@ -186,7 +194,9 @@ class FeedbackAcknowledgementService implements IFeedbackAcknowledgementService 
         'FeedbackAcknowledgementService: Dispatched thank-you notification for ${item.feedbackId} ($title).',
       );
     } catch (err, stack) {
-      debugPrint('FeedbackAcknowledgementService error dispatching notification: $err\n$stack');
+      debugPrint(
+        'FeedbackAcknowledgementService error dispatching notification: $err\n$stack',
+      );
     }
   }
 }

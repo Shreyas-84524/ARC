@@ -53,8 +53,10 @@ class MoneyAutomationState {
       isEnabled: isEnabled ?? this.isEnabled,
       promptMonth: promptMonth ?? this.promptMonth,
       promptCount: promptCount ?? this.promptCount,
-      hasAcceptedInfoDialog: hasAcceptedInfoDialog ?? this.hasAcceptedInfoDialog,
-      isDismissedForSession: isDismissedForSession ?? this.isDismissedForSession,
+      hasAcceptedInfoDialog:
+          hasAcceptedInfoDialog ?? this.hasAcceptedInfoDialog,
+      isDismissedForSession:
+          isDismissedForSession ?? this.isDismissedForSession,
       isPromptActiveThisVisit:
           isPromptActiveThisVisit ?? this.isPromptActiveThisVisit,
       listenerStatus: listenerStatus ?? this.listenerStatus,
@@ -76,12 +78,12 @@ class MoneyAutomationState {
 
   @override
   int get hashCode => Object.hash(
-        isEnabled,
-        promptMonth,
-        promptCount,
-        hasAcceptedInfoDialog,
-        isDismissedForSession,
-        isPromptActiveThisVisit,
-        listenerStatus,
-      );
+    isEnabled,
+    promptMonth,
+    promptCount,
+    hasAcceptedInfoDialog,
+    isDismissedForSession,
+    isPromptActiveThisVisit,
+    listenerStatus,
+  );
 }

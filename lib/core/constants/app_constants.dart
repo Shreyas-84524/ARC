@@ -22,7 +22,7 @@ enum TaskPriority {
       case TaskPriority.high:
         return 'High';
       case TaskPriority.must:
-        return 'Must';
+        return 'Medium';
       case TaskPriority.low:
         return 'Low';
     }
@@ -72,6 +72,6 @@ class AppConstants {
     'Health',
     'Finance',
     'Social',
-    'Other'
+    'Other',
   ];
 }

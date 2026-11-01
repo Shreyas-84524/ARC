@@ -10,11 +10,7 @@ class ShellScreen extends StatelessWidget {
   final Widget child;
   final String? location;
 
-  const ShellScreen({
-    super.key,
-    required this.child,
-    this.location,
-  });
+  const ShellScreen({super.key, required this.child, this.location});
 
   int _indexFromLocation(String location) {
     if (location.startsWith('/tasks')) return 1;
@@ -46,8 +42,7 @@ class ShellScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final String currentPath = location ??
-        GoRouterState.of(context).uri.path;
+    final String currentPath = location ?? GoRouterState.of(context).uri.path;
     final int currentIndex = _indexFromLocation(currentPath);
 
     return PopScope(
@@ -63,9 +58,7 @@ class ShellScreen extends StatelessWidget {
         body: child,
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
-            color: isDark
-                ? AppColors.darkSurface
-                : Colors.white,
+            color: isDark ? AppColors.darkSurface : Colors.white,
             border: Border(
               top: BorderSide(
                 color: isDark
@@ -143,8 +136,8 @@ class ShellScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: active
                   ? (isDark
-                      ? AppColors.accent.withValues(alpha: 0.15)
-                      : AppColors.accent)
+                        ? AppColors.accent.withValues(alpha: 0.15)
+                        : AppColors.accent)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(16),
             ),
@@ -154,8 +147,8 @@ class ShellScreen extends StatelessWidget {
               color: active
                   ? (isDark ? AppColors.accent : AppColors.textPrimaryLight)
                   : (isDark
-                      ? AppColors.textMutedDark
-                      : AppColors.textMutedLight),
+                        ? AppColors.textMutedDark
+                        : AppColors.textMutedLight),
             ),
           ),
         ),

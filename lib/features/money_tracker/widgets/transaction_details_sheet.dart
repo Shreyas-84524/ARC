@@ -11,10 +11,7 @@ import 'package:arc/providers/global_providers.dart';
 class TransactionDetailsSheet extends ConsumerWidget {
   final Transaction transaction;
 
-  const TransactionDetailsSheet({
-    super.key,
-    required this.transaction,
-  });
+  const TransactionDetailsSheet({super.key, required this.transaction});
 
   IconData _getCategoryIcon(String category) {
     switch (category) {
@@ -103,8 +100,12 @@ class TransactionDetailsSheet extends ConsumerWidget {
     final IconData icon = _getCategoryIcon(transaction.category);
 
     final cardBg = isDark ? AppColors.darkSurface : AppColors.lightBgSecondary;
-    final primaryTextColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final primaryTextColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final secondaryTextColor = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -143,7 +144,10 @@ class TransactionDetailsSheet extends ConsumerWidget {
                       ),
                       const SizedBox(height: 2),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: typeColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(6),
@@ -184,10 +188,7 @@ class TransactionDetailsSheet extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(
                   isIncome ? 'Income Added' : 'Expense Recorded',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: secondaryTextColor,
-                  ),
+                  style: TextStyle(fontSize: 13, color: secondaryTextColor),
                 ),
               ],
             ),
@@ -206,7 +207,11 @@ class TransactionDetailsSheet extends ConsumerWidget {
                 // Date & Time Row
                 Row(
                   children: [
-                    const Icon(LucideIcons.calendar, size: 18, color: AppColors.accent),
+                    const Icon(
+                      LucideIcons.calendar,
+                      size: 18,
+                      color: AppColors.accent,
+                    ),
                     const SizedBox(width: 12),
                     Text(
                       'Date & Time',
@@ -228,11 +233,18 @@ class TransactionDetailsSheet extends ConsumerWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(LucideIcons.fileText, size: 18, color: AppColors.accent),
+                      const Icon(
+                        LucideIcons.fileText,
+                        size: 18,
+                        color: AppColors.accent,
+                      ),
                       const SizedBox(width: 12),
                       Text(
                         'Notes',
-                        style: TextStyle(fontSize: 14, color: secondaryTextColor),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: secondaryTextColor,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(

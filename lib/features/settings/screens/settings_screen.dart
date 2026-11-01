@@ -23,10 +23,7 @@ import 'package:arc/features/settings/widgets/edit_display_name_dialog.dart';
 class SettingsScreen extends ConsumerStatefulWidget {
   final AuthService? authService;
 
-  const SettingsScreen({
-    super.key,
-    this.authService,
-  });
+  const SettingsScreen({super.key, this.authService});
 
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
@@ -102,13 +99,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             final isDark = theme.brightness == Brightness.dark;
 
             return AlertDialog(
-              backgroundColor: isDark ? AppColors.darkModal : AppColors.lightModal,
+              backgroundColor: isDark
+                  ? AppColors.darkModal
+                  : AppColors.lightModal,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppTheme.radiusCard),
               ),
               title: Row(
                 children: [
-                  const Icon(LucideIcons.keyRound, color: AppColors.accent, size: 22),
+                  const Icon(
+                    LucideIcons.keyRound,
+                    color: AppColors.accent,
+                    size: 22,
+                  ),
                   const SizedBox(width: 10),
                   const Text('Add ARC Password'),
                 ],
@@ -125,7 +128,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         Text(
                           'Adding an ARC password gives you another way to sign in. Your Google Sign-In will continue working normally.',
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -151,12 +156,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           initialValue: email,
                           enabled: false,
                           style: TextStyle(
-                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
                           ),
                           decoration: InputDecoration(
                             labelText: 'Verified Email',
                             labelStyle: TextStyle(
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
                             ),
                             prefixIcon: const Icon(LucideIcons.mail),
                           ),
@@ -168,22 +177,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           obscureText: obscureNew,
                           enabled: !isSubmitting,
                           style: TextStyle(
-                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
                           ),
                           decoration: InputDecoration(
                             labelText: 'New Password',
                             labelStyle: TextStyle(
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
                             ),
                             prefixIcon: const Icon(LucideIcons.lock),
                             suffixIcon: IconButton(
-                              icon: Icon(obscureNew ? LucideIcons.eyeOff : LucideIcons.eye),
-                              onPressed: () => setDialogState(() => obscureNew = !obscureNew),
+                              icon: Icon(
+                                obscureNew
+                                    ? LucideIcons.eyeOff
+                                    : LucideIcons.eye,
+                              ),
+                              onPressed: () => setDialogState(
+                                () => obscureNew = !obscureNew,
+                              ),
                             ),
                           ),
                           validator: (v) {
-                            if (v == null || v.isEmpty) return 'Please enter a password';
-                            if (v.length < 6) return 'Password must be at least 6 characters';
+                            if (v == null || v.isEmpty) {
+                              return 'Please enter a password';
+                            }
+                            if (v.length < 6) {
+                              return 'Password must be at least 6 characters';
+                            }
                             return null;
                           },
                         ),
@@ -194,21 +217,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           obscureText: obscureConfirm,
                           enabled: !isSubmitting,
                           style: TextStyle(
-                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
                           ),
                           decoration: InputDecoration(
                             labelText: 'Confirm Password',
                             labelStyle: TextStyle(
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
                             ),
                             prefixIcon: const Icon(LucideIcons.checkCheck),
                             suffixIcon: IconButton(
-                              icon: Icon(obscureConfirm ? LucideIcons.eyeOff : LucideIcons.eye),
-                              onPressed: () => setDialogState(() => obscureConfirm = !obscureConfirm),
+                              icon: Icon(
+                                obscureConfirm
+                                    ? LucideIcons.eyeOff
+                                    : LucideIcons.eye,
+                              ),
+                              onPressed: () => setDialogState(
+                                () => obscureConfirm = !obscureConfirm,
+                              ),
                             ),
                           ),
                           validator: (v) {
-                            if (v != newPasswordController.text) return 'Passwords do not match';
+                            if (v != newPasswordController.text) {
+                              return 'Passwords do not match';
+                            }
                             return null;
                           },
                         ),
@@ -219,7 +254,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed: isSubmitting ? null : () => Navigator.of(dialogContext).pop(),
+                  onPressed: isSubmitting
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
@@ -237,7 +274,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           });
 
                           try {
-                            await _authService.linkPassword(newPassword: newPasswordController.text);
+                            await _authService.linkPassword(
+                              newPassword: newPasswordController.text,
+                            );
                             if (dialogContext.mounted) {
                               Navigator.of(dialogContext).pop();
                             }
@@ -248,7 +287,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   content: const Text(
                                     'ARC Password added successfully! You can now log in with either Google or your email and password.',
                                   ),
-                                  backgroundColor: Theme.of(context).colorScheme.primary,
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.primary,
                                   behavior: SnackBarBehavior.floating,
                                 ),
                               );
@@ -256,7 +297,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           } catch (e) {
                             setDialogState(() {
                               isSubmitting = false;
-                              localError = e is AuthException ? e.message : e.toString();
+                              localError = e is AuthException
+                                  ? e.message
+                                  : e.toString();
                             });
                           }
                         },
@@ -264,9 +307,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ? const SizedBox(
                           height: 18,
                           width: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.black,
+                          ),
                         )
-                      : const Text('Add Password', style: TextStyle(fontWeight: FontWeight.bold)),
+                      : const Text(
+                          'Add Password',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                 ),
               ],
             );
@@ -313,7 +362,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString().replaceAll('ArgumentError:', '').replaceAll('Exception:', '').trim()),
+            content: Text(
+              e
+                  .toString()
+                  .replaceAll('ArgumentError:', '')
+                  .replaceAll('Exception:', '')
+                  .trim(),
+            ),
             backgroundColor: AppColors.danger,
             behavior: SnackBarBehavior.floating,
           ),
@@ -336,114 +391,131 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         final isDark = theme.brightness == Brightness.dark;
 
         return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-          ),
-          backgroundColor: isDark ? AppColors.darkModal : AppColors.lightModal,
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Icon Badge
-                Container(
-                  height: 56,
-                  width: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.danger.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    LucideIcons.logOut,
-                    size: 26,
-                    color: AppColors.danger,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Title
-                Text(
-                  'Log out?',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Concise explanation
-                Text(
-                  'Are you sure you want to log out of your account?',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Buttons Row
-                Row(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+              ),
+              backgroundColor: isDark
+                  ? AppColors.darkModal
+                  : AppColors.lightModal,
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Cancel Action (Visually Secondary)
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(double.infinity, 46),
-                          foregroundColor: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                          side: BorderSide(
-                            color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppTheme.radiusButton),
-                          ),
-                        ),
-                        onPressed: () {
-                          AppHaptics.lightImpact();
-                          Navigator.of(context).pop(false);
-                        },
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                    // Icon Badge
+                    Container(
+                      height: 56,
+                      width: 56,
+                      decoration: BoxDecoration(
+                        color: AppColors.danger.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        LucideIcons.logOut,
+                        size: 26,
+                        color: AppColors.danger,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(height: 16),
 
-                    // Primary / Destructive Logout Action
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(double.infinity, 46),
-                          backgroundColor: AppColors.danger,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppTheme.radiusButton),
-                          ),
-                        ),
-                        onPressed: () {
-                          AppHaptics.mediumImpact();
-                          Navigator.of(context).pop(true);
-                        },
-                        child: const Text(
-                          'Log Out',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                    // Title
+                    Text(
+                      'Log out?',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
                       ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Concise explanation
+                    Text(
+                      'Are you sure you want to log out of your account?',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Buttons Row
+                    Row(
+                      children: [
+                        // Cancel Action (Visually Secondary)
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 46),
+                              foregroundColor: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
+                              side: BorderSide(
+                                color: isDark
+                                    ? AppColors.borderMedium
+                                    : AppColors.borderMediumLight,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.radiusButton,
+                                ),
+                              ),
+                            ),
+                            onPressed: () {
+                              AppHaptics.lightImpact();
+                              Navigator.of(context).pop(false);
+                            },
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+
+                        // Primary / Destructive Logout Action
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 46),
+                              backgroundColor: AppColors.danger,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.radiusButton,
+                                ),
+                              ),
+                            ),
+                            onPressed: () {
+                              AppHaptics.mediumImpact();
+                              Navigator.of(context).pop(true);
+                            },
+                            child: const Text(
+                              'Log Out',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-        ).animate().scale(duration: 200.ms, curve: Curves.easeOutBack).fade(duration: 150.ms);
+              ),
+            )
+            .animate()
+            .scale(duration: 200.ms, curve: Curves.easeOutBack)
+            .fade(duration: 150.ms);
       },
     );
 
@@ -460,9 +532,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               CircularProgressIndicator(),
               SizedBox(width: 20),
-              Expanded(
-                child: Text('Saving your latest changes...'),
-              ),
+              Expanded(child: Text('Saving your latest changes...')),
             ],
           ),
         ),
@@ -481,10 +551,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       // 2. Check if unsynced items still remain in queues (e.g. if network or sync failed)
       bool hasUnsyncedItems = false;
       if (userId != null && userId.isNotEmpty) {
-        final taskQ = HiveService().getUserBox(HiveService.tasksSyncQueueBoxName, userId);
-        final habitQ = HiveService().getUserBox(HiveService.habitsSyncQueueBoxName, userId);
-        final moneyQ = HiveService().getUserBox(HiveService.moneySyncQueueBoxName, userId);
-        hasUnsyncedItems = taskQ.isNotEmpty || habitQ.isNotEmpty || moneyQ.isNotEmpty;
+        final taskQ = HiveService().getUserBox(
+          HiveService.tasksSyncQueueBoxName,
+          userId,
+        );
+        final habitQ = HiveService().getUserBox(
+          HiveService.habitsSyncQueueBoxName,
+          userId,
+        );
+        final moneyQ = HiveService().getUserBox(
+          HiveService.moneySyncQueueBoxName,
+          userId,
+        );
+        hasUnsyncedItems =
+            taskQ.isNotEmpty || habitQ.isNotEmpty || moneyQ.isNotEmpty;
       }
 
       if (!flushSuccess || hasUnsyncedItems) {
@@ -565,7 +645,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Clear Local Cache'),
-        content: const Text('This will clean temporary cache files from local storage. Your saved data will remain intact.'),
+        content: const Text(
+          'This will clean temporary cache files from local storage. Your saved data will remain intact.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -636,9 +718,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
 
     if (confirm == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Application data reset.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Application data reset.')));
     }
   }
 
@@ -652,7 +734,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final notificationHealth = ref.watch(notificationControllerProvider);
     final userContext = ref.watch(userContextProvider);
     final automationState = ref.watch(moneyAutomationProvider);
-    final currentUsername = userContext.profile?.displayName ?? userContext.profile?.username ?? 'User';
+    final currentUsername =
+        userContext.profile?.displayName ??
+        userContext.profile?.username ??
+        'User';
 
     final linkedProviders = _authService.getLinkedProviders();
     final hasGoogle = linkedProviders.isNotEmpty
@@ -661,7 +746,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final hasPassword = linkedProviders.isNotEmpty
         ? linkedProviders.contains('password')
         : (userContext.profile?.authProvider.contains('password') ?? true);
-    final userEmail = userContext.profile?.email ?? UserProfile.emailForUsername(currentUsername);
+    final userEmail =
+        userContext.profile?.email ??
+        UserProfile.emailForUsername(currentUsername);
 
     return Scaffold(
       appBar: AppBar(
@@ -678,7 +765,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // ==========================================
           // 1. ACCOUNT & CHANGE PASSWORD (START OF SETTINGS)
           // ==========================================
-          Text('Account & Security', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'Account & Security',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 8),
           Card(
             child: Padding(
@@ -711,10 +803,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 Flexible(
                                   child: Text(
                                     currentUsername,
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                    ),
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                        ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -724,7 +817,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                   child: InkWell(
                                     key: const Key('edit_display_name_button'),
                                     onTap: () {
-                                      final profile = userContext.profile ??
+                                      final profile =
+                                          userContext.profile ??
                                           UserProfile(
                                             id: userContext.userId ?? '',
                                             username: currentUsername,
@@ -734,10 +828,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                           );
                                       showDialog(
                                         context: context,
-                                        builder: (dialogCtx) => EditDisplayNameDialog(
-                                          currentProfile: profile,
-                                          authService: _authService,
-                                        ),
+                                        builder: (dialogCtx) =>
+                                            EditDisplayNameDialog(
+                                              currentProfile: profile,
+                                              authService: _authService,
+                                            ),
                                       );
                                     },
                                     borderRadius: BorderRadius.circular(12),
@@ -746,7 +841,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                       child: Icon(
                                         LucideIcons.pencil,
                                         size: 15,
-                                        color: isDark ? AppColors.accent : AppColors.darkAccent,
+                                        color: isDark
+                                            ? AppColors.accent
+                                            : AppColors.darkAccent,
                                       ),
                                     ),
                                   ),
@@ -757,14 +854,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             Text(
                               userEmail,
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                                color: isDark
+                                    ? AppColors.textMutedDark
+                                    : AppColors.textMutedLight,
                               ),
                             ),
                             const SizedBox(height: 4),
                             InkWell(
                               key: const Key('edit_display_name_text_button'),
                               onTap: () {
-                                final profile = userContext.profile ??
+                                final profile =
+                                    userContext.profile ??
                                     UserProfile(
                                       id: userContext.userId ?? '',
                                       username: currentUsername,
@@ -786,9 +886,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: isDark ? AppColors.accent : AppColors.darkAccent,
+                                  color: isDark
+                                      ? AppColors.accent
+                                      : AppColors.darkAccent,
                                   decoration: TextDecoration.underline,
-                                  decorationColor: isDark ? AppColors.accent : AppColors.darkAccent,
+                                  decorationColor: isDark
+                                      ? AppColors.accent
+                                      : AppColors.darkAccent,
                                 ),
                               ),
                             ),
@@ -801,23 +905,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         InkWell(
                           onTap: () {
                             setState(() {
-                              _isPasswordSectionExpanded = !_isPasswordSectionExpanded;
+                              _isPasswordSectionExpanded =
+                                  !_isPasswordSectionExpanded;
                             });
                           },
                           borderRadius: BorderRadius.circular(8),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 6,
+                            ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  _isPasswordSectionExpanded ? LucideIcons.chevronUp : LucideIcons.key,
+                                  _isPasswordSectionExpanded
+                                      ? LucideIcons.chevronUp
+                                      : LucideIcons.key,
                                   size: 16,
                                   color: AppColors.danger,
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  _isPasswordSectionExpanded ? 'Close' : 'Change Password',
+                                  _isPasswordSectionExpanded
+                                      ? 'Close'
+                                      : 'Change Password',
                                   style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
@@ -853,7 +965,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             'Google',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
-                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimaryLight,
                             ),
                           ),
                         ),
@@ -877,7 +991,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             'Email & Password',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
-                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimaryLight,
                             ),
                           ),
                         ),
@@ -900,7 +1016,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           foregroundColor: AppColors.accent,
                           side: const BorderSide(color: AppColors.accent),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.radiusButton,
+                            ),
                           ),
                         ),
                       ),
@@ -927,26 +1045,41 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             obscureText: _obscureCurrentPassword,
                             enabled: !_isChangingPassword,
                             style: TextStyle(
-                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimaryLight,
                             ),
                             decoration: InputDecoration(
                               labelText: 'Current Password',
                               labelStyle: TextStyle(
-                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight,
                               ),
                               prefixIcon: Icon(
                                 LucideIcons.lock,
-                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight,
                               ),
                               suffixIcon: IconButton(
                                 icon: Icon(
-                                  _obscureCurrentPassword ? LucideIcons.eyeOff : LucideIcons.eye,
-                                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                  _obscureCurrentPassword
+                                      ? LucideIcons.eyeOff
+                                      : LucideIcons.eye,
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight,
                                 ),
-                                onPressed: () => setState(() => _obscureCurrentPassword = !_obscureCurrentPassword),
+                                onPressed: () => setState(
+                                  () => _obscureCurrentPassword =
+                                      !_obscureCurrentPassword,
+                                ),
                               ),
                             ),
-                            validator: (v) => (v == null || v.isEmpty) ? 'Please enter your current password' : null,
+                            validator: (v) => (v == null || v.isEmpty)
+                                ? 'Please enter your current password'
+                                : null,
                           ),
                           const SizedBox(height: 14),
                           TextFormField(
@@ -954,28 +1087,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             obscureText: _obscureNewPassword,
                             enabled: !_isChangingPassword,
                             style: TextStyle(
-                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimaryLight,
                             ),
                             decoration: InputDecoration(
                               labelText: 'New Password',
                               labelStyle: TextStyle(
-                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight,
                               ),
                               prefixIcon: Icon(
                                 LucideIcons.keyRound,
-                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight,
                               ),
                               suffixIcon: IconButton(
                                 icon: Icon(
-                                  _obscureNewPassword ? LucideIcons.eyeOff : LucideIcons.eye,
-                                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                  _obscureNewPassword
+                                      ? LucideIcons.eyeOff
+                                      : LucideIcons.eye,
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight,
                                 ),
-                                onPressed: () => setState(() => _obscureNewPassword = !_obscureNewPassword),
+                                onPressed: () => setState(
+                                  () => _obscureNewPassword =
+                                      !_obscureNewPassword,
+                                ),
                               ),
                             ),
                             validator: (v) {
-                              if (v == null || v.isEmpty) return 'Please enter a new password';
-                              if (v.length < 6) return 'Password must be at least 6 characters';
+                              if (v == null || v.isEmpty) {
+                                return 'Please enter a new password';
+                              }
+                              if (v.length < 6) {
+                                return 'Password must be at least 6 characters';
+                              }
                               return null;
                             },
                           ),
@@ -985,27 +1135,42 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             obscureText: _obscureConfirmPassword,
                             enabled: !_isChangingPassword,
                             style: TextStyle(
-                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimaryLight,
                             ),
                             decoration: InputDecoration(
                               labelText: 'Confirm New Password',
                               labelStyle: TextStyle(
-                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight,
                               ),
                               prefixIcon: Icon(
                                 LucideIcons.checkCheck,
-                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight,
                               ),
                               suffixIcon: IconButton(
                                 icon: Icon(
-                                  _obscureConfirmPassword ? LucideIcons.eyeOff : LucideIcons.eye,
-                                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                  _obscureConfirmPassword
+                                      ? LucideIcons.eyeOff
+                                      : LucideIcons.eye,
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight,
                                 ),
-                                onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                                onPressed: () => setState(
+                                  () => _obscureConfirmPassword =
+                                      !_obscureConfirmPassword,
+                                ),
                               ),
                             ),
                             validator: (v) {
-                              if (v != _newPasswordController.text) return 'Passwords do not match';
+                              if (v != _newPasswordController.text) {
+                                return 'Passwords do not match';
+                              }
                               return null;
                             },
                           ),
@@ -1013,12 +1178,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           SizedBox(
                             height: 48,
                             child: ElevatedButton(
-                              onPressed: _isChangingPassword ? null : _handleChangePassword,
+                              onPressed: _isChangingPassword
+                                  ? null
+                                  : _handleChangePassword,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.accent,
                                 foregroundColor: Colors.black,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                                  borderRadius: BorderRadius.circular(
+                                    AppTheme.radiusButton,
+                                  ),
                                 ),
                                 elevation: 0,
                               ),
@@ -1053,14 +1222,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 20),
 
           // 2. Appearance Section
-          Text('Appearance', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'Appearance',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 8),
           Card(
             child: Column(
               children: [
                 SwitchListTile(
-                  secondary: const Icon(LucideIcons.moon, color: AppColors.accent),
-                  title: const Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.bold)),
+                  secondary: const Icon(
+                    LucideIcons.moon,
+                    color: AppColors.accent,
+                  ),
+                  title: const Text(
+                    'Dark Mode',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   subtitle: const Text('Toggle between Dark and Light theme'),
                   value: themeMode == ThemeMode.dark,
                   activeThumbColor: AppColors.accent,
@@ -1075,15 +1255,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 20),
 
           // 3. Notifications Section
-          Text('Notifications', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'Notifications',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 8),
           Card(
             child: Column(
               children: [
                 SwitchListTile(
-                  secondary: const Icon(LucideIcons.bell, color: AppColors.accent),
-                  title: const Text('Master Notifications', style: TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(_masterNotifications ? 'Notifications: Enabled' : 'Notifications: Disabled'),
+                  secondary: const Icon(
+                    LucideIcons.bell,
+                    color: AppColors.accent,
+                  ),
+                  title: const Text(
+                    'Master Notifications',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    _masterNotifications
+                        ? 'Notifications: Enabled'
+                        : 'Notifications: Disabled',
+                  ),
                   value: _masterNotifications,
                   activeThumbColor: AppColors.accent,
                   onChanged: (val) {
@@ -1093,9 +1288,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       _habitReminders = val;
                       _moneyReminders = val;
                     });
-                    ref.read(appSettingsProvider.notifier).updateMasterNotifications(val);
+                    ref
+                        .read(appSettingsProvider.notifier)
+                        .updateMasterNotifications(val);
                     if (val) {
-                      ref.read(notificationControllerProvider.notifier)
+                      ref
+                          .read(notificationControllerProvider.notifier)
                           .requestPermissionFromUserAction();
                     }
                   },
@@ -1104,8 +1302,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   if (notificationHealth.permission !=
                       ArcNotificationPermissionState.granted)
                     ListTile(
-                      leading: const Icon(LucideIcons.alertTriangle,
-                          color: AppColors.warning),
+                      leading: const Icon(
+                        LucideIcons.alertTriangle,
+                        color: AppColors.warning,
+                      ),
                       title: const Text('Notification permission'),
                       subtitle: Text(
                         notificationHealth.permission ==
@@ -1122,25 +1322,47 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   const Divider(height: 1, indent: 56),
                   ListTile(
-                    leading: const Icon(LucideIcons.clock, color: AppColors.accent),
-                    title: const Text('Daily Reminder Time', style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('Pending habits & spending check-in at ${_formatReminderTime(appSettings.remTime)}'),
+                    leading: const Icon(
+                      LucideIcons.clock,
+                      color: AppColors.accent,
+                    ),
+                    title: const Text(
+                      'Daily Reminder Time',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      'Pending habits & spending check-in at ${_formatReminderTime(appSettings.remTime)}',
+                    ),
                     trailing: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                        color: isDark
+                            ? Colors.white10
+                            : Colors.black.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.accent.withValues(alpha: 0.5)),
+                        border: Border.all(
+                          color: AppColors.accent.withValues(alpha: 0.5),
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             "Edit",
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.accent,
+                            ),
                           ),
                           const SizedBox(width: 4),
-                          const Icon(LucideIcons.pencil, size: 14, color: AppColors.accent),
+                          const Icon(
+                            LucideIcons.pencil,
+                            size: 14,
+                            color: AppColors.accent,
+                          ),
                         ],
                       ),
                     ),
@@ -1154,16 +1376,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       }
                       final picked = await showTimePicker(
                         context: context,
-                        initialTime: TimeOfDay(hour: initialHour, minute: initialMinute),
+                        initialTime: TimeOfDay(
+                          hour: initialHour,
+                          minute: initialMinute,
+                        ),
                       );
                       if (picked != null) {
                         final formatted =
                             '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-                        await ref.read(appSettingsProvider.notifier).updateRemTime(formatted);
+                        await ref
+                            .read(appSettingsProvider.notifier)
+                            .updateRemTime(formatted);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Daily reminder time updated to $formatted'),
+                              content: Text(
+                                'Daily reminder time updated to $formatted',
+                              ),
                               behavior: SnackBarBehavior.floating,
                             ),
                           );
@@ -1173,41 +1402,68 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   const Divider(height: 1, indent: 56),
                   SwitchListTile(
-                    secondary: const Icon(LucideIcons.checkSquare, color: AppColors.accent),
+                    secondary: const Icon(
+                      LucideIcons.checkSquare,
+                      color: AppColors.accent,
+                    ),
                     title: const Text('Task Reminders'),
-                    subtitle: const Text('Alerts 5m before deadline and at due time'),
+                    subtitle: const Text(
+                      'Alerts 5m before deadline and at due time',
+                    ),
                     value: _taskReminders,
                     activeThumbColor: AppColors.accent,
                     onChanged: (val) {
                       setState(() => _taskReminders = val);
-                      final updated = appSettings.copyWith(taskRemindersEnabled: val);
-                      ref.read(appSettingsProvider.notifier).updateSettings(updated);
+                      final updated = appSettings.copyWith(
+                        taskRemindersEnabled: val,
+                      );
+                      ref
+                          .read(appSettingsProvider.notifier)
+                          .updateSettings(updated);
                     },
                   ),
                   const Divider(height: 1, indent: 56),
                   SwitchListTile(
-                    secondary: const Icon(LucideIcons.zap, color: AppColors.accent),
+                    secondary: const Icon(
+                      LucideIcons.zap,
+                      color: AppColors.accent,
+                    ),
                     title: const Text('Habit Reminders'),
-                    subtitle: Text('Habit deadline alerts & check-in at ${_formatReminderTime(appSettings.remTime)}'),
+                    subtitle: Text(
+                      'Habit deadline alerts & check-in at ${_formatReminderTime(appSettings.remTime)}',
+                    ),
                     value: _habitReminders,
                     activeThumbColor: AppColors.accent,
                     onChanged: (val) {
                       setState(() => _habitReminders = val);
-                      final updated = appSettings.copyWith(habitRemindersEnabled: val);
-                      ref.read(appSettingsProvider.notifier).updateSettings(updated);
+                      final updated = appSettings.copyWith(
+                        habitRemindersEnabled: val,
+                      );
+                      ref
+                          .read(appSettingsProvider.notifier)
+                          .updateSettings(updated);
                     },
                   ),
                   const Divider(height: 1, indent: 56),
                   SwitchListTile(
-                    secondary: const Icon(LucideIcons.wallet, color: AppColors.success),
+                    secondary: const Icon(
+                      LucideIcons.wallet,
+                      color: AppColors.success,
+                    ),
                     title: const Text('Expense Reminders'),
-                    subtitle: Text('Daily reminder to log spending at ${_formatReminderTime(appSettings.remTime)}'),
+                    subtitle: Text(
+                      'Daily reminder to log spending at ${_formatReminderTime(appSettings.remTime)}',
+                    ),
                     value: _moneyReminders,
                     activeThumbColor: AppColors.accent,
                     onChanged: (val) {
                       setState(() => _moneyReminders = val);
-                      final updated = appSettings.copyWith(moneyRemindersEnabled: val);
-                      ref.read(appSettingsProvider.notifier).updateSettings(updated);
+                      final updated = appSettings.copyWith(
+                        moneyRemindersEnabled: val,
+                      );
+                      ref
+                          .read(appSettingsProvider.notifier)
+                          .updateSettings(updated);
                     },
                   ),
                 ],
@@ -1218,14 +1474,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 20),
 
           // 4. Money Tracker Section
-          Text('Money Tracker', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'Money Tracker',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 8),
           Card(
             child: Column(
               children: [
                 SwitchListTile(
-                  secondary: const Icon(LucideIcons.sparkles, color: AppColors.accent),
-                  title: const Text('Automatic Spending Tracking', style: TextStyle(fontWeight: FontWeight.bold)),
+                  secondary: const Icon(
+                    LucideIcons.sparkles,
+                    color: AppColors.accent,
+                  ),
+                  title: const Text(
+                    'Automatic Spending Tracking',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   subtitle: Text(
                     automationState.isEnabled
                         ? 'Status: ${automationState.listenerStatus.label}'
@@ -1241,19 +1508,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         builder: (ctx) => const AutomaticSpendingInfoDialog(),
                       );
                       if (confirmed == true) {
-                        await ref.read(moneyAutomationProvider.notifier).enableAutomation();
+                        await ref
+                            .read(moneyAutomationProvider.notifier)
+                            .enableAutomation();
                       }
                     } else {
-                      await ref.read(moneyAutomationProvider.notifier).disableAutomation();
+                      await ref
+                          .read(moneyAutomationProvider.notifier)
+                          .disableAutomation();
                     }
                   },
                 ),
-                if (automationState.listenerStatus == MoneyAutomationListenerStatus.permissionRequired) ...[
+                if (automationState.listenerStatus ==
+                    MoneyAutomationListenerStatus.permissionRequired) ...[
                   const Divider(height: 1, indent: 56),
                   ListTile(
-                    leading: const Icon(LucideIcons.alertCircle, color: AppColors.warning),
-                    title: const Text('Android Permission Required', style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Tap to grant SMS permission or open Settings'),
+                    leading: const Icon(
+                      LucideIcons.alertCircle,
+                      color: AppColors.warning,
+                    ),
+                    title: const Text(
+                      'Android Permission Required',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: const Text(
+                      'Tap to grant SMS permission or open Settings',
+                    ),
                     trailing: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.warning,
@@ -1262,7 +1542,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       onPressed: () {
                         AppHaptics.mediumImpact();
-                        ref.read(moneyAutomationProvider.notifier).requestPermissionAgain();
+                        ref
+                            .read(moneyAutomationProvider.notifier)
+                            .requestPermissionAgain();
                       },
                       child: const Text('Enable Access'),
                     ),
@@ -1275,15 +1557,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 20),
 
           // 5. Help & Feedback
-          Text('Help & Feedback', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'Help & Feedback',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 8),
           Card(
             child: Column(
               children: [
                 ListTile(
                   leading: const Icon(LucideIcons.bug, color: AppColors.danger),
-                  title: const Text('Report a Bug', style: TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: const Text('Encountered an issue or glitch? Let us know'),
+                  title: const Text(
+                    'Report a Bug',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: const Text(
+                    'Encountered an issue or glitch? Let us know',
+                  ),
                   trailing: const Icon(LucideIcons.chevronRight, size: 18),
                   onTap: () {
                     AppHaptics.lightImpact();
@@ -1292,8 +1584,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const Divider(height: 1, indent: 56),
                 ListTile(
-                  leading: const Icon(LucideIcons.sparkles, color: AppColors.accent),
-                  title: const Text('Suggest a Feature', style: TextStyle(fontWeight: FontWeight.bold)),
+                  leading: const Icon(
+                    LucideIcons.sparkles,
+                    color: AppColors.accent,
+                  ),
+                  title: const Text(
+                    'Suggest a Feature',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   subtitle: const Text('Have an idea to make Arc better?'),
                   trailing: const Icon(LucideIcons.chevronRight, size: 18),
                   onTap: () {
@@ -1303,8 +1601,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const Divider(height: 1, indent: 56),
                 ListTile(
-                  leading: const Icon(LucideIcons.messageSquare, color: AppColors.info),
-                  title: const Text('General Feedback', style: TextStyle(fontWeight: FontWeight.bold)),
+                  leading: const Icon(
+                    LucideIcons.messageSquare,
+                    color: AppColors.info,
+                  ),
+                  title: const Text(
+                    'General Feedback',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   subtitle: const Text('Share your thoughts and suggestions'),
                   trailing: const Icon(LucideIcons.chevronRight, size: 18),
                   onTap: () {
@@ -1314,8 +1618,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const Divider(height: 1, indent: 56),
                 ListTile(
-                  leading: const Icon(LucideIcons.star, color: Color(0xFFFFC857)),
-                  title: const Text('Rate Arc', style: TextStyle(fontWeight: FontWeight.bold)),
+                  leading: const Icon(
+                    LucideIcons.star,
+                    color: Color(0xFFFFC857),
+                  ),
+                  title: const Text(
+                    'Rate Arc',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   subtitle: const Text('Give us a 1–5 star rating and review'),
                   trailing: const Icon(LucideIcons.chevronRight, size: 18),
                   onTap: () {
@@ -1326,8 +1636,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 const Divider(height: 1, indent: 56),
                 ListTile(
                   key: const Key('settings_my_feedback_tile'),
-                  leading: const Icon(LucideIcons.inbox, color: AppColors.accent),
-                  title: const Text('My Feedback', style: TextStyle(fontWeight: FontWeight.bold)),
+                  leading: const Icon(
+                    LucideIcons.inbox,
+                    color: AppColors.accent,
+                  ),
+                  title: const Text(
+                    'My Feedback',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   subtitle: const Text('View your submitted feedback'),
                   trailing: const Icon(LucideIcons.chevronRight, size: 18),
                   onTap: () {
@@ -1342,21 +1658,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 20),
 
           // 6. Backup & Maintenance
-          Text('Backup & Maintenance', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'Backup & Maintenance',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 8),
           Card(
             child: Column(
               children: [
                 ListTile(
-                  leading: const Icon(LucideIcons.hardDrive, color: AppColors.accent),
-                  title: const Text('Clear Local Cache', style: TextStyle(fontWeight: FontWeight.bold)),
+                  leading: const Icon(
+                    LucideIcons.hardDrive,
+                    color: AppColors.accent,
+                  ),
+                  title: const Text(
+                    'Clear Local Cache',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   subtitle: const Text('Clean cached temporary indexes'),
                   onTap: _confirmClearCache,
                 ),
                 const Divider(height: 1, indent: 56),
                 ListTile(
-                  leading: const Icon(LucideIcons.alertTriangle, color: AppColors.danger),
-                  title: const Text('Reset Local Data', style: TextStyle(fontWeight: FontWeight.bold)),
+                  leading: const Icon(
+                    LucideIcons.alertTriangle,
+                    color: AppColors.danger,
+                  ),
+                  title: const Text(
+                    'Reset Local Data',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   subtitle: const Text('Reset local storage cache'),
                   onTap: _confirmResetData,
                 ),
@@ -1381,7 +1714,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               },
               borderRadius: BorderRadius.circular(AppTheme.radiusCard),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 child: Row(
                   children: [
                     Container(
@@ -1414,7 +1750,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           Text(
                             'Sign out of account and sync session',
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                              color: isDark
+                                  ? AppColors.textMutedDark
+                                  : AppColors.textMutedLight,
                             ),
                           ),
                         ],
@@ -1441,21 +1779,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   'Project Arc',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Version 1.3.5 • Build 2026.08',
                   style: theme.textTheme.labelLarge?.copyWith(
-                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                    color: isDark
+                        ? AppColors.textMutedDark
+                        : AppColors.textMutedLight,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'Made with love in India',
                   style: theme.textTheme.labelMedium?.copyWith(
-                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                    color: isDark
+                        ? AppColors.textMutedDark
+                        : AppColors.textMutedLight,
                   ),
                 ),
               ],

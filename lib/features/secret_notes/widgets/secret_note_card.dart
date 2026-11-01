@@ -4,6 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:arc/core/theme/app_theme.dart';
 import 'package:arc/features/secret_notes/models/secret_note.dart';
 import 'package:arc/features/secret_notes/models/secret_note_color.dart';
+import 'package:arc/features/secret_notes/models/secret_note_attachment.dart';
 
 // LOCAL-ONLY ARCHITECTURE RULE:
 // Secret Notes must NEVER sync with Firebase, Firestore, or any cloud service.
@@ -13,11 +14,7 @@ class SecretNoteCard extends StatelessWidget {
   final SecretNote note;
   final VoidCallback onTap;
 
-  const SecretNoteCard({
-    super.key,
-    required this.note,
-    required this.onTap,
-  });
+  const SecretNoteCard({super.key, required this.note, required this.onTap});
 
   String _formatDate(DateTime dt) {
     final now = DateTime.now();
@@ -47,20 +44,27 @@ class SecretNoteCard extends StatelessWidget {
     final hasTitle = note.title.trim().isNotEmpty;
     final hasDescription = note.description.trim().isNotEmpty;
     final hasChecklist = note.checklist.isNotEmpty;
+    final imageCount = note.attachments
+        .where((item) => item.type == SecretNoteAttachmentType.image)
+        .length;
+    final audioCount = note.attachments
+        .where((item) => item.type == SecretNoteAttachmentType.audio)
+        .length;
 
     // Up to 2 preview checklist items
-    final checklistPreview = hasChecklist ? note.checklist.take(2).toList() : const [];
-    final extraCount = hasChecklist ? note.checklist.length - checklistPreview.length : 0;
+    final checklistPreview = hasChecklist
+        ? note.checklist.take(2).toList()
+        : const [];
+    final extraCount = hasChecklist
+        ? note.checklist.length - checklistPreview.length
+        : 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: cardBorder,
-          width: 1.2,
-        ),
+        border: Border.all(color: cardBorder, width: 1.2),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
@@ -93,7 +97,8 @@ class SecretNoteCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (hasDescription || hasChecklist) const SizedBox(height: 6),
+                  if (hasDescription || hasChecklist || note.labels.isNotEmpty)
+                    const SizedBox(height: 6),
                 ],
                 if (hasDescription) ...[
                   Text(
@@ -128,11 +133,11 @@ class SecretNoteCard extends StatelessWidget {
                             size: 15,
                             color: item.isCompleted
                                 ? (isDark
-                                    ? AppColors.textMutedDark
-                                    : AppColors.textMutedLight)
+                                      ? AppColors.textMutedDark
+                                      : AppColors.textMutedLight)
                                 : (isDark
-                                    ? AppColors.textSecondaryDark
-                                    : AppColors.textSecondaryLight),
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
@@ -141,11 +146,11 @@ class SecretNoteCard extends StatelessWidget {
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: item.isCompleted
                                     ? (isDark
-                                        ? AppColors.textMutedDark
-                                        : AppColors.textMutedLight)
+                                          ? AppColors.textMutedDark
+                                          : AppColors.textMutedLight)
                                     : (isDark
-                                        ? AppColors.textPrimaryDark
-                                        : AppColors.textPrimaryLight),
+                                          ? AppColors.textPrimaryDark
+                                          : AppColors.textPrimaryLight),
                                 decoration: item.isCompleted
                                     ? TextDecoration.lineThrough
                                     : null,
@@ -172,6 +177,38 @@ class SecretNoteCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                ],
+                if (note.labels.isNotEmpty ||
+                    imageCount > 0 ||
+                    audioCount > 0) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      ...note.labels
+                          .take(3)
+                          .map(
+                            (label) => Chip(
+                              visualDensity: VisualDensity.compact,
+                              avatar: const Icon(LucideIcons.tag, size: 12),
+                              label: Text(label),
+                            ),
+                          ),
+                      if (imageCount > 0)
+                        Chip(
+                          visualDensity: VisualDensity.compact,
+                          avatar: const Icon(LucideIcons.image, size: 12),
+                          label: Text('$imageCount'),
+                        ),
+                      if (audioCount > 0)
+                        Chip(
+                          visualDensity: VisualDensity.compact,
+                          avatar: const Icon(LucideIcons.mic, size: 12),
+                          label: Text('$audioCount'),
+                        ),
+                    ],
+                  ),
                 ],
                 const SizedBox(height: 10),
                 Row(

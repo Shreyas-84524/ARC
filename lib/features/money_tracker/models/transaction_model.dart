@@ -69,7 +69,8 @@ class Transaction extends HiveObject {
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       source: source ?? this.source,
-      automationFingerprint: automationFingerprint ?? this.automationFingerprint,
+      automationFingerprint:
+          automationFingerprint ?? this.automationFingerprint,
     );
   }
 
@@ -97,7 +98,9 @@ class Transaction extends HiveObject {
       date: map['date'] != null ? DateTime.parse(map['date']) : DateTime.now(),
       time: map['time'] ?? '',
       notes: map['notes'] ?? '',
-      createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : DateTime.now(),
+      createdAt: map['createdAt'] != null
+          ? DateTime.parse(map['createdAt'])
+          : DateTime.now(),
       source: map['source'] ?? 'manual',
       automationFingerprint: map['automationFingerprint'],
     );

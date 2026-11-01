@@ -16,10 +16,12 @@ class SecretNotesSetupScreen extends ConsumerStatefulWidget {
   const SecretNotesSetupScreen({super.key});
 
   @override
-  ConsumerState<SecretNotesSetupScreen> createState() => _SecretNotesSetupScreenState();
+  ConsumerState<SecretNotesSetupScreen> createState() =>
+      _SecretNotesSetupScreenState();
 }
 
-class _SecretNotesSetupScreenState extends ConsumerState<SecretNotesSetupScreen> {
+class _SecretNotesSetupScreenState
+    extends ConsumerState<SecretNotesSetupScreen> {
   final TextEditingController _pinController = TextEditingController();
   final TextEditingController _confirmPinController = TextEditingController();
 
@@ -136,117 +138,124 @@ class _SecretNotesSetupScreenState extends ConsumerState<SecretNotesSetupScreen>
             onPressed: _exitToTasks,
           ),
         ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              horizontal: ResponsiveLayout.horizontalPadding(context),
-              vertical: 24,
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: AppColors.accent.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: ResponsiveLayout.horizontalPadding(context),
+                vertical: 24,
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          LucideIcons.lock,
+                          color: AppColors.accent,
+                          size: 32,
+                        ),
                       ),
-                      child: const Icon(
-                        LucideIcons.lock,
-                        color: AppColors.accent,
-                        size: 32,
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Create Secret PIN',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Create Secret PIN',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Set a 3–6 digit numeric PIN to protect your private notes. This PIN is stored only on this device.',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  SecretNotesPinField(
-                    controller: _pinController,
-                    focusNode: _pinFocus,
-                    autofocus: true,
-                    label: 'Create Secret PIN',
-                    errorText: _pinError,
-                    onChanged: (val) {
-                      setState(() {
-                        if (_pinError != null) _pinError = null;
-                      });
-                    },
-                    onSubmitted: (_) {
-                      _confirmPinFocus.requestFocus();
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  SecretNotesPinField(
-                    controller: _confirmPinController,
-                    focusNode: _confirmPinFocus,
-                    label: 'Confirm Secret PIN',
-                    errorText: _confirmPinError,
-                    onChanged: (val) {
-                      setState(() {
-                        if (_confirmPinError != null) _confirmPinError = null;
-                      });
-                    },
-                    onSubmitted: (_) => _handleContinue(),
-                  ),
-                  const SizedBox(height: 36),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: AppColors.textPrimaryLight,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Set a 3–6 digit numeric PIN to protect your private notes. This PIN is stored only on this device.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
                       ),
-                      elevation: 0,
                     ),
-                    onPressed: (_isLoading || _pinController.text.length < 3 || _confirmPinController.text.length < 3)
-                        ? null
-                        : _handleContinue,
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.textPrimaryLight,
-                            ),
-                          )
-                        : const Text(
-                            'Continue',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                    const SizedBox(height: 32),
+                    SecretNotesPinField(
+                      controller: _pinController,
+                      focusNode: _pinFocus,
+                      autofocus: true,
+                      label: 'Create Secret PIN',
+                      errorText: _pinError,
+                      onChanged: (val) {
+                        setState(() {
+                          if (_pinError != null) _pinError = null;
+                        });
+                      },
+                      onSubmitted: (_) {
+                        _confirmPinFocus.requestFocus();
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    SecretNotesPinField(
+                      controller: _confirmPinController,
+                      focusNode: _confirmPinFocus,
+                      label: 'Confirm Secret PIN',
+                      errorText: _confirmPinError,
+                      onChanged: (val) {
+                        setState(() {
+                          if (_confirmPinError != null) _confirmPinError = null;
+                        });
+                      },
+                      onSubmitted: (_) => _handleContinue(),
+                    ),
+                    const SizedBox(height: 36),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: AppColors.textPrimaryLight,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusButton,
                           ),
-                  ),
-                ],
+                        ),
+                        elevation: 0,
+                      ),
+                      onPressed:
+                          (_isLoading ||
+                              _pinController.text.length < 3 ||
+                              _confirmPinController.text.length < 3)
+                          ? null
+                          : _handleContinue,
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.textPrimaryLight,
+                              ),
+                            )
+                          : const Text(
+                              'Continue',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
-    ),
     );
   }
 }

@@ -42,7 +42,8 @@ class UserProfile {
 
   static bool isKnownUsername(String username) {
     final clean = username.trim().toLowerCase();
-    return clean == 'admin' || knownUsernames.any((u) => u.toLowerCase() == clean);
+    return clean == 'admin' ||
+        knownUsernames.any((u) => u.toLowerCase() == clean);
   }
 
   /// Standard internal email generator for username mapping
@@ -109,7 +110,8 @@ class UserProfile {
 
   factory UserProfile.fromMap(Map<String, dynamic> map) {
     final authProv = map['authProvider'] ?? 'password';
-    final inferredSource = map['displayNameSource'] as String? ??
+    final inferredSource =
+        map['displayNameSource'] as String? ??
         (authProv.toString().contains('google') ? 'google' : 'default');
 
     return UserProfile(

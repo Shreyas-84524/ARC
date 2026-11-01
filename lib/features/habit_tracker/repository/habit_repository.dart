@@ -13,11 +13,20 @@ class HabitRepository {
   final fs.FirebaseFirestore? _firestore;
 
   HabitRepository({String? userId, fs.FirebaseFirestore? firestore})
-      : _userId = userId,
-        _habitBox = HiveService().getUserBox<Habit>(HiveService.habitsBoxName, userId),
-        _entryBox = HiveService().getUserBox<HabitEntry>(HiveService.habitEntriesBoxName, userId),
-        _queueBox = HiveService().getUserBox(HiveService.habitsSyncQueueBoxName, userId),
-        _firestore = firestore;
+    : _userId = userId,
+      _habitBox = HiveService().getUserBox<Habit>(
+        HiveService.habitsBoxName,
+        userId,
+      ),
+      _entryBox = HiveService().getUserBox<HabitEntry>(
+        HiveService.habitEntriesBoxName,
+        userId,
+      ),
+      _queueBox = HiveService().getUserBox(
+        HiveService.habitsSyncQueueBoxName,
+        userId,
+      ),
+      _firestore = firestore;
 
   fs.FirebaseFirestore get _db => _firestore ?? fs.FirebaseFirestore.instance;
 
@@ -62,8 +71,9 @@ class HabitRepository {
     await _habitBox.delete(id);
 
     // Delete associated entries locally
-    final entriesToDelete =
-        _entryBox.values.where((e) => e.habitId == id).toList();
+    final entriesToDelete = _entryBox.values
+        .where((e) => e.habitId == id)
+        .toList();
     for (final entry in entriesToDelete) {
       await _entryBox.delete(entry.id);
     }
@@ -80,7 +90,11 @@ class HabitRepository {
     }
   }
 
-  Future<void> toggleEntry(String habitId, String dateStr, bool completed) async {
+  Future<void> toggleEntry(
+    String habitId,
+    String dateStr,
+    bool completed,
+  ) async {
     final entryId = '${habitId}_$dateStr';
     final entry = HabitEntry(
       id: entryId,
@@ -92,9 +106,7 @@ class HabitRepository {
     if (completed) {
       await _entryBox.put(entryId, entry);
       try {
-        await _entriesRef()
-            .doc(entryId)
-            .set(entry.toMap());
+        await _entriesRef().doc(entryId).set(entry.toMap());
         await _queueBox.delete('entry_$entryId');
       } catch (e) {
         await _queueBox.put('entry_$entryId', {
@@ -122,7 +134,9 @@ class HabitRepository {
   Future<bool> syncPending() async {
     if (_queueBox.isEmpty) return true;
 
-    debugPrint('[HabitRepository.syncPending] Found ${_queueBox.length} pending habit sync items for UID: $_userId');
+    debugPrint(
+      '[HabitRepository.syncPending] Found ${_queueBox.length} pending habit sync items for UID: $_userId',
+    );
     final keys = List.from(_queueBox.keys);
     bool allSuccess = true;
 
@@ -138,7 +152,9 @@ class HabitRepository {
       final action = item['action'] as String?;
 
       if (id == null || type == null || action == null) {
-        debugPrint('[HabitRepository.syncPending] Removing malformed habit queue item with key: $key');
+        debugPrint(
+          '[HabitRepository.syncPending] Removing malformed habit queue item with key: $key',
+        );
         await _queueBox.delete(key);
         continue;
       }
@@ -146,41 +162,61 @@ class HabitRepository {
       try {
         if (type == 'habit') {
           final docPath = _habitsRef().doc(id).path;
-          debugPrint('[HabitRepository.syncPending] Attempting $action for habit ID: $id on path: $docPath');
+          debugPrint(
+            '[HabitRepository.syncPending] Attempting $action for habit ID: $id on path: $docPath',
+          );
           if (action == 'upsert') {
             final habit = _habitBox.get(id);
             final payload =
                 habit?.toMap() ?? (item['data'] as Map<String, dynamic>?);
             if (payload != null) {
-              await _habitsRef().doc(id).set(payload).timeout(const Duration(seconds: 8));
+              await _habitsRef()
+                  .doc(id)
+                  .set(payload)
+                  .timeout(const Duration(seconds: 8));
             } else {
               await _queueBox.delete(key);
               continue;
             }
           } else if (action == 'delete') {
-            await _habitsRef().doc(id).delete().timeout(const Duration(seconds: 8));
+            await _habitsRef()
+                .doc(id)
+                .delete()
+                .timeout(const Duration(seconds: 8));
           }
         } else if (type == 'entry') {
           final docPath = _entriesRef().doc(id).path;
-          debugPrint('[HabitRepository.syncPending] Attempting $action for entry ID: $id on path: $docPath');
+          debugPrint(
+            '[HabitRepository.syncPending] Attempting $action for entry ID: $id on path: $docPath',
+          );
           if (action == 'upsert') {
             final entry = _entryBox.get(id);
             final payload =
                 entry?.toMap() ?? (item['data'] as Map<String, dynamic>?);
             if (payload != null) {
-              await _entriesRef().doc(id).set(payload).timeout(const Duration(seconds: 8));
+              await _entriesRef()
+                  .doc(id)
+                  .set(payload)
+                  .timeout(const Duration(seconds: 8));
             } else {
               await _queueBox.delete(key);
               continue;
             }
           } else if (action == 'delete') {
-            await _entriesRef().doc(id).delete().timeout(const Duration(seconds: 8));
+            await _entriesRef()
+                .doc(id)
+                .delete()
+                .timeout(const Duration(seconds: 8));
           }
         }
         await _queueBox.delete(key);
-        debugPrint('[HabitRepository.syncPending] SUCCESS: $action for habit/entry ID: $id completed. Queue item removed.');
+        debugPrint(
+          '[HabitRepository.syncPending] SUCCESS: $action for habit/entry ID: $id completed. Queue item removed.',
+        );
       } catch (e) {
-        debugPrint('[HabitRepository.syncPending] FAILURE: Sync failed for habit queue item $key. Error: $e');
+        debugPrint(
+          '[HabitRepository.syncPending] FAILURE: Sync failed for habit queue item $key. Error: $e',
+        );
         allSuccess = false;
         break; // Stop and retry later if network fails again
       }

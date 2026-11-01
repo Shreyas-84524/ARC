@@ -11,10 +11,13 @@ class SettingsRepository {
 
   static const String settingsHiveKey = 'app_settings';
 
-  SettingsRepository({String? userId, fs.FirebaseFirestore? firestore, Box? settingsBox})
-      : _userId = userId,
-        _settingsBox = settingsBox ?? _safeGetBox(userId),
-        _firestore = firestore;
+  SettingsRepository({
+    String? userId,
+    fs.FirebaseFirestore? firestore,
+    Box? settingsBox,
+  }) : _userId = userId,
+       _settingsBox = settingsBox ?? _safeGetBox(userId),
+       _firestore = firestore;
 
   static Box? _safeGetBox(String? userId) {
     try {
@@ -32,7 +35,11 @@ class SettingsRepository {
   fs.DocumentReference<Map<String, dynamic>> _settingsDocRef() {
     final uid = _userId;
     if (uid != null && uid.isNotEmpty) {
-      return _db.collection('users').doc(uid).collection('settings').doc('profile');
+      return _db
+          .collection('users')
+          .doc(uid)
+          .collection('settings')
+          .doc('profile');
     }
     return _db.collection('settings').doc('global');
   }
@@ -78,14 +85,22 @@ class SettingsRepository {
 
     try {
       final docPath = _settingsDocRef().path;
-      debugPrint('[SettingsRepository.syncPending] Attempting settings set on path: $docPath for UID: $_userId');
+      debugPrint(
+        '[SettingsRepository.syncPending] Attempting settings set on path: $docPath for UID: $_userId',
+      );
       final settings = getSettings();
-      await _settingsDocRef().set(settings.toMap()).timeout(const Duration(seconds: 8));
+      await _settingsDocRef()
+          .set(settings.toMap())
+          .timeout(const Duration(seconds: 8));
       await _settingsBox.delete('settings_sync_queued');
-      debugPrint('[SettingsRepository.syncPending] SUCCESS: settings sync completed.');
+      debugPrint(
+        '[SettingsRepository.syncPending] SUCCESS: settings sync completed.',
+      );
       return true;
     } catch (e) {
-      debugPrint('[SettingsRepository.syncPending] FAILURE: settings sync failed: $e');
+      debugPrint(
+        '[SettingsRepository.syncPending] FAILURE: settings sync failed: $e',
+      );
       return false;
     }
   }

@@ -47,7 +47,9 @@ class MyFeedbackScreen extends ConsumerWidget {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: isDark ? AppColors.borderStrong : AppColors.borderStrongLight,
+                    color: isDark
+                        ? AppColors.borderStrong
+                        : AppColors.borderStrongLight,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -57,14 +59,18 @@ class MyFeedbackScreen extends ConsumerWidget {
                 'Send Feedback',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 'Choose a category to share your thoughts with our team',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
                 ),
               ),
               const SizedBox(height: 16),
@@ -145,7 +151,9 @@ class MyFeedbackScreen extends ConsumerWidget {
             'My Feedback',
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
             ),
           ),
           actions: [
@@ -171,7 +179,11 @@ class MyFeedbackScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(LucideIcons.alertTriangle, size: 48, color: AppColors.danger),
+                    const Icon(
+                      LucideIcons.alertTriangle,
+                      size: 48,
+                      color: AppColors.danger,
+                    ),
                     const SizedBox(height: 16),
                     Text(
                       'Unable to Load Feedback',
@@ -184,7 +196,9 @@ class MyFeedbackScreen extends ConsumerWidget {
                       'Please check your network connection and try again.',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -222,7 +236,10 @@ class MyFeedbackScreen extends ConsumerWidget {
                   physics: const AlwaysScrollableScrollPhysics(
                     parent: BouncingScrollPhysics(),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
                   itemCount: feedbackList.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
@@ -258,10 +275,7 @@ class _FeedbackItemCard extends StatelessWidget {
   final FeedbackModel feedback;
   final VoidCallback onTap;
 
-  const _FeedbackItemCard({
-    required this.feedback,
-    required this.onTap,
-  });
+  const _FeedbackItemCard({required this.feedback, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -297,7 +311,9 @@ class _FeedbackItemCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: catInfo.getColor(isDark).withValues(alpha: 0.15),
+                          color: catInfo
+                              .getColor(isDark)
+                              .withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
@@ -311,7 +327,9 @@ class _FeedbackItemCard extends StatelessWidget {
                         catInfo.title,
                         style: theme.textTheme.labelLarge?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          color: isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight,
                         ),
                       ),
                     ],
@@ -328,14 +346,20 @@ class _FeedbackItemCard extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
                 ),
               ),
 
-              if (feedback.status == FeedbackStatus.acknowledged && feedback.acknowledgedAt != null) ...[
+              if (feedback.status == FeedbackStatus.acknowledged &&
+                  feedback.acknowledgedAt != null) ...[
                 const SizedBox(height: 10),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.accent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(6),
@@ -357,7 +381,9 @@ class _FeedbackItemCard extends StatelessWidget {
                         'Acknowledged on ${DateFormat('MMM d, y').format(feedback.acknowledgedAt!)}',
                         style: theme.textTheme.labelSmall?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: isDark ? AppColors.accent : const Color(0xFF5C7000),
+                          color: isDark
+                              ? AppColors.accent
+                              : const Color(0xFF5C7000),
                         ),
                       ),
                     ],
@@ -371,15 +397,22 @@ class _FeedbackItemCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
+                      color: isDark
+                          ? AppColors.darkSurface
+                          : AppColors.lightBgSecondary,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       moduleInfo.label,
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                        color: isDark
+                            ? AppColors.textMutedDark
+                            : AppColors.textMutedLight,
                       ),
                     ),
                   ),
@@ -387,13 +420,19 @@ class _FeedbackItemCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Row(
                       children: [
-                        const Icon(LucideIcons.star, size: 14, color: Color(0xFFFFC857)),
+                        const Icon(
+                          LucideIcons.star,
+                          size: 14,
+                          color: Color(0xFFFFC857),
+                        ),
                         const SizedBox(width: 3),
                         Text(
                           '${feedback.rating}',
                           style: theme.textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
                           ),
                         ),
                       ],
@@ -403,7 +442,9 @@ class _FeedbackItemCard extends StatelessWidget {
                   Text(
                     dateStr,
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                      color: isDark
+                          ? AppColors.textMutedDark
+                          : AppColors.textMutedLight,
                     ),
                   ),
                 ],
@@ -462,11 +503,7 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: fg,
-        ),
+        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: fg),
       ),
     );
   }
@@ -483,7 +520,9 @@ class _FeedbackDetailsSheet extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final catInfo = FeedbackCategoryInfo.forCategory(feedback.category);
     final moduleInfo = FeedbackModuleInfo.forModule(feedback.module);
-    final fullDate = DateFormat('EEEE, MMMM d, y • h:mm a').format(feedback.createdAt);
+    final fullDate = DateFormat(
+      'EEEE, MMMM d, y • h:mm a',
+    ).format(feedback.createdAt);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
@@ -501,7 +540,9 @@ class _FeedbackDetailsSheet extends StatelessWidget {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: isDark ? AppColors.borderStrong : AppColors.borderStrongLight,
+                color: isDark
+                    ? AppColors.borderStrong
+                    : AppColors.borderStrongLight,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -517,7 +558,11 @@ class _FeedbackDetailsSheet extends StatelessWidget {
                   color: catInfo.getColor(isDark).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(catInfo.icon, color: catInfo.getColor(isDark), size: 22),
+                child: Icon(
+                  catInfo.icon,
+                  color: catInfo.getColor(isDark),
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -533,7 +578,9 @@ class _FeedbackDetailsSheet extends StatelessWidget {
                     Text(
                       moduleInfo.label,
                       style: theme.textTheme.labelMedium?.copyWith(
-                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                        color: isDark
+                            ? AppColors.textMutedDark
+                            : AppColors.textMutedLight,
                       ),
                     ),
                   ],
@@ -552,7 +599,9 @@ class _FeedbackDetailsSheet extends StatelessWidget {
             'Message',
             style: theme.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+              color: isDark
+                  ? AppColors.textMutedDark
+                  : AppColors.textMutedLight,
             ),
           ),
           const SizedBox(height: 6),
@@ -560,14 +609,18 @@ class _FeedbackDetailsSheet extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
+              color: isDark
+                  ? AppColors.darkSurface
+                  : AppColors.lightBgSecondary,
               borderRadius: BorderRadius.circular(14),
             ),
             child: SelectableText(
               feedback.message,
               style: theme.textTheme.bodyMedium?.copyWith(
                 height: 1.45,
-                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
               ),
             ),
           ),
@@ -578,7 +631,9 @@ class _FeedbackDetailsSheet extends StatelessWidget {
               'Rating',
               style: theme.textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                color: isDark
+                    ? AppColors.textMutedDark
+                    : AppColors.textMutedLight,
               ),
             ),
             const SizedBox(height: 6),
@@ -589,7 +644,9 @@ class _FeedbackDetailsSheet extends StatelessWidget {
                   size: 20,
                   color: index < feedback.rating!
                       ? const Color(0xFFFFC857)
-                      : (isDark ? const Color(0xFF333333) : const Color(0xFFE5E7EB)),
+                      : (isDark
+                            ? const Color(0xFF333333)
+                            : const Color(0xFFE5E7EB)),
                 );
               }),
             ),
@@ -601,14 +658,18 @@ class _FeedbackDetailsSheet extends StatelessWidget {
             'Submitted On',
             style: theme.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+              color: isDark
+                  ? AppColors.textMutedDark
+                  : AppColors.textMutedLight,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             fullDate,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
             ),
           ),
 
@@ -631,30 +692,39 @@ class _FeedbackDetailsSheet extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  DateFormat('EEEE, MMMM d, y • h:mm a').format(feedback.acknowledgedAt!),
+                  DateFormat(
+                    'EEEE, MMMM d, y • h:mm a',
+                  ).format(feedback.acknowledgedAt!),
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                   ),
                 ),
               ],
             ),
           ],
 
-          if (feedback.contactEmail != null && feedback.contactEmail!.isNotEmpty) ...[
+          if (feedback.contactEmail != null &&
+              feedback.contactEmail!.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(
               'Contact Email',
               style: theme.textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                color: isDark
+                    ? AppColors.textMutedDark
+                    : AppColors.textMutedLight,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               feedback.contactEmail!,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
               ),
             ),
           ],
@@ -663,26 +733,36 @@ class _FeedbackDetailsSheet extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
+              color: isDark
+                  ? AppColors.darkSurface
+                  : AppColors.lightBgSecondary,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               children: [
-                const Icon(LucideIcons.hash, size: 14, color: AppColors.textMutedDark),
+                const Icon(
+                  LucideIcons.hash,
+                  size: 14,
+                  color: AppColors.textMutedDark,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     'Ticket ID: ${feedback.feedbackId}',
                     style: theme.textTheme.labelSmall?.copyWith(
                       fontFamily: 'monospace',
-                      color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                      color: isDark
+                          ? AppColors.textMutedDark
+                          : AppColors.textMutedLight,
                     ),
                   ),
                 ),
                 Text(
                   'v${feedback.appVersion}',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                    color: isDark
+                        ? AppColors.textMutedDark
+                        : AppColors.textMutedLight,
                   ),
                 ),
               ],
@@ -728,7 +808,9 @@ class _CategorySelectionTile extends StatelessWidget {
             color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight,
+              color: isDark
+                  ? AppColors.borderSubtle
+                  : AppColors.borderSubtleLight,
             ),
           ),
           child: Row(
@@ -750,14 +832,18 @@ class _CategorySelectionTile extends StatelessWidget {
                       title,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
                       ),
                     ),
                   ],
@@ -766,7 +852,9 @@ class _CategorySelectionTile extends StatelessWidget {
               Icon(
                 LucideIcons.chevronRight,
                 size: 16,
-                color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                color: isDark
+                    ? AppColors.textMutedDark
+                    : AppColors.textMutedLight,
               ),
             ],
           ),

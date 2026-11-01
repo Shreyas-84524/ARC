@@ -22,7 +22,7 @@ class SecretNotesSecurityService {
   static const int maxFailedAttemptsBeforeLockout = 5;
 
   SecretNotesSecurityService({SecretNotesLocalRepository? repository})
-      : _repository = repository ?? SecretNotesLocalRepository();
+    : _repository = repository ?? SecretNotesLocalRepository();
 
   /// Validates a raw PIN for format and length requirements without storing or logging it.
   static String? validatePin(String? pin) {
@@ -81,7 +81,9 @@ class SecretNotesSecurityService {
     await _repository.init();
 
     // Generate random 32-byte cryptographic salt
-    final saltBytes = SecretNotesCrypto.generateSalt(SecretNotesCrypto.saltByteLength);
+    final saltBytes = SecretNotesCrypto.generateSalt(
+      SecretNotesCrypto.saltByteLength,
+    );
     final saltHex = SecretNotesCrypto.bytesToHex(saltBytes);
 
     // Derive PBKDF2 HMAC-SHA256 verifier with 10,000 iterations
@@ -136,7 +138,10 @@ class SecretNotesSecurityService {
         keyLength: SecretNotesCrypto.derivedKeyLength,
       );
 
-      final isMatch = SecretNotesCrypto.constantTimeEquals(candidateHashBytes, storedHashBytes);
+      final isMatch = SecretNotesCrypto.constantTimeEquals(
+        candidateHashBytes,
+        storedHashBytes,
+      );
 
       if (isMatch) {
         // Successful verification: reset failed attempts and lockout
@@ -144,7 +149,9 @@ class SecretNotesSecurityService {
         // If the stored verifier was derived with legacy iterations (< defaultIterations),
         // transparently upgrade it with a fresh cryptographic salt and defaultIterations (100,000+).
         if (state.iterations < SecretNotesCrypto.defaultIterations) {
-          final newSaltBytes = SecretNotesCrypto.generateSalt(SecretNotesCrypto.saltByteLength);
+          final newSaltBytes = SecretNotesCrypto.generateSalt(
+            SecretNotesCrypto.saltByteLength,
+          );
           final newSaltHex = SecretNotesCrypto.bytesToHex(newSaltBytes);
           final upgradedDerivedKey = SecretNotesCrypto.pbkdf2HmacSha256(
             pin: pin,
@@ -152,7 +159,9 @@ class SecretNotesSecurityService {
             iterations: SecretNotesCrypto.defaultIterations,
             keyLength: SecretNotesCrypto.derivedKeyLength,
           );
-          final upgradedHashHex = SecretNotesCrypto.bytesToHex(upgradedDerivedKey);
+          final upgradedHashHex = SecretNotesCrypto.bytesToHex(
+            upgradedDerivedKey,
+          );
 
           final upgradedState = state.copyWith(
             salt: newSaltHex,
@@ -162,7 +171,9 @@ class SecretNotesSecurityService {
             clearLockedUntil: true,
           );
           await _repository.saveSecurityState(upgradedState);
-          debugPrint('Secret Notes: transparently migrated legacy PIN verifier to 100,000 iterations.');
+          debugPrint(
+            'Secret Notes: transparently migrated legacy PIN verifier to 100,000 iterations.',
+          );
         } else {
           final updatedState = state.copyWith(
             failedAttempts: 0,
@@ -179,10 +190,16 @@ class SecretNotesSecurityService {
 
         if (newFailedAttempts >= maxFailedAttemptsBeforeLockout) {
           final lockoutSeconds = _calculateLockoutDuration(newFailedAttempts);
-          newLockedUntil = DateTime.now().add(Duration(seconds: lockoutSeconds));
-          debugPrint('Secret Notes: threshold reached, entry locked for $lockoutSeconds seconds.');
+          newLockedUntil = DateTime.now().add(
+            Duration(seconds: lockoutSeconds),
+          );
+          debugPrint(
+            'Secret Notes: threshold reached, entry locked for $lockoutSeconds seconds.',
+          );
         } else {
-          debugPrint('Secret Notes: unlock failed. Attempt $newFailedAttempts of $maxFailedAttemptsBeforeLockout.');
+          debugPrint(
+            'Secret Notes: unlock failed. Attempt $newFailedAttempts of $maxFailedAttemptsBeforeLockout.',
+          );
         }
 
         final updatedState = state.copyWith(
@@ -244,7 +261,10 @@ class SecretNotesSecurityService {
       keyLength: SecretNotesCrypto.derivedKeyLength,
     );
 
-    final isMatch = SecretNotesCrypto.constantTimeEquals(candidateHashBytes, storedHashBytes);
+    final isMatch = SecretNotesCrypto.constantTimeEquals(
+      candidateHashBytes,
+      storedHashBytes,
+    );
     if (!isMatch) {
       // Record failed attempt
       final newFailedAttempts = state.failedAttempts + 1;
@@ -253,15 +273,19 @@ class SecretNotesSecurityService {
         final lockoutSeconds = _calculateLockoutDuration(newFailedAttempts);
         newLockedUntil = DateTime.now().add(Duration(seconds: lockoutSeconds));
       }
-      await _repository.saveSecurityState(state.copyWith(
-        failedAttempts: newFailedAttempts,
-        lockedUntil: newLockedUntil,
-      ));
+      await _repository.saveSecurityState(
+        state.copyWith(
+          failedAttempts: newFailedAttempts,
+          lockedUntil: newLockedUntil,
+        ),
+      );
       return 'Current PIN is incorrect.';
     }
 
     // 4. Generate new salt and compute fresh PBKDF2 HMAC-SHA256 verifier
-    final newSaltBytes = SecretNotesCrypto.generateSalt(SecretNotesCrypto.saltByteLength);
+    final newSaltBytes = SecretNotesCrypto.generateSalt(
+      SecretNotesCrypto.saltByteLength,
+    );
     final newSaltHex = SecretNotesCrypto.bytesToHex(newSaltBytes);
 
     final newDerivedKey = SecretNotesCrypto.pbkdf2HmacSha256(
@@ -283,6 +307,17 @@ class SecretNotesSecurityService {
     await _repository.saveSecurityState(updatedState);
     debugPrint('Secret Notes: PIN successfully changed with fresh salt.');
     return null; // Success (no error)
+  }
+
+  /// Removes the optional PIN after authenticating the current PIN.
+  /// Stored notes are intentionally left untouched.
+  Future<String?> removePin(String currentPin) async {
+    if (!await isSecretNotesConfigured()) return null;
+    final valid = await verifyPin(currentPin);
+    if (!valid) return 'Current PIN is incorrect.';
+    await _repository.clearSecurityConfiguration();
+    debugPrint('Secret Notes: optional PIN protection removed.');
+    return null;
   }
 
   /// Checks if biometric unlock is enabled in local preferences.

@@ -28,7 +28,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   bool _isLoading = false;
   bool _isGoogleLoading = false;
@@ -142,10 +143,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   }
 
   void _onAuthSuccess(UserProfile profile) {
-    ref.read(userContextProvider.notifier).setActiveUser(
-      userId: profile.id,
-      profile: profile,
-    );
+    ref
+        .read(userContextProvider.notifier)
+        .setActiveUser(userId: profile.id, profile: profile);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -168,8 +168,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     final cardBgColor = isDark ? AppColors.darkCard : AppColors.lightCard;
-    final primaryTextColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final primaryTextColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final secondaryTextColor = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
     final buttonBgColor = AppColors.accent;
     const buttonTextColor = Colors.black;
 
@@ -179,16 +183,24 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 32.0,
+            ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 28.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 28.0,
+                ),
                 decoration: BoxDecoration(
                   color: cardBgColor,
                   borderRadius: BorderRadius.circular(AppTheme.radiusCard),
                   border: Border.all(
-                    color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                    color: isDark
+                        ? AppColors.borderMedium
+                        : AppColors.borderMediumLight,
                   ),
                   boxShadow: isDark
                       ? [
@@ -297,7 +309,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                             color: secondaryTextColor,
                           ),
                           hintStyle: TextStyle(
-                            color: isDark ? AppColors.textPlaceholderDark : AppColors.textPlaceholderLight,
+                            color: isDark
+                                ? AppColors.textPlaceholderDark
+                                : AppColors.textPlaceholderLight,
                           ),
                         ),
                         validator: (value) {
@@ -336,14 +350,18 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                             color: secondaryTextColor,
                           ),
                           hintStyle: TextStyle(
-                            color: isDark ? AppColors.textPlaceholderDark : AppColors.textPlaceholderLight,
+                            color: isDark
+                                ? AppColors.textPlaceholderDark
+                                : AppColors.textPlaceholderLight,
                           ),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return 'Please enter your email';
                           }
-                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value.trim())) {
+                          if (!RegExp(
+                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                          ).hasMatch(value.trim())) {
                             return 'Please enter a valid email address';
                           }
                           return null;
@@ -376,7 +394,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                           ),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscurePassword ? LucideIcons.eyeOff : LucideIcons.eye,
+                              _obscurePassword
+                                  ? LucideIcons.eyeOff
+                                  : LucideIcons.eye,
                               color: secondaryTextColor,
                               size: 20,
                             ),
@@ -387,7 +407,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                             },
                           ),
                           hintStyle: TextStyle(
-                            color: isDark ? AppColors.textPlaceholderDark : AppColors.textPlaceholderLight,
+                            color: isDark
+                                ? AppColors.textPlaceholderDark
+                                : AppColors.textPlaceholderLight,
                           ),
                         ),
                         validator: (value) {
@@ -428,18 +450,23 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                           ),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscureConfirmPassword ? LucideIcons.eyeOff : LucideIcons.eye,
+                              _obscureConfirmPassword
+                                  ? LucideIcons.eyeOff
+                                  : LucideIcons.eye,
                               color: secondaryTextColor,
                               size: 20,
                             ),
                             onPressed: () {
                               setState(() {
-                                _obscureConfirmPassword = !_obscureConfirmPassword;
+                                _obscureConfirmPassword =
+                                    !_obscureConfirmPassword;
                               });
                             },
                           ),
                           hintStyle: TextStyle(
-                            color: isDark ? AppColors.textPlaceholderDark : AppColors.textPlaceholderLight,
+                            color: isDark
+                                ? AppColors.textPlaceholderDark
+                                : AppColors.textPlaceholderLight,
                           ),
                         ),
                         validator: (value) {
@@ -458,14 +485,22 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       SizedBox(
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: (anyLoading || !_isFormValid) ? null : _handleSignUp,
+                          onPressed: (anyLoading || !_isFormValid)
+                              ? null
+                              : _handleSignUp,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: buttonBgColor,
                             foregroundColor: buttonTextColor,
-                            disabledBackgroundColor: isDark ? Colors.grey[800] : Colors.grey[300],
-                            disabledForegroundColor: isDark ? Colors.grey[600] : Colors.grey[500],
+                            disabledBackgroundColor: isDark
+                                ? Colors.grey[800]
+                                : Colors.grey[300],
+                            disabledForegroundColor: isDark
+                                ? Colors.grey[600]
+                                : Colors.grey[500],
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.radiusButton,
+                              ),
                             ),
                             elevation: 0,
                           ),
@@ -494,7 +529,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         children: [
                           Expanded(
                             child: Divider(
-                              color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                              color: isDark
+                                  ? AppColors.borderMedium
+                                  : AppColors.borderMediumLight,
                             ),
                           ),
                           Padding(
@@ -511,7 +548,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                           ),
                           Expanded(
                             child: Divider(
-                              color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                              color: isDark
+                                  ? AppColors.borderMedium
+                                  : AppColors.borderMediumLight,
                             ),
                           ),
                         ],
@@ -526,10 +565,14 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: primaryTextColor,
                             side: BorderSide(
-                              color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                              color: isDark
+                                  ? AppColors.borderMedium
+                                  : AppColors.borderMediumLight,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.radiusButton,
+                              ),
                             ),
                           ),
                           child: _isGoogleLoading

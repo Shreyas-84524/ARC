@@ -67,17 +67,24 @@ class EmptyStateWidget extends StatelessWidget {
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: 24),
               ElevatedButton.icon(
-                onPressed: onAction,
-                icon: const Icon(Icons.add, size: 18),
-                label: Text(actionLabel!),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusButton),
-                  ),
-                ),
-              ).animate().fade(delay: 200.ms, duration: 300.ms).slideY(begin: 0.1),
+                    onPressed: onAction,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text(actionLabel!),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.radiusButton,
+                        ),
+                      ),
+                    ),
+                  )
+                  .animate()
+                  .fade(delay: 200.ms, duration: 300.ms)
+                  .slideY(begin: 0.1),
             ],
           ],
         ),

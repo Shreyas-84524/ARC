@@ -33,5 +33,6 @@ extension MoneyAutomationListenerStatusX on MoneyAutomationListenerStatus {
   }
 
   bool get isOperational => this == MoneyAutomationListenerStatus.ready;
-  bool get needsPermission => this == MoneyAutomationListenerStatus.permissionRequired;
+  bool get needsPermission =>
+      this == MoneyAutomationListenerStatus.permissionRequired;
 }

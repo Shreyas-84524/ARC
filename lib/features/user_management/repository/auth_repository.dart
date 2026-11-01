@@ -49,10 +49,10 @@ class AuthRepository implements IAuthRepository {
     fs.FirebaseFirestore? firestore,
     GoogleSignIn? googleSignIn,
     DataMigrationService? migrationService,
-  })  : _firebaseAuth = firebaseAuth,
-        _firestore = firestore,
-        _googleSignInInstance = googleSignIn,
-        _migrationService = migrationService ?? DataMigrationService();
+  }) : _firebaseAuth = firebaseAuth,
+       _firestore = firestore,
+       _googleSignInInstance = googleSignIn,
+       _migrationService = migrationService ?? DataMigrationService();
 
   auth.FirebaseAuth get _auth => _firebaseAuth ?? auth.FirebaseAuth.instance;
   fs.FirebaseFirestore get _db => _firestore ?? fs.FirebaseFirestore.instance;
@@ -94,7 +94,9 @@ class AuthRepository implements IAuthRepository {
 
       final user = credential.user;
       if (user == null) {
-        throw const AuthException('Failed to retrieve authenticated user session.');
+        throw const AuthException(
+          'Failed to retrieve authenticated user session.',
+        );
       }
 
       // Open user-scoped Hive boxes
@@ -110,7 +112,8 @@ class AuthRepository implements IAuthRepository {
 
       final UserProfile activeProfile;
       if (profile == null) {
-        final displayName = user.displayName ?? _displayNameFromEmail(cleanEmail);
+        final displayName =
+            user.displayName ?? _displayNameFromEmail(cleanEmail);
         final role = _deriveRole(cleanEmail);
         activeProfile = UserProfile(
           id: user.uid,
@@ -125,10 +128,7 @@ class AuthRepository implements IAuthRepository {
           lastLoginAt: now,
         );
       } else {
-        activeProfile = profile.copyWith(
-          lastLoginAt: now,
-          updatedAt: now,
-        );
+        activeProfile = profile.copyWith(lastLoginAt: now, updatedAt: now);
       }
 
       // Persist profile in Firestore without any sensitive credentials
@@ -223,7 +223,9 @@ class AuthRepository implements IAuthRepository {
   @override
   Future<UserProfile> signInWithGoogle() async {
     final platform = kIsWeb ? 'web' : defaultTargetPlatform.name;
-    debugPrint('AuthRepository: Initiating Google Sign-In flow on platform: $platform');
+    debugPrint(
+      'AuthRepository: Initiating Google Sign-In flow on platform: $platform',
+    );
     try {
       auth.UserCredential credential;
 
@@ -237,29 +239,48 @@ class AuthRepository implements IAuthRepository {
         debugPrint('AuthRepository: Opening native Google account picker.');
         final googleUser = await _googleSignIn.signIn();
         if (googleUser == null) {
-          debugPrint('AuthRepository: Google sign-in was cancelled by the user.');
-          throw const AuthException('Google sign-in was cancelled.', code: 'cancelled');
+          debugPrint(
+            'AuthRepository: Google sign-in was cancelled by the user.',
+          );
+          throw const AuthException(
+            'Google sign-in was cancelled.',
+            code: 'cancelled',
+          );
         }
 
-        debugPrint('AuthRepository: Google account selected (${googleUser.email}). Fetching authentication tokens.');
+        debugPrint(
+          'AuthRepository: Google account selected (${googleUser.email}). Fetching authentication tokens.',
+        );
         final googleAuth = await googleUser.authentication;
-        final hasIdToken = googleAuth.idToken != null && googleAuth.idToken!.isNotEmpty;
-        final hasAccessToken = googleAuth.accessToken != null && googleAuth.accessToken!.isNotEmpty;
-        debugPrint('AuthRepository: Building Firebase credential (idToken: $hasIdToken, accessToken: $hasAccessToken).');
+        final hasIdToken =
+            googleAuth.idToken != null && googleAuth.idToken!.isNotEmpty;
+        final hasAccessToken =
+            googleAuth.accessToken != null &&
+            googleAuth.accessToken!.isNotEmpty;
+        debugPrint(
+          'AuthRepository: Building Firebase credential (idToken: $hasIdToken, accessToken: $hasAccessToken).',
+        );
 
         final authCredential = auth.GoogleAuthProvider.credential(
           accessToken: googleAuth.accessToken,
           idToken: googleAuth.idToken,
         );
-        debugPrint('AuthRepository: Reaching Firebase Authentication signInWithCredential.');
+        debugPrint(
+          'AuthRepository: Reaching Firebase Authentication signInWithCredential.',
+        );
         credential = await _auth.signInWithCredential(authCredential);
       }
 
       final user = credential.user;
       if (user == null) {
-        throw const AuthException('Failed to retrieve authenticated user session.', code: 'session-retrieval-failed');
+        throw const AuthException(
+          'Failed to retrieve authenticated user session.',
+          code: 'session-retrieval-failed',
+        );
       }
-      debugPrint('AuthRepository: Firebase Authentication successful for UID: ${user.uid}');
+      debugPrint(
+        'AuthRepository: Firebase Authentication successful for UID: ${user.uid}',
+      );
 
       try {
         await HiveService().ensureUserBoxesOpened(user.uid);
@@ -272,9 +293,12 @@ class AuthRepository implements IAuthRepository {
 
       UserProfile profile;
       if (existingProfile == null) {
-        final displayName = (user.displayName != null && user.displayName!.isNotEmpty)
+        final displayName =
+            (user.displayName != null && user.displayName!.isNotEmpty)
             ? user.displayName!
-            : (user.email != null ? _displayNameFromEmail(user.email!) : 'Google User');
+            : (user.email != null
+                  ? _displayNameFromEmail(user.email!)
+                  : 'Google User');
         final role = _deriveRole(user.email ?? '');
 
         profile = UserProfile(
@@ -291,14 +315,17 @@ class AuthRepository implements IAuthRepository {
           updatedAt: now,
           lastLoginAt: now,
         );
-        debugPrint('AuthRepository: Created fresh user profile for UID: ${user.uid}');
+        debugPrint(
+          'AuthRepository: Created fresh user profile for UID: ${user.uid}',
+        );
       } else {
         final currentProvider = existingProfile.authProvider;
         final updatedProvider = currentProvider.contains('password')
             ? 'password,google'
             : 'google';
 
-        final isCustomized = existingProfile.displayNameSource == 'user_customized';
+        final isCustomized =
+            existingProfile.displayNameSource == 'user_customized';
         String resolvedDisplayName;
         String resolvedSource;
         DateTime? resolvedUpdatedAt = existingProfile.displayNameUpdatedAt;
@@ -307,7 +334,8 @@ class AuthRepository implements IAuthRepository {
           resolvedDisplayName = existingProfile.displayName;
           resolvedSource = 'user_customized';
         } else {
-          final freshGoogleName = (user.displayName != null && user.displayName!.trim().isNotEmpty)
+          final freshGoogleName =
+              (user.displayName != null && user.displayName!.trim().isNotEmpty)
               ? user.displayName!.trim()
               : null;
           if (freshGoogleName != null && freshGoogleName.isNotEmpty) {
@@ -317,7 +345,9 @@ class AuthRepository implements IAuthRepository {
           } else {
             resolvedDisplayName = existingProfile.displayName.isNotEmpty
                 ? existingProfile.displayName
-                : (user.email != null ? _displayNameFromEmail(user.email!) : 'Google User');
+                : (user.email != null
+                      ? _displayNameFromEmail(user.email!)
+                      : 'Google User');
             resolvedSource = existingProfile.displayNameSource;
           }
         }
@@ -331,7 +361,9 @@ class AuthRepository implements IAuthRepository {
           photoURL: user.photoURL ?? existingProfile.photoURL,
           authProvider: updatedProvider,
         );
-        debugPrint('AuthRepository: Reconciled existing user profile for UID: ${user.uid} with name: $resolvedDisplayName (source: $resolvedSource)');
+        debugPrint(
+          'AuthRepository: Reconciled existing user profile for UID: ${user.uid} with name: $resolvedDisplayName (source: $resolvedSource)',
+        );
       }
 
       await _persistProfile(profile);
@@ -382,14 +414,23 @@ class AuthRepository implements IAuthRepository {
   Future<void> linkPassword({required String newPassword}) async {
     final user = currentUser;
     if (user == null) {
-      throw const AuthException('No active user session found.', code: 'no-current-user');
+      throw const AuthException(
+        'No active user session found.',
+        code: 'no-current-user',
+      );
     }
     final email = user.email;
     if (email == null || email.trim().isEmpty) {
-      throw const AuthException('A verified email is required to add an ARC password.', code: 'missing-email');
+      throw const AuthException(
+        'A verified email is required to add an ARC password.',
+        code: 'missing-email',
+      );
     }
     if (newPassword.length < 6) {
-      throw const AuthException('Password must be at least 6 characters.', code: 'weak-password');
+      throw const AuthException(
+        'Password must be at least 6 characters.',
+        code: 'weak-password',
+      );
     }
 
     try {
@@ -521,7 +562,8 @@ class AuthRepository implements IAuthRepository {
     final normalized = DisplayNameUtils.normalize(newDisplayName);
     final now = DateTime.now();
 
-    UserProfile? current = await getUserProfile(userId) ?? getCachedProfileFromHive(userId);
+    UserProfile? current =
+        await getUserProfile(userId) ?? getCachedProfileFromHive(userId);
     final UserProfile updated;
 
     if (current != null) {
@@ -574,13 +616,21 @@ class AuthRepository implements IAuthRepository {
           .set(profileMap, fs.SetOptions(merge: true));
 
       try {
-        final box = HiveService().getUserBox(HiveService.settingsBoxName, userId);
+        final box = HiveService().getUserBox(
+          HiveService.settingsBoxName,
+          userId,
+        );
         await box.put('profile_sync_pending', false);
       } catch (_) {}
     } catch (e) {
-      debugPrint('AuthRepository updateDisplayName remote write failed, queued: $e');
+      debugPrint(
+        'AuthRepository updateDisplayName remote write failed, queued: $e',
+      );
       try {
-        final box = HiveService().getUserBox(HiveService.settingsBoxName, userId);
+        final box = HiveService().getUserBox(
+          HiveService.settingsBoxName,
+          userId,
+        );
         await box.put('profile_sync_pending', true);
       } catch (_) {}
     }
@@ -592,7 +642,10 @@ class AuthRepository implements IAuthRepository {
   Future<void> saveProfileToHive(UserProfile profile) async {
     try {
       await HiveService().ensureUserBoxesOpened(profile.id);
-      final box = HiveService().getUserBox(HiveService.settingsBoxName, profile.id);
+      final box = HiveService().getUserBox(
+        HiveService.settingsBoxName,
+        profile.id,
+      );
       await box.put('cached_user_profile', profile.toMap());
     } catch (e) {
       debugPrint('AuthRepository saveProfileToHive warning: $e');
@@ -617,7 +670,8 @@ class AuthRepository implements IAuthRepository {
   Future<void> flushPendingProfileSync(String userId) async {
     try {
       final box = HiveService().getUserBox(HiveService.settingsBoxName, userId);
-      final isPending = box.get('profile_sync_pending', defaultValue: false) == true;
+      final isPending =
+          box.get('profile_sync_pending', defaultValue: false) == true;
       if (!isPending) return;
 
       final cached = getCachedProfileFromHive(userId);
@@ -635,7 +689,9 @@ class AuthRepository implements IAuthRepository {
             .set(profileMap, fs.SetOptions(merge: true));
 
         await box.put('profile_sync_pending', false);
-        debugPrint('AuthRepository: Successfully flushed pending profile sync for $userId');
+        debugPrint(
+          'AuthRepository: Successfully flushed pending profile sync for $userId',
+        );
       }
     } catch (e) {
       debugPrint('AuthRepository flushPendingProfileSync warning: $e');
@@ -674,13 +730,17 @@ class AuthRepository implements IAuthRepository {
           e.code == 'user-mismatch') {
         throw ArgumentError('Current password is incorrect.');
       } else if (e.code == 'weak-password') {
-        throw ArgumentError('Your new password does not meet the password requirements.');
+        throw ArgumentError(
+          'Your new password does not meet the password requirements.',
+        );
       } else if (e.code == 'requires-recent-login') {
         throw ArgumentError(
           'For security reasons, please log out and log back in before changing your password.',
         );
       } else {
-        throw ArgumentError('Failed to change password. Please check your connection and try again.');
+        throw ArgumentError(
+          'Failed to change password. Please check your connection and try again.',
+        );
       }
     }
   }
@@ -751,7 +811,9 @@ class AuthRepository implements IAuthRepository {
       } else if (e.code == 'weak-password') {
         throw ArgumentError('Password does not meet requirements.');
       } else {
-        throw ArgumentError('Authentication failed. Please check your credentials.');
+        throw ArgumentError(
+          'Authentication failed. Please check your credentials.',
+        );
       }
     }
 
@@ -772,10 +834,7 @@ class AuthRepository implements IAuthRepository {
 
     final existingProfile = await getUserProfile(uid);
     final profile = existingProfile != null
-        ? existingProfile.copyWith(
-            lastLoginAt: now,
-            updatedAt: now,
-          )
+        ? existingProfile.copyWith(lastLoginAt: now, updatedAt: now)
         : UserProfile(
             id: uid,
             username: matchingUsername,
@@ -796,7 +855,9 @@ class AuthRepository implements IAuthRepository {
       try {
         await _migrationService.migrateLegacyDataToUser(targetUserId: uid);
       } catch (migrationError) {
-        debugPrint('AuthRepository Shreyas data migration notice: $migrationError');
+        debugPrint(
+          'AuthRepository Shreyas data migration notice: $migrationError',
+        );
       }
     }
 
@@ -825,13 +886,19 @@ class AuthRepository implements IAuthRepository {
           .set(profileMap, fs.SetOptions(merge: true));
 
       try {
-        final box = HiveService().getUserBox(HiveService.settingsBoxName, profile.id);
+        final box = HiveService().getUserBox(
+          HiveService.settingsBoxName,
+          profile.id,
+        );
         await box.put('profile_sync_pending', false);
       } catch (_) {}
     } catch (e) {
       debugPrint('AuthRepository profile save remote write warning: $e');
       try {
-        final box = HiveService().getUserBox(HiveService.settingsBoxName, profile.id);
+        final box = HiveService().getUserBox(
+          HiveService.settingsBoxName,
+          profile.id,
+        );
         await box.put('profile_sync_pending', true);
       } catch (_) {}
     }

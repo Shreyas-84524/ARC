@@ -29,7 +29,9 @@ class NotificationCenterScreen extends ConsumerWidget {
             if (health.desiredNotifications.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(32),
-                child: Center(child: Text('No reminders are currently expected.')),
+                child: Center(
+                  child: Text('No reminders are currently expected.'),
+                ),
               )
             else
               ...health.desiredNotifications.map(
@@ -55,16 +57,23 @@ class _HealthCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Notification health',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Notification health',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             Text('Permission: ${health.permission.name}'),
             Text('Timezone: ${health.timezone}'),
-            Text('Expected: ${health.desiredCount}  Pending: ${health.pendingCount}'),
-            if (health.lastReason != null) Text('Last sync: ${health.lastReason}'),
+            Text(
+              'Expected: ${health.desiredCount}  Pending: ${health.pendingCount}',
+            ),
+            if (health.lastReason != null)
+              Text('Last sync: ${health.lastReason}'),
             if (health.lastError != null)
-              Text(health.lastError!,
-                  style: const TextStyle(color: AppColors.danger)),
+              Text(
+                health.lastError!,
+                style: const TextStyle(color: AppColors.danger),
+              ),
           ],
         ),
       ),
@@ -93,7 +102,12 @@ class _NotificationTile extends StatelessWidget {
         leading: Icon(icon, color: AppColors.accent),
         title: Text(spec.title),
         subtitle: Text(
-          '${spec.body}\n${spec.scheduledAt} (${spec.recurrence.name})',
+          [
+            spec.body,
+            if (spec.actions.isNotEmpty)
+              'Actions: ${spec.actions.map((action) => action.title).join(' · ')}',
+            '${spec.scheduledAt} (${spec.recurrence.name})',
+          ].join('\n'),
         ),
         isThreeLine: true,
       ),

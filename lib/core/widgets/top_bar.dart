@@ -28,7 +28,8 @@ class CustomTopBar extends ConsumerWidget implements PreferredSizeWidget {
     final shouldShowDate = showDate ?? (title == 'Dashboard');
 
     final userContext = ref.watch(userContextProvider);
-    final username = userContext.profile?.displayName ?? userContext.profile?.username;
+    final username =
+        userContext.profile?.displayName ?? userContext.profile?.username;
 
     final displayTitle = GreetingUtils.getGreetingTitle(
       title: title,
@@ -54,7 +55,9 @@ class CustomTopBar extends ConsumerWidget implements PreferredSizeWidget {
               displayTitle,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
               ),
             ),
             if (shouldShowDate) ...[
@@ -62,7 +65,9 @@ class CustomTopBar extends ConsumerWidget implements PreferredSizeWidget {
               Text(
                 formattedDate,
                 style: theme.textTheme.labelLarge?.copyWith(
-                  color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                  color: isDark
+                      ? AppColors.textMutedDark
+                      : AppColors.textMutedLight,
                 ),
               ),
             ],
@@ -75,7 +80,9 @@ class CustomTopBar extends ConsumerWidget implements PreferredSizeWidget {
                 icon: Icon(
                   LucideIcons.bell,
                   size: 20,
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
                 ),
                 onPressed: () {
                   context.push('/notifications');
@@ -85,9 +92,12 @@ class CustomTopBar extends ConsumerWidget implements PreferredSizeWidget {
                 icon: Icon(
                   LucideIcons.settings,
                   size: 20,
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
                 ),
-                onPressed: onSettingsPressed ??
+                onPressed:
+                    onSettingsPressed ??
                     () {
                       context.push('/settings');
                     },

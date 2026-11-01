@@ -17,6 +17,7 @@ class ParsedMoneyTransaction {
   final MoneyTransactionConfidence confidence;
   final String fingerprint;
   final String? accountMask;
+  final String parserReason;
 
   const ParsedMoneyTransaction({
     required this.amount,
@@ -29,6 +30,7 @@ class ParsedMoneyTransaction {
     required this.confidence,
     required this.fingerprint,
     this.accountMask,
+    this.parserReason = 'unknown',
   });
 
   bool get isConfirmedDebit =>
@@ -46,8 +48,10 @@ class ParsedMoneyTransaction {
 
   @override
   String toString() {
-    // Sanitized representation: never print raw text or sensitive financial details
-    final shortFp = fingerprint.length > 8 ? '${fingerprint.substring(0, 8)}...' : fingerprint;
-    return 'ParsedMoneyTransaction(classification: ${classification.name}, confidence: ${confidence.name}, amount: $amount $currency, sender: $sourceSender, ref: ${referenceId != null ? "[REDACTED]" : "none"}, fp: $shortFp)';
+    // Sanitized representation: never print raw text or sensitive financial details or amounts
+    final shortFp = fingerprint.length > 8
+        ? '${fingerprint.substring(0, 8)}...'
+        : fingerprint;
+    return 'ParsedMoneyTransaction(stage: parsed, classification: ${classification.name}, confidence: ${confidence.name}, reason: $parserReason, hasAmount: ${amount > 0}, hasRef: ${referenceId != null}, hasMerchant: ${merchantOrDescription != null}, fp: $shortFp)';
   }
 }

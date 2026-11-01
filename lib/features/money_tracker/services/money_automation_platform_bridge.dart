@@ -27,9 +27,14 @@ abstract class MoneyAutomationPlatformBridge {
 }
 
 /// Default implementation utilizing Flutter's [MethodChannel] and [EventChannel].
-class MethodChannelMoneyAutomationBridge implements MoneyAutomationPlatformBridge {
-  static const MethodChannel _methodChannel = MethodChannel('com.arc.arc/money_automation');
-  static const EventChannel _eventChannel = EventChannel('com.arc.arc/money_automation_events');
+class MethodChannelMoneyAutomationBridge
+    implements MoneyAutomationPlatformBridge {
+  static const MethodChannel _methodChannel = MethodChannel(
+    'com.arc.arc/money_automation',
+  );
+  static const EventChannel _eventChannel = EventChannel(
+    'com.arc.arc/money_automation_events',
+  );
 
   Stream<MoneyAutomationRawEvent>? _broadcastStream;
 
@@ -47,12 +52,16 @@ class MethodChannelMoneyAutomationBridge implements MoneyAutomationPlatformBridg
   Future<bool> checkPermission() async {
     if (!isPlatformSupported) return false;
     try {
-      final bool? granted = await _methodChannel.invokeMethod<bool>('checkPermission');
+      final bool? granted = await _methodChannel.invokeMethod<bool>(
+        'checkPermission',
+      );
       return granted ?? false;
     } on MissingPluginException {
       return false;
     } catch (e) {
-      debugPrint('MethodChannelMoneyAutomationBridge: checkPermission error: $e');
+      debugPrint(
+        'MethodChannelMoneyAutomationBridge: checkPermission error: $e',
+      );
       return false;
     }
   }
@@ -61,12 +70,16 @@ class MethodChannelMoneyAutomationBridge implements MoneyAutomationPlatformBridg
   Future<String> requestPermission() async {
     if (!isPlatformSupported) return 'unsupported';
     try {
-      final String? result = await _methodChannel.invokeMethod<String>('requestPermission');
+      final String? result = await _methodChannel.invokeMethod<String>(
+        'requestPermission',
+      );
       return result ?? 'denied';
     } on MissingPluginException {
       return 'unsupported';
     } catch (e) {
-      debugPrint('MethodChannelMoneyAutomationBridge: requestPermission error: $e');
+      debugPrint(
+        'MethodChannelMoneyAutomationBridge: requestPermission error: $e',
+      );
       return 'error';
     }
   }
@@ -77,7 +90,9 @@ class MethodChannelMoneyAutomationBridge implements MoneyAutomationPlatformBridg
     try {
       await _methodChannel.invokeMethod('openAppSettings');
     } catch (e) {
-      debugPrint('MethodChannelMoneyAutomationBridge: openAppSettings error: $e');
+      debugPrint(
+        'MethodChannelMoneyAutomationBridge: openAppSettings error: $e',
+      );
     }
   }
 
@@ -85,11 +100,15 @@ class MethodChannelMoneyAutomationBridge implements MoneyAutomationPlatformBridg
   Future<void> setListenerEnabled(bool enabled) async {
     if (!isPlatformSupported) return;
     try {
-      await _methodChannel.invokeMethod('setListenerEnabled', {'enabled': enabled});
+      await _methodChannel.invokeMethod('setListenerEnabled', {
+        'enabled': enabled,
+      });
     } on MissingPluginException {
       // Ignored on unsupported platforms
     } catch (e) {
-      debugPrint('MethodChannelMoneyAutomationBridge: setListenerEnabled error: $e');
+      debugPrint(
+        'MethodChannelMoneyAutomationBridge: setListenerEnabled error: $e',
+      );
     }
   }
 
@@ -102,7 +121,10 @@ class MethodChannelMoneyAutomationBridge implements MoneyAutomationPlatformBridg
     _broadcastStream ??= _eventChannel
         .receiveBroadcastStream()
         .where((event) => event is Map)
-        .map((event) => MoneyAutomationRawEvent.fromMap(event as Map<dynamic, dynamic>))
+        .map(
+          (event) =>
+              MoneyAutomationRawEvent.fromMap(event as Map<dynamic, dynamic>),
+        )
         .asBroadcastStream();
 
     return _broadcastStream!;

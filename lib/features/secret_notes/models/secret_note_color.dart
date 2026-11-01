@@ -22,7 +22,8 @@ class SecretNoteColorOption {
     required this.dotColor,
   });
 
-  Color backgroundColor(bool isDark) => isDark ? darkBackground : lightBackground;
+  Color backgroundColor(bool isDark) =>
+      isDark ? darkBackground : lightBackground;
   Color borderColor(bool isDark) => isDark ? darkBorder : lightBorder;
 }
 

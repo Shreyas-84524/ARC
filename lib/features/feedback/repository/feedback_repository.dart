@@ -56,9 +56,9 @@ class FeedbackRepository implements IFeedbackRepository {
     IFeedbackRemoteDataSource? remoteDataSource,
     auth.FirebaseAuth? firebaseAuth,
     Uuid? uuid,
-  })  : _remoteDataSource = remoteDataSource ?? FeedbackRemoteDataSource(),
-        _firebaseAuth = firebaseAuth ?? auth.FirebaseAuth.instance,
-        _uuid = uuid ?? const Uuid();
+  }) : _remoteDataSource = remoteDataSource ?? FeedbackRemoteDataSource(),
+       _firebaseAuth = firebaseAuth ?? auth.FirebaseAuth.instance,
+       _uuid = uuid ?? const Uuid();
 
   /// Current authenticated Firebase UID.
   @override

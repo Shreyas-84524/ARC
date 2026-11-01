@@ -29,7 +29,9 @@ class StarRatingInput extends StatelessWidget {
       case 5:
         return '5 Stars — Excellent!';
       default:
-        return isRequired ? 'Tap a star to rate (Required)' : 'Tap a star to rate (Optional)';
+        return isRequired
+            ? 'Tap a star to rate (Required)'
+            : 'Tap a star to rate (Optional)';
     }
   }
 
@@ -38,7 +40,9 @@ class StarRatingInput extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     const starActiveColor = Color(0xFFFFC857);
-    final starInactiveColor = isDark ? const Color(0xFF404040) : const Color(0xFFE5E7EB);
+    final starInactiveColor = isDark
+        ? const Color(0xFF404040)
+        : const Color(0xFFE5E7EB);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,7 +68,10 @@ class StarRatingInput extends StatelessWidget {
                 },
                 borderRadius: BorderRadius.circular(999),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8.0,
+                    vertical: 6.0,
+                  ),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     curve: Curves.easeOut,
@@ -90,10 +97,16 @@ class StarRatingInput extends StatelessWidget {
               _getRatingLabel(rating),
               key: ValueKey(rating),
               style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: rating != null ? FontWeight.bold : FontWeight.normal,
+                fontWeight: rating != null
+                    ? FontWeight.bold
+                    : FontWeight.normal,
                 color: rating != null
-                    ? (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)
-                    : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+                    ? (isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight)
+                    : (isDark
+                          ? AppColors.textMutedDark
+                          : AppColors.textMutedLight),
               ),
             ),
           ),

@@ -19,7 +19,8 @@ class GeneralFeedbackScreen extends ConsumerStatefulWidget {
   const GeneralFeedbackScreen({super.key});
 
   @override
-  ConsumerState<GeneralFeedbackScreen> createState() => _GeneralFeedbackScreenState();
+  ConsumerState<GeneralFeedbackScreen> createState() =>
+      _GeneralFeedbackScreenState();
 }
 
 class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
@@ -73,7 +74,9 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
     final userEmail = userContext.profile?.email;
 
     final draftService = ref.read(feedbackDraftServiceProvider);
-    final draft = await draftService.loadDraft(FeedbackCategory.generalFeedback);
+    final draft = await draftService.loadDraft(
+      FeedbackCategory.generalFeedback,
+    );
 
     if (mounted) {
       if (draft != null) {
@@ -122,7 +125,9 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
       module: _selectedModule,
       message: _messageController.text,
       selectedPrompt: _selectedPrompt,
-      contactEmail: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+      contactEmail: _emailController.text.trim().isEmpty
+          ? null
+          : _emailController.text.trim(),
     );
 
     if (payload.message.trim().isEmpty && _selectedPrompt == null) {
@@ -157,7 +162,9 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
       module: _selectedModule,
       message: _messageController.text,
       selectedPrompt: _selectedPrompt,
-      contactEmail: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+      contactEmail: _emailController.text.trim().isEmpty
+          ? null
+          : _emailController.text.trim(),
     );
 
     final error = payload.validate();
@@ -202,7 +209,9 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              e is ArgumentError ? e.message.toString() : 'Failed to submit feedback. Your draft has been preserved.',
+              e is ArgumentError
+                  ? e.message.toString()
+                  : 'Failed to submit feedback. Your draft has been preserved.',
             ),
             backgroundColor: AppColors.danger,
             behavior: SnackBarBehavior.floating,
@@ -231,7 +240,9 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
 
         return AlertDialog(
           backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Row(
             children: [
               Container(
@@ -240,14 +251,20 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
                   color: _conversationalCyan.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(LucideIcons.heartHandshake, color: _conversationalCyan, size: 24),
+                child: const Icon(
+                  LucideIcons.heartHandshake,
+                  color: _conversationalCyan,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 12),
               Text(
                 'Thank You!',
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
                 ),
               ),
             ],
@@ -259,18 +276,27 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
               Text(
                 'Your thoughts have been delivered directly to our team. Every note helps us build a more mindful and effective Arc.',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
                   height: 1.4,
                 ),
               ),
               const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
+                  color: isDark
+                      ? AppColors.darkSurface
+                      : AppColors.lightBgSecondary,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight,
+                    color: isDark
+                        ? AppColors.borderSubtle
+                        : AppColors.borderSubtleLight,
                   ),
                 ),
                 child: Row(
@@ -278,7 +304,9 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
                     Text(
                       'Ref: ',
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                        color: isDark
+                            ? AppColors.textMutedDark
+                            : AppColors.textMutedLight,
                       ),
                     ),
                     Expanded(
@@ -306,7 +334,9 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
               child: Text(
                 'Done',
                 style: TextStyle(
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
                 ),
               ),
             ),
@@ -314,7 +344,9 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: _conversationalCyan,
                 foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               onPressed: () {
                 Navigator.of(dialogContext).pop();
@@ -322,7 +354,10 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
                   context.pushReplacement('/feedback/my-feedback');
                 }
               },
-              child: const Text('View Status', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                'View Status',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         );
@@ -391,9 +426,7 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : AppColors.lightCard,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: _conversationalCyan.withValues(alpha: 0.2),
-        ),
+        border: Border.all(color: _conversationalCyan.withValues(alpha: 0.2)),
         boxShadow: isDark
             ? []
             : [
@@ -415,7 +448,11 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
                   color: _conversationalCyan.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(LucideIcons.messageCircle, color: _conversationalCyan, size: 24),
+                child: const Icon(
+                  LucideIcons.messageCircle,
+                  color: _conversationalCyan,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -426,14 +463,18 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
                       'We\'re All Ears',
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       'Direct, thoughtful conversations with the builders',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                        color: isDark
+                            ? AppColors.textMutedDark
+                            : AppColors.textMutedLight,
                       ),
                     ),
                   ],
@@ -445,7 +486,9 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
           Text(
             'Whether you love an aspect of Arc, feel friction with a workflow, or just want to share an impression — we read every single message.',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
               height: 1.45,
             ),
           ),
@@ -460,14 +503,20 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
       children: [
         Row(
           children: [
-            const Icon(LucideIcons.sparkles, size: 14, color: _conversationalCyan),
+            const Icon(
+              LucideIcons.sparkles,
+              size: 14,
+              color: _conversationalCyan,
+            ),
             const SizedBox(width: 6),
             Text(
               'INSPIRATION PROMPTS (OPTIONAL)',
               style: theme.textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 letterSpacing: 0.8,
-                color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                color: isDark
+                    ? AppColors.textMutedDark
+                    : AppColors.textMutedLight,
               ),
             ),
           ],
@@ -488,17 +537,25 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   color: isSelected
                       ? Colors.white
-                      : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                      : (isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight),
                 ),
               ),
-              backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
+              backgroundColor: isDark
+                  ? AppColors.darkSurface
+                  : AppColors.lightBgSecondary,
               selectedColor: _conversationalCyan.withValues(alpha: 0.85),
               side: BorderSide(
                 color: isSelected
                     ? _conversationalCyan
-                    : (isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight),
+                    : (isDark
+                          ? AppColors.borderSubtle
+                          : AppColors.borderSubtleLight),
               ),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               onSelected: (_) => _togglePrompt(prompt),
             );
           }).toList(),
@@ -523,11 +580,17 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
             decoration: BoxDecoration(
               color: _conversationalCyan.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: _conversationalCyan.withValues(alpha: 0.3)),
+              border: Border.all(
+                color: _conversationalCyan.withValues(alpha: 0.3),
+              ),
             ),
             child: Row(
               children: [
-                const Icon(LucideIcons.tag, size: 13, color: _conversationalCyan),
+                const Icon(
+                  LucideIcons.tag,
+                  size: 13,
+                  color: _conversationalCyan,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -550,7 +613,9 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
                   child: Icon(
                     LucideIcons.x,
                     size: 14,
-                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                    color: isDark
+                        ? AppColors.textMutedDark
+                        : AppColors.textMutedLight,
                   ),
                 ),
               ],
@@ -562,7 +627,9 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
             color: isDark ? AppColors.darkCard : AppColors.lightCard,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+              color: isDark
+                  ? AppColors.borderMedium
+                  : AppColors.borderMediumLight,
             ),
           ),
           child: Column(
@@ -574,12 +641,16 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
                 maxLines: 12,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   height: 1.5,
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
                 ),
                 decoration: InputDecoration(
                   hintText: hintText,
                   hintStyle: TextStyle(
-                    color: isDark ? AppColors.textPlaceholderDark : AppColors.textPlaceholderLight,
+                    color: isDark
+                        ? AppColors.textPlaceholderDark
+                        : AppColors.textPlaceholderLight,
                     fontSize: 14,
                   ),
                   border: InputBorder.none,
@@ -587,7 +658,10 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -596,7 +670,9 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: currentLength > 4500
                             ? AppColors.danger
-                            : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+                            : (isDark
+                                  ? AppColors.textMutedDark
+                                  : AppColors.textMutedLight),
                         fontFamily: 'monospace',
                         fontSize: 11,
                       ),
@@ -625,15 +701,23 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
             child: Row(
               children: [
                 Icon(
-                  _showDetails ? LucideIcons.chevronDown : LucideIcons.chevronRight,
+                  _showDetails
+                      ? LucideIcons.chevronDown
+                      : LucideIcons.chevronRight,
                   size: 16,
-                  color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                  color: isDark
+                      ? AppColors.textMutedDark
+                      : AppColors.textMutedLight,
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  _showDetails ? 'Hide additional context' : 'Add context (component & follow-up email)',
+                  _showDetails
+                      ? 'Hide additional context'
+                      : 'Add context (component & follow-up email)',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                    color: isDark
+                        ? AppColors.textMutedDark
+                        : AppColors.textMutedLight,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -649,7 +733,9 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
               color: isDark ? AppColors.darkCard : AppColors.lightCard,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: isDark ? AppColors.borderSubtle : AppColors.borderSubtleLight,
+                color: isDark
+                    ? AppColors.borderSubtle
+                    : AppColors.borderSubtleLight,
               ),
             ),
             child: Column(
@@ -660,19 +746,28 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
                   style: theme.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.8,
-                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                    color: isDark
+                        ? AppColors.textMutedDark
+                        : AppColors.textMutedLight,
                   ),
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   initialValue: _selectedModule,
-                  dropdownColor: isDark ? AppColors.darkElevated : AppColors.lightSurface,
+                  dropdownColor: isDark
+                      ? AppColors.darkElevated
+                      : AppColors.lightSurface,
                   decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: BorderSide(
-                        color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                        color: isDark
+                            ? AppColors.borderMedium
+                            : AppColors.borderMediumLight,
                       ),
                     ),
                   ),
@@ -695,7 +790,9 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
                   style: theme.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.8,
-                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                    color: isDark
+                        ? AppColors.textMutedDark
+                        : AppColors.textMutedLight,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -706,11 +803,16 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
                   decoration: InputDecoration(
                     hintText: 'name@example.com',
                     prefixIcon: const Icon(LucideIcons.mail, size: 18),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: BorderSide(
-                        color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                        color: isDark
+                            ? AppColors.borderMedium
+                            : AppColors.borderMediumLight,
                       ),
                     ),
                   ),
@@ -732,14 +834,19 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
           backgroundColor: _conversationalCyan,
           foregroundColor: Colors.black,
           elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
         onPressed: _isSubmitting ? null : _submitFeedback,
         child: _isSubmitting
             ? const SizedBox(
                 height: 22,
                 width: 22,
-                child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.black),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: Colors.black,
+                ),
               )
             : const Row(
                 mainAxisAlignment: MainAxisAlignment.center,

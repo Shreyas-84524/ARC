@@ -45,13 +45,28 @@ class ArcNotificationPayload {
   final String entityId;
   final String fingerprint;
   final String? customDestination;
+  final String? actionId;
+  final int? notificationId;
 
   const ArcNotificationPayload({
     required this.type,
     required this.entityId,
     required this.fingerprint,
     this.customDestination,
+    this.actionId,
+    this.notificationId,
   });
+
+  ArcNotificationPayload withResponse({String? actionId, int? notificationId}) {
+    return ArcNotificationPayload(
+      type: type,
+      entityId: entityId,
+      fingerprint: fingerprint,
+      customDestination: customDestination,
+      actionId: actionId,
+      notificationId: notificationId,
+    );
+  }
 
   String get category {
     switch (type) {
@@ -102,14 +117,14 @@ class ArcNotificationPayload {
   }
 
   String toJson() => jsonEncode({
-        'app': 'arc',
-        'version': currentVersion,
-        'category': category,
-        'type': type.name,
-        'id': entityId,
-        'destination': destination,
-        'fingerprint': fingerprint,
-      });
+    'app': 'arc',
+    'version': currentVersion,
+    'category': category,
+    'type': type.name,
+    'id': entityId,
+    'destination': destination,
+    'fingerprint': fingerprint,
+  });
 
   static ArcNotificationPayload? tryParse(String? raw) {
     if (raw == null || raw.isEmpty) return null;
@@ -162,6 +177,8 @@ class ArcNotificationSpec {
   final DateTime scheduledAt;
   final ArcNotificationRecurrence recurrence;
   final String fingerprint;
+  final bool persistent;
+  final List<ArcNotificationAction> actions;
 
   const ArcNotificationSpec({
     required this.id,
@@ -173,14 +190,23 @@ class ArcNotificationSpec {
     required this.scheduledAt,
     required this.recurrence,
     required this.fingerprint,
+    this.persistent = false,
+    this.actions = const [],
   });
 
   String get payload => ArcNotificationPayload(
-        type: type,
-        entityId: entityId,
-        fingerprint: fingerprint,
-      ).toJson();
+    type: type,
+    entityId: entityId,
+    fingerprint: fingerprint,
+  ).toJson();
+}
 
+@immutable
+class ArcNotificationAction {
+  final String id;
+  final String title;
+
+  const ArcNotificationAction({required this.id, required this.title});
 }
 
 @immutable
@@ -277,8 +303,7 @@ class NotificationHealth {
       cancelledCount: cancelledCount ?? this.cancelledCount,
       unchangedCount: unchangedCount ?? this.unchangedCount,
       lastError: clearError ? null : (lastError ?? this.lastError),
-      desiredNotifications:
-          desiredNotifications ?? this.desiredNotifications,
+      desiredNotifications: desiredNotifications ?? this.desiredNotifications,
       navigationIntent: clearNavigationIntent
           ? null
           : (navigationIntent ?? this.navigationIntent),

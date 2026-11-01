@@ -46,7 +46,9 @@ class _SecretNotesPinFieldState extends State<SecretNotesPinField> {
           widget.label,
           style: theme.textTheme.labelMedium?.copyWith(
             fontWeight: FontWeight.w600,
-            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+            color: isDark
+                ? AppColors.textSecondaryDark
+                : AppColors.textSecondaryLight,
           ),
         ),
         const SizedBox(height: 8),
@@ -87,28 +89,26 @@ class _SecretNotesPinFieldState extends State<SecretNotesPinField> {
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppTheme.radiusInput),
               borderSide: BorderSide(
-                color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                color: isDark
+                    ? AppColors.borderMedium
+                    : AppColors.borderMediumLight,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppTheme.radiusInput),
               borderSide: BorderSide(
-                color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                color: isDark
+                    ? AppColors.borderMedium
+                    : AppColors.borderMediumLight,
               ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppTheme.radiusInput),
-              borderSide: const BorderSide(
-                color: AppColors.accent,
-                width: 2,
-              ),
+              borderSide: const BorderSide(color: AppColors.accent, width: 2),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppTheme.radiusInput),
-              borderSide: const BorderSide(
-                color: AppColors.danger,
-                width: 1.5,
-              ),
+              borderSide: const BorderSide(color: AppColors.danger, width: 1.5),
             ),
           ),
           onChanged: widget.onChanged,

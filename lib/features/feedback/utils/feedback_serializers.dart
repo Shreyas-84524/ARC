@@ -67,7 +67,9 @@ class BugReportPayload {
     return BugReportPayload(
       module: (data['module'] as String?) ?? 'general',
       title: (extra?['title'] as String?) ?? '',
-      description: (extra?['description'] as String?) ?? (data['message'] as String? ?? ''),
+      description:
+          (extra?['description'] as String?) ??
+          (data['message'] as String? ?? ''),
       stepsToReproduce: (extra?['stepsToReproduce'] as String?) ?? '',
       expectedBehavior: (extra?['expectedBehavior'] as String?) ?? '',
       actualBehavior: (extra?['actualBehavior'] as String?) ?? '',
@@ -140,11 +142,7 @@ class FeatureRequestPayload {
 
   /// Maps structured fields into draft storage payload.
   Map<String, dynamic> toDraftMap() {
-    return {
-      'title': title,
-      'description': description,
-      'benefit': benefit,
-    };
+    return {'title': title, 'description': description, 'benefit': benefit};
   }
 
   /// Reconstructs payload from SharedPreferences draft map.
@@ -153,7 +151,9 @@ class FeatureRequestPayload {
     return FeatureRequestPayload(
       module: (data['module'] as String?) ?? 'general',
       title: (extra?['title'] as String?) ?? '',
-      description: (extra?['description'] as String?) ?? (data['message'] as String? ?? ''),
+      description:
+          (extra?['description'] as String?) ??
+          (data['message'] as String? ?? ''),
       benefit: extra?['benefit'] as String?,
       contactEmail: data['contactEmail'] as String?,
     );
@@ -209,10 +209,7 @@ class GeneralFeedbackPayload {
 
   /// Maps structured fields into draft storage payload.
   Map<String, dynamic> toDraftMap() {
-    return {
-      'message': message,
-      'selectedPrompt': selectedPrompt,
-    };
+    return {'message': message, 'selectedPrompt': selectedPrompt};
   }
 
   /// Reconstructs payload from SharedPreferences draft map.
@@ -220,7 +217,8 @@ class GeneralFeedbackPayload {
     final extra = data['extraFields'] as Map<String, dynamic>?;
     return GeneralFeedbackPayload(
       module: (data['module'] as String?) ?? 'general',
-      message: (extra?['message'] as String?) ?? (data['message'] as String? ?? ''),
+      message:
+          (extra?['message'] as String?) ?? (data['message'] as String? ?? ''),
       selectedPrompt: extra?['selectedPrompt'] as String?,
       contactEmail: data['contactEmail'] as String?,
     );
@@ -293,18 +291,19 @@ class RateArcPayload {
 
   /// Maps structured fields into draft storage payload.
   Map<String, dynamic> toDraftMap() {
-    return {
-      'rating': rating,
-      'writtenReview': writtenReview,
-    };
+    return {'rating': rating, 'writtenReview': writtenReview};
   }
 
   /// Reconstructs payload from SharedPreferences draft map.
   static RateArcPayload fromDraft(Map<String, dynamic> data) {
     final extra = data['extraFields'] as Map<String, dynamic>?;
     return RateArcPayload(
-      rating: (extra?['rating'] as num?)?.toInt() ?? (data['rating'] as num?)?.toInt() ?? 0,
-      writtenReview: (extra?['writtenReview'] as String?) ?? (data['message'] as String?),
+      rating:
+          (extra?['rating'] as num?)?.toInt() ??
+          (data['rating'] as num?)?.toInt() ??
+          0,
+      writtenReview:
+          (extra?['writtenReview'] as String?) ?? (data['message'] as String?),
       module: (data['module'] as String?) ?? 'general',
       contactEmail: data['contactEmail'] as String?,
     );

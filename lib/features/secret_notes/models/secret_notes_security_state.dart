@@ -79,7 +79,9 @@ class SecretNotesSecurityState {
       isConfigured: map['is_configured'] as bool? ?? false,
       hasSeenIntro: map['has_seen_intro'] as bool? ?? false,
       failedAttempts: map['failed_attempts'] as int? ?? 0,
-      lockedUntil: lockedUntilMs != null ? DateTime.fromMillisecondsSinceEpoch(lockedUntilMs) : null,
+      lockedUntil: lockedUntilMs != null
+          ? DateTime.fromMillisecondsSinceEpoch(lockedUntilMs)
+          : null,
       salt: map['pin_salt'] as String?,
       pinHash: map['pin_hash'] as String?,
       iterations: map['iterations'] as int? ?? 10000,

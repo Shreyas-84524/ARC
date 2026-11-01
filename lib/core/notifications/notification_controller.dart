@@ -8,11 +8,11 @@ import 'package:arc/core/notifications/notification_policy.dart';
 import 'package:arc/core/notifications/notification_service.dart';
 import 'package:arc/core/services/hive_service.dart';
 
-final notificationControllerProvider = StateNotifierProvider<
-    NotificationController, NotificationHealth>((ref) {
-  // StateNotifierProvider owns and disposes the notifier exactly once.
-  return NotificationController();
-});
+final notificationControllerProvider =
+    StateNotifierProvider<NotificationController, NotificationHealth>((ref) {
+      // StateNotifierProvider owns and disposes the notifier exactly once.
+      return NotificationController();
+    });
 
 class NotificationController extends StateNotifier<NotificationHealth> {
   final LocalNotificationGateway _gateway;
@@ -26,9 +26,9 @@ class NotificationController extends StateNotifier<NotificationHealth> {
   NotificationController({
     LocalNotificationGateway? gateway,
     NotificationPolicy? policy,
-  })  : _gateway = gateway ?? FlutterLocalNotificationGateway(),
-        _policy = policy ?? NotificationPolicy(),
-        super(const NotificationHealth());
+  }) : _gateway = gateway ?? FlutterLocalNotificationGateway(),
+       _policy = policy ?? NotificationPolicy(),
+       super(const NotificationHealth());
 
   Future<void> initialize() async {
     if (state.initialized) return;
@@ -53,7 +53,9 @@ class NotificationController extends StateNotifier<NotificationHealth> {
         'ARC_NOTIFICATIONS initialized timezone=${_gateway.timezoneName} permission=${permission.name}',
       );
     } catch (error, stackTrace) {
-      debugPrint('ARC_NOTIFICATIONS initialization_failed: $error\n$stackTrace');
+      debugPrint(
+        'ARC_NOTIFICATIONS initialization_failed: $error\n$stackTrace',
+      );
       state = state.copyWith(
         initialized: false,
         permission: ArcNotificationPermissionState.error,
@@ -62,7 +64,8 @@ class NotificationController extends StateNotifier<NotificationHealth> {
     }
   }
 
-  Future<ArcNotificationPermissionState> requestPermissionFromUserAction() async {
+  Future<ArcNotificationPermissionState>
+  requestPermissionFromUserAction() async {
     if (!state.initialized) await initialize();
     final permission = await _gateway.requestPermission();
     state = state.copyWith(permission: permission);
@@ -93,7 +96,12 @@ class NotificationController extends StateNotifier<NotificationHealth> {
           // If Hive is not initialized (e.g. in unit tests), continue migration in memory
         }
       }
-      if (box != null && box.get('migrated_consolidated_habit_notifications_v1', defaultValue: false) == true) {
+      if (box != null &&
+          box.get(
+                'migrated_consolidated_habit_notifications_v1',
+                defaultValue: false,
+              ) ==
+              true) {
         return 0;
       }
 
@@ -102,21 +110,29 @@ class NotificationController extends StateNotifier<NotificationHealth> {
 
       for (final request in pending) {
         final payload = ArcNotificationPayload.tryParse(request.payload);
-        final isHabitPending = payload?.type == ArcNotificationType.habitPending;
-        final isInHabitRemRange = request.id >= NotificationPolicy.habitRemTimeMin &&
-            request.id < (NotificationPolicy.habitRemTimeMin + NotificationPolicy.habitRemTimeRange);
+        final isHabitPending =
+            payload?.type == ArcNotificationType.habitPending;
+        final isInHabitRemRange =
+            request.id >= NotificationPolicy.habitRemTimeMin &&
+            request.id <
+                (NotificationPolicy.habitRemTimeMin +
+                    NotificationPolicy.habitRemTimeRange);
 
         if (isHabitPending || isInHabitRemRange) {
           await _gateway.cancel(request.id);
           migratedCount++;
-          debugPrint('ARC_NOTIFICATIONS: Cancelled obsolete per-habit notification ${request.id}');
+          debugPrint(
+            'ARC_NOTIFICATIONS: Cancelled obsolete per-habit notification ${request.id}',
+          );
         }
       }
 
       if (box != null) {
         await box.put('migrated_consolidated_habit_notifications_v1', true);
       }
-      debugPrint('ARC_NOTIFICATIONS: Migration completed. Removed $migratedCount obsolete notifications.');
+      debugPrint(
+        'ARC_NOTIFICATIONS: Migration completed. Removed $migratedCount obsolete notifications.',
+      );
       return migratedCount;
     } catch (e) {
       debugPrint('ARC_NOTIFICATIONS: Migration check failed: $e');
@@ -173,9 +189,9 @@ class NotificationController extends StateNotifier<NotificationHealth> {
       // If permission or the master switch is disabled, clear ARC schedules.
       final schedulingAllowed =
           permission == ArcNotificationPermissionState.granted &&
-              snapshot.userId != null &&
-              snapshot.userId!.isNotEmpty &&
-              snapshot.settings.masterNotificationsEnabled;
+          snapshot.userId != null &&
+          snapshot.userId!.isNotEmpty &&
+          snapshot.settings.masterNotificationsEnabled;
 
       for (final request in pending) {
         final payload = ArcNotificationPayload.tryParse(request.payload);
@@ -190,8 +206,9 @@ class NotificationController extends StateNotifier<NotificationHealth> {
       if (schedulingAllowed) {
         for (final spec in desired) {
           final existing = pendingById[spec.id];
-          final existingPayload =
-              ArcNotificationPayload.tryParse(existing?.payload);
+          final existingPayload = ArcNotificationPayload.tryParse(
+            existing?.payload,
+          );
           if (existingPayload?.fingerprint == spec.fingerprint) {
             unchanged++;
             continue;
@@ -221,7 +238,9 @@ class NotificationController extends StateNotifier<NotificationHealth> {
         'ARC_NOTIFICATIONS reconciled reason=$reason desired=${desired.length} pending=${refreshedPending.length} scheduled=$scheduled cancelled=$cancelled unchanged=$unchanged',
       );
     } catch (error, stackTrace) {
-      debugPrint('ARC_NOTIFICATIONS reconciliation_failed: $error\n$stackTrace');
+      debugPrint(
+        'ARC_NOTIFICATIONS reconciliation_failed: $error\n$stackTrace',
+      );
       state = state.copyWith(
         reconciling: false,
         lastReconciledAt: DateTime.now(),

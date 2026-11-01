@@ -11,46 +11,48 @@ import 'package:arc/providers/global_providers.dart';
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
 import 'package:arc/features/user_management/models/user_context.dart';
 import 'package:arc/features/secret_notes/providers/secret_notes_provider.dart';
+import 'package:arc/features/money_tracker/providers/money_automation_provider.dart';
 
 void main() async {
-  runZonedGuarded<Future<void>>(() async {
-    WidgetsFlutterBinding.ensureInitialized();
+  runZonedGuarded<Future<void>>(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
 
-    FlutterError.onError = (FlutterErrorDetails details) {
-      FlutterError.presentError(details);
-      debugPrint('FlutterError caught: ${details.exception}');
-    };
+      FlutterError.onError = (FlutterErrorDetails details) {
+        FlutterError.presentError(details);
+        debugPrint('FlutterError caught: ${details.exception}');
+      };
 
-    // Initialize Firebase Cloud services
-    try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-      debugPrint('Firebase Core: successfully initialized.');
-    } catch (e) {
-      debugPrint('Firebase Core initialization warning: $e');
-    }
+      // Initialize Firebase Cloud services
+      try {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+        debugPrint('Firebase Core: successfully initialized.');
+      } catch (e) {
+        debugPrint('Firebase Core initialization warning: $e');
+      }
 
-    // Initialize Local Databases (Hive)
-    try {
-      await HiveService().init();
-    } catch (e) {
-      debugPrint('HiveService initialization warning: $e');
-    }
+      // Initialize Local Databases (Hive)
+      try {
+        await HiveService().init();
+      } catch (e) {
+        debugPrint('HiveService initialization warning: $e');
+      }
 
-    // Run the application
-    runApp(
-      const ProviderScope(
-        child: SyncInitializer(
-          child: NotificationOrchestrator(
-            child: ProjectArcApp(),
+      // Run the application
+      runApp(
+        const ProviderScope(
+          child: SyncInitializer(
+            child: NotificationOrchestrator(child: ProjectArcApp()),
           ),
         ),
-      ),
-    );
-  }, (error, stackTrace) {
-    debugPrint('Uncaught async error in main: $error\n$stackTrace');
-  });
+      );
+    },
+    (error, stackTrace) {
+      debugPrint('Uncaught async error in main: $error\n$stackTrace');
+    },
+  );
 }
 
 class SyncInitializer extends ConsumerStatefulWidget {
@@ -96,7 +98,6 @@ class _SyncInitializerState extends ConsumerState<SyncInitializer> {
         onRefreshState: refreshAllNotifiers,
       );
       syncService.startRealTimeSync(onRefreshState: refreshAllNotifiers);
-
     } catch (e) {
       debugPrint('SyncInitializer background sync notice: $e');
     }
@@ -105,7 +106,8 @@ class _SyncInitializerState extends ConsumerState<SyncInitializer> {
   @override
   Widget build(BuildContext context) {
     ref.listen<UserContext>(userContextProvider, (previous, next) {
-      if (next.isAuthenticated && (previous == null || !previous.isAuthenticated)) {
+      if (next.isAuthenticated &&
+          (previous == null || !previous.isAuthenticated)) {
         _startSyncProcess();
       }
     });
@@ -146,7 +148,9 @@ class _ProjectArcAppState extends ConsumerState<ProjectArcApp>
       final isUnlocked = ref.read(secretNotesSessionProvider);
       if (isUnlocked) {
         ref.read(secretNotesSessionProvider.notifier).lock();
-        debugPrint('ProjectArcApp: app backgrounded (${state.name}). Secret Notes automatically locked.');
+        debugPrint(
+          'ProjectArcApp: app backgrounded (${state.name}). Secret Notes automatically locked.',
+        );
       }
     }
   }
@@ -156,6 +160,8 @@ class _ProjectArcAppState extends ConsumerState<ProjectArcApp>
     // Read the active theme state and reactive router from Riverpod
     final activeThemeMode = ref.watch(themeModeProvider);
     final router = ref.watch(routerProvider);
+    // Restore opted-in tracking at app startup, before Money is visited.
+    ref.watch(moneyAutomationProvider);
 
     return MaterialApp.router(
       title: 'Project Arc',

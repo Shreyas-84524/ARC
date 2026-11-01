@@ -22,7 +22,9 @@ class AppColors {
   static const Color accentHover = Color(0xffE5FF5C);
   static const Color accentPressed = Color(0xffBCD91F);
   static const Color accentGlow = Color(0x66D7FF2F);
-  static const Color darkAccent = Color(0xFF5C7000); // designlight.md: Dark Accent #5C7000 for text/icons requiring contrast
+  static const Color darkAccent = Color(
+    0xFF5C7000,
+  ); // designlight.md: Dark Accent #5C7000 for text/icons requiring contrast
 
   // Priorities
   static const Color priorityHigh = Color(0xffFF4D4F);
@@ -159,10 +161,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusButton),
           ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           elevation: 0,
         ),
       ),
@@ -174,10 +173,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusButton),
           ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
       cardTheme: CardThemeData(
@@ -192,7 +188,10 @@ class AppTheme {
         filled: true,
         fillColor: AppColors.darkSurface,
         hintStyle: const TextStyle(color: AppColors.textPlaceholderDark),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusInput),
           borderSide: BorderSide.none,
@@ -296,10 +295,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusButton),
           ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           elevation: 0,
         ),
       ),
@@ -312,19 +308,13 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusButton),
           ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.textSecondaryLight,
-          textStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
       cardTheme: CardThemeData(
@@ -339,7 +329,10 @@ class AppTheme {
         filled: true,
         fillColor: AppColors.lightSurface,
         hintStyle: const TextStyle(color: AppColors.textPlaceholderLight),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusInput),
           borderSide: const BorderSide(color: AppColors.borderMediumLight),
@@ -350,7 +343,10 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusInput),
-          borderSide: const BorderSide(color: AppColors.textPrimaryLight, width: 1.5),
+          borderSide: const BorderSide(
+            color: AppColors.textPrimaryLight,
+            width: 1.5,
+          ),
         ),
       ),
       dialogTheme: DialogThemeData(

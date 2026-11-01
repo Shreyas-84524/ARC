@@ -29,12 +29,15 @@ class HiveService {
   static const String settingsBoxName = 'settings_box';
   // Local-only Secret Notes namespaces (NEVER synced with cloud/Firebase)
   static const String secretNotesSecurityBoxName = 'secret_notes_security';
-  static const String secretNotesPreferencesBoxName = 'secret_notes_preferences';
+  static const String secretNotesPreferencesBoxName =
+      'secret_notes_preferences';
   static const String secretNotesDataBoxName = 'secret_notes_data';
   // Local-only Money Automation preferences (NEVER synced with cloud/Firebase)
-  static const String moneyAutomationPreferencesBoxName = 'money_automation_preferences';
+  static const String moneyAutomationPreferencesBoxName =
+      'money_automation_preferences';
   // Local-only Feedback Acknowledgement deduplication box
-  static const String feedbackAcknowledgementsBoxName = 'feedback_acknowledgements_box';
+  static const String feedbackAcknowledgementsBoxName =
+      'feedback_acknowledgements_box';
 
   Future<void> init() async {
     if (_initialized) return;
@@ -46,8 +49,12 @@ class HiveService {
       // Register Adapters
       if (!Hive.isAdapterRegistered(0)) Hive.registerAdapter(TaskAdapter());
       if (!Hive.isAdapterRegistered(1)) Hive.registerAdapter(HabitAdapter());
-      if (!Hive.isAdapterRegistered(2)) Hive.registerAdapter(HabitEntryAdapter());
-      if (!Hive.isAdapterRegistered(3)) Hive.registerAdapter(TransactionAdapter());
+      if (!Hive.isAdapterRegistered(2)) {
+        Hive.registerAdapter(HabitEntryAdapter());
+      }
+      if (!Hive.isAdapterRegistered(3)) {
+        Hive.registerAdapter(TransactionAdapter());
+      }
 
       // Open caching boxes
       await Hive.openBox<Task>(tasksBoxName);
@@ -74,7 +81,9 @@ class HiveService {
   // Generic getter to read a box
   Box<T> getBox<T>(String boxName) {
     if (!_initialized || !Hive.isBoxOpen(boxName)) {
-      throw StateError('HiveService has not been initialized or box $boxName is not open.');
+      throw StateError(
+        'HiveService has not been initialized or box $boxName is not open.',
+      );
     }
     return Hive.box<T>(boxName);
   }
@@ -161,7 +170,10 @@ class HiveService {
     }
   }
 
-  Future<Box<T>> _openAndMigrateUserBox<T>(String baseBoxName, String userId) async {
+  Future<Box<T>> _openAndMigrateUserBox<T>(
+    String baseBoxName,
+    String userId,
+  ) async {
     final scopedName = getUserBoxName(baseBoxName, userId);
     if (!Hive.isBoxOpen(scopedName)) {
       await Hive.openBox<T>(scopedName);
@@ -172,7 +184,9 @@ class HiveService {
     if (scopedBox.isEmpty && Hive.isBoxOpen(baseBoxName)) {
       final baseBox = Hive.box<T>(baseBoxName);
       if (baseBox.isNotEmpty) {
-        debugPrint('HiveService: Copying ${baseBox.length} legacy records from $baseBoxName to $scopedName');
+        debugPrint(
+          'HiveService: Copying ${baseBox.length} legacy records from $baseBoxName to $scopedName',
+        );
         for (final key in baseBox.keys) {
           final val = baseBox.get(key);
           if (val != null) {
@@ -184,7 +198,10 @@ class HiveService {
     return scopedBox;
   }
 
-  Future<Box> _openAndMigrateUntypedBox(String baseBoxName, String userId) async {
+  Future<Box> _openAndMigrateUntypedBox(
+    String baseBoxName,
+    String userId,
+  ) async {
     final scopedName = getUserBoxName(baseBoxName, userId);
     if (!Hive.isBoxOpen(scopedName)) {
       await Hive.openBox(scopedName);
@@ -194,7 +211,9 @@ class HiveService {
     if (scopedBox.isEmpty && Hive.isBoxOpen(baseBoxName)) {
       final baseBox = Hive.box(baseBoxName);
       if (baseBox.isNotEmpty) {
-        debugPrint('HiveService: Copying ${baseBox.length} legacy records from $baseBoxName to $scopedName');
+        debugPrint(
+          'HiveService: Copying ${baseBox.length} legacy records from $baseBoxName to $scopedName',
+        );
         for (final key in baseBox.keys) {
           final val = baseBox.get(key);
           if (val != null) {
@@ -222,7 +241,9 @@ class HiveService {
       return Hive.box<T>(baseBoxName);
     }
 
-    throw StateError('HiveService: box $scopedName (or fallback $baseBoxName) is not open.');
+    throw StateError(
+      'HiveService: box $scopedName (or fallback $baseBoxName) is not open.',
+    );
   }
 
   // Helper methods to read/write settings cache
@@ -236,4 +257,3 @@ class HiveService {
     return box.get(key, defaultValue: defaultValue);
   }
 }
-

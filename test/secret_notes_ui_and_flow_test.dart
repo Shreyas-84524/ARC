@@ -39,7 +39,9 @@ void main() {
   late Directory tempDir;
 
   setUpAll(() async {
-    tempDir = await Directory.systemTemp.createTemp('arc_secret_notes_ui_test_');
+    tempDir = await Directory.systemTemp.createTemp(
+      'arc_secret_notes_ui_test_',
+    );
     Hive.init(tempDir.path);
   });
 
@@ -68,7 +70,9 @@ void main() {
           child: const SecretNotesSetupScreen(),
           overrides: [
             secretNotesLocalRepositoryProvider.overrideWithValue(repo),
-            secretNotesSecurityServiceProvider.overrideWithValue(securityService),
+            secretNotesSecurityServiceProvider.overrideWithValue(
+              securityService,
+            ),
           ],
         ),
       );
@@ -79,7 +83,9 @@ void main() {
       expect(find.text('Continue'), findsOneWidget);
     });
 
-    testWidgets('Validates PIN setup matching and requirements', (tester) async {
+    testWidgets('Validates PIN setup matching and requirements', (
+      tester,
+    ) async {
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(800, 1200);
       addTearDown(() {
@@ -92,7 +98,9 @@ void main() {
           child: const SecretNotesSetupScreen(),
           overrides: [
             secretNotesLocalRepositoryProvider.overrideWithValue(repo),
-            secretNotesSecurityServiceProvider.overrideWithValue(securityService),
+            secretNotesSecurityServiceProvider.overrideWithValue(
+              securityService,
+            ),
           ],
         ),
       );
@@ -147,7 +155,9 @@ void main() {
           child: const SecretNotesUnlockScreen(),
           overrides: [
             secretNotesLocalRepositoryProvider.overrideWithValue(repo),
-            secretNotesSecurityServiceProvider.overrideWithValue(securityService),
+            secretNotesSecurityServiceProvider.overrideWithValue(
+              securityService,
+            ),
           ],
         ),
       );
@@ -170,7 +180,9 @@ void main() {
           child: const SecretNotesUnlockScreen(),
           overrides: [
             secretNotesLocalRepositoryProvider.overrideWithValue(repo),
-            secretNotesSecurityServiceProvider.overrideWithValue(securityService),
+            secretNotesSecurityServiceProvider.overrideWithValue(
+              securityService,
+            ),
           ],
         ),
       );
@@ -187,7 +199,9 @@ void main() {
       expect(find.text('Incorrect PIN.'), findsOneWidget);
     });
 
-    testWidgets('Triggers lockout UI after repeated incorrect attempts', (tester) async {
+    testWidgets('Triggers lockout UI after repeated incorrect attempts', (
+      tester,
+    ) async {
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(800, 1200);
       addTearDown(() {
@@ -205,7 +219,9 @@ void main() {
           child: const SecretNotesUnlockScreen(),
           overrides: [
             secretNotesLocalRepositoryProvider.overrideWithValue(repo),
-            secretNotesSecurityServiceProvider.overrideWithValue(securityService),
+            secretNotesSecurityServiceProvider.overrideWithValue(
+              securityService,
+            ),
           ],
         ),
       );
@@ -225,13 +241,17 @@ void main() {
       securityService = SecretNotesSecurityService(repository: repo);
     });
 
-    testWidgets('Displays all 5 points and I Understand button', (tester) async {
+    testWidgets('Displays all 5 points and I Understand button', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createTestApp(
           child: const SecretNotesIntroDialog(),
           overrides: [
             secretNotesLocalRepositoryProvider.overrideWithValue(repo),
-            secretNotesSecurityServiceProvider.overrideWithValue(securityService),
+            secretNotesSecurityServiceProvider.overrideWithValue(
+              securityService,
+            ),
           ],
         ),
       );
@@ -262,7 +282,9 @@ void main() {
       securityService = SecretNotesSecurityService(repository: repo);
     });
 
-    testWidgets('Renders Secret Notes placeholder and lock button', (tester) async {
+    testWidgets('Renders Secret Notes placeholder without a forced lock', (
+      tester,
+    ) async {
       // Set intro as already seen so popup does not block
       await securityService.markIntroSeen();
 
@@ -271,7 +293,9 @@ void main() {
           child: const SecretNotesDashboardScreen(),
           overrides: [
             secretNotesLocalRepositoryProvider.overrideWithValue(repo),
-            secretNotesSecurityServiceProvider.overrideWithValue(securityService),
+            secretNotesSecurityServiceProvider.overrideWithValue(
+              securityService,
+            ),
           ],
         ),
       );
@@ -279,16 +303,20 @@ void main() {
 
       expect(find.text('Secret Notes'), findsWidgets);
       expect(find.text('No secret notes yet'), findsOneWidget);
-      expect(find.byTooltip('Lock Secret Notes'), findsOneWidget);
+      expect(find.byTooltip('Lock Secret Notes'), findsNothing);
     });
 
-    testWidgets('Automatically presents intro dialog on first visit', (tester) async {
+    testWidgets('Automatically presents intro dialog on first visit', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createTestApp(
           child: const SecretNotesDashboardScreen(),
           overrides: [
             secretNotesLocalRepositoryProvider.overrideWithValue(repo),
-            secretNotesSecurityServiceProvider.overrideWithValue(securityService),
+            secretNotesSecurityServiceProvider.overrideWithValue(
+              securityService,
+            ),
           ],
         ),
       );
@@ -316,105 +344,119 @@ void main() {
       securityService = SecretNotesSecurityService(repository: repo);
     });
 
-    testWidgets('Deliberate left-to-right swipe opens Secret Notes access flow', (tester) async {
-      bool opened = false;
-      final router = GoRouter(
-        initialLocation: '/tasks',
-        routes: [
-          GoRoute(
-            path: '/tasks',
-            builder: (context, state) => const TasksScreen(),
-          ),
-          GoRoute(
-            path: '/secret-notes/setup',
-            builder: (context, state) {
-              opened = true;
-              return const Scaffold(body: Text('Setup Screen Target'));
-            },
-          ),
-        ],
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            taskRepositoryProvider.overrideWithValue(InMemoryTaskRepository()),
-            secretNotesLocalRepositoryProvider.overrideWithValue(repo),
-            secretNotesSecurityServiceProvider.overrideWithValue(securityService),
+    testWidgets(
+      'Deliberate left-to-right swipe opens Secret Notes access flow',
+      (tester) async {
+        bool opened = false;
+        final router = GoRouter(
+          initialLocation: '/tasks',
+          routes: [
+            GoRoute(
+              path: '/tasks',
+              builder: (context, state) => const TasksScreen(),
+            ),
+            GoRoute(
+              path: '/secret-notes',
+              builder: (context, state) {
+                opened = true;
+                return const Scaffold(body: Text('Secret Notes Target'));
+              },
+            ),
           ],
-          child: MaterialApp.router(
-            routerConfig: router,
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              taskRepositoryProvider.overrideWithValue(
+                InMemoryTaskRepository(),
+              ),
+              secretNotesLocalRepositoryProvider.overrideWithValue(repo),
+              secretNotesSecurityServiceProvider.overrideWithValue(
+                securityService,
+              ),
+            ],
+            child: MaterialApp.router(routerConfig: router),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Swipe from left to right with distance 150px (exceeds 80px threshold)
-      await tester.drag(find.byType(TasksScreen), const Offset(150, 0));
-      await tester.pumpAndSettle();
+        // Swipe from left to right with distance 150px (exceeds 80px threshold)
+        await tester.drag(find.byType(TasksScreen), const Offset(150, 0));
+        await tester.pumpAndSettle();
 
-      expect(opened, isTrue);
-      expect(find.text('Setup Screen Target'), findsOneWidget);
-    });
+        expect(opened, isTrue);
+        expect(find.text('Secret Notes Target'), findsOneWidget);
+      },
+    );
 
-    testWidgets('Accidental small horizontal swipe does NOT trigger Secret Notes', (tester) async {
-      bool opened = false;
-      final router = GoRouter(
-        initialLocation: '/tasks',
-        routes: [
-          GoRoute(
-            path: '/tasks',
-            builder: (context, state) => const TasksScreen(),
-          ),
-          GoRoute(
-            path: '/secret-notes/setup',
-            builder: (context, state) {
-              opened = true;
-              return const Scaffold(body: Text('Setup Screen Target'));
-            },
-          ),
-        ],
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            taskRepositoryProvider.overrideWithValue(InMemoryTaskRepository()),
-            secretNotesLocalRepositoryProvider.overrideWithValue(repo),
-            secretNotesSecurityServiceProvider.overrideWithValue(securityService),
+    testWidgets(
+      'Accidental small horizontal swipe does NOT trigger Secret Notes',
+      (tester) async {
+        bool opened = false;
+        final router = GoRouter(
+          initialLocation: '/tasks',
+          routes: [
+            GoRoute(
+              path: '/tasks',
+              builder: (context, state) => const TasksScreen(),
+            ),
+            GoRoute(
+              path: '/secret-notes/setup',
+              builder: (context, state) {
+                opened = true;
+                return const Scaffold(body: Text('Setup Screen Target'));
+              },
+            ),
           ],
-          child: MaterialApp.router(
-            routerConfig: router,
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              taskRepositoryProvider.overrideWithValue(
+                InMemoryTaskRepository(),
+              ),
+              secretNotesLocalRepositoryProvider.overrideWithValue(repo),
+              secretNotesSecurityServiceProvider.overrideWithValue(
+                securityService,
+              ),
+            ],
+            child: MaterialApp.router(routerConfig: router),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Small drag 30px (below 80px threshold)
-      await tester.drag(find.byType(TasksScreen), const Offset(30, 0));
-      await tester.pumpAndSettle();
+        // Small drag 30px (below 80px threshold)
+        await tester.drag(find.byType(TasksScreen), const Offset(30, 0));
+        await tester.pumpAndSettle();
 
-      expect(opened, isFalse);
-      expect(find.text('Setup Screen Target'), findsNothing);
-      expect(find.byType(TasksScreen), findsOneWidget);
-    });
+        expect(opened, isFalse);
+        expect(find.text('Setup Screen Target'), findsNothing);
+        expect(find.byType(TasksScreen), findsOneWidget);
+      },
+    );
 
-    testWidgets('Normal vertical task scrolling continues to function', (tester) async {
+    testWidgets('Normal vertical task scrolling continues to function', (
+      tester,
+    ) async {
       final taskRepo = InMemoryTaskRepository();
       // Add multiple sample tasks so list has items
       for (int i = 0; i < 10; i++) {
-        taskRepo.saveTask(Task(
-          id: 'task_$i',
-          title: 'Sample Task $i',
-          description: '',
-          priority: 'High',
-          category: 'Work',
-          labels: const [],
-          dueDate: DateTime.now().add(Duration(days: i)),
-          completed: false,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ));
+        taskRepo.saveTask(
+          Task(
+            id: 'task_$i',
+            title: 'Sample Task $i',
+            description: '',
+            priority: 'High',
+            category: 'Work',
+            labels: const [],
+            dueDate: DateTime.now().add(Duration(days: i)),
+            completed: false,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
       }
 
       final router = GoRouter(
@@ -432,11 +474,11 @@ void main() {
           overrides: [
             taskRepositoryProvider.overrideWithValue(taskRepo),
             secretNotesLocalRepositoryProvider.overrideWithValue(repo),
-            secretNotesSecurityServiceProvider.overrideWithValue(securityService),
+            secretNotesSecurityServiceProvider.overrideWithValue(
+              securityService,
+            ),
           ],
-          child: MaterialApp.router(
-            routerConfig: router,
-          ),
+          child: MaterialApp.router(routerConfig: router),
         ),
       );
       await tester.pumpAndSettle();
@@ -451,29 +493,39 @@ void main() {
   });
 
   group('Secret Notes - Router Navigation Isolation Tests', () {
-    test('Unauthenticated user is redirected away from /secret-notes to /login', () {
-      final container = ProviderContainer(
-        overrides: [
-          userContextProvider.overrideWith((ref) => UserContextNotifierTestHelper(UserContext.legacy)),
-        ],
-      );
+    test(
+      'Unauthenticated user is redirected away from /secret-notes to /login',
+      () {
+        final container = ProviderContainer(
+          overrides: [
+            userContextProvider.overrideWith(
+              (ref) => UserContextNotifierTestHelper(UserContext.legacy),
+            ),
+          ],
+        );
 
-      final routerNotifier = container.read(routerNotifierProvider);
-      final fakeState = FakeGoRouterState('/secret-notes');
+        final routerNotifier = container.read(routerNotifierProvider);
+        final fakeState = FakeGoRouterState('/secret-notes');
 
-      final redirectResult = routerNotifier.redirect(FakeBuildContext(), fakeState);
-      expect(redirectResult, equals('/login'));
-    });
+        final redirectResult = routerNotifier.redirect(
+          FakeBuildContext(),
+          fakeState,
+        );
+        expect(redirectResult, equals('/login'));
+      },
+    );
 
-    test('Unconfigured user on /secret-notes is redirected to /secret-notes/setup', () {
+    test('Unconfigured user can open /secret-notes without a forced PIN', () {
       final repo = SecretNotesLocalRepository(inMemoryOnly: true);
       final securityService = SecretNotesSecurityService(repository: repo);
 
       final container = ProviderContainer(
         overrides: [
-          userContextProvider.overrideWith((ref) => UserContextNotifierTestHelper(
-                const UserContext(userId: 'test_uid', isInitializing: false),
-              )),
+          userContextProvider.overrideWith(
+            (ref) => UserContextNotifierTestHelper(
+              const UserContext(userId: 'test_uid', isInitializing: false),
+            ),
+          ),
           secretNotesLocalRepositoryProvider.overrideWithValue(repo),
           secretNotesSecurityServiceProvider.overrideWithValue(securityService),
         ],
@@ -482,55 +534,78 @@ void main() {
       final routerNotifier = container.read(routerNotifierProvider);
       final fakeState = FakeGoRouterState('/secret-notes');
 
-      final redirectResult = routerNotifier.redirect(FakeBuildContext(), fakeState);
-      expect(redirectResult, equals('/secret-notes/setup'));
-    });
-
-    test('Configured but locked user on /secret-notes is redirected to /secret-notes/unlock', () async {
-      final repo = SecretNotesLocalRepository(inMemoryOnly: true);
-      final securityService = SecretNotesSecurityService(repository: repo);
-      await securityService.setupPin('123456');
-
-      final container = ProviderContainer(
-        overrides: [
-          userContextProvider.overrideWith((ref) => UserContextNotifierTestHelper(
-                const UserContext(userId: 'test_uid', isInitializing: false),
-              )),
-          secretNotesLocalRepositoryProvider.overrideWithValue(repo),
-          secretNotesSecurityServiceProvider.overrideWithValue(securityService),
-        ],
+      final redirectResult = routerNotifier.redirect(
+        FakeBuildContext(),
+        fakeState,
       );
-
-      final routerNotifier = container.read(routerNotifierProvider);
-      final fakeState = FakeGoRouterState('/secret-notes');
-
-      final redirectResult = routerNotifier.redirect(FakeBuildContext(), fakeState);
-      expect(redirectResult, equals('/secret-notes/unlock'));
-    });
-
-    test('Unlocked user can access /secret-notes without redirection', () async {
-      final repo = SecretNotesLocalRepository(inMemoryOnly: true);
-      final securityService = SecretNotesSecurityService(repository: repo);
-      await securityService.setupPin('123456');
-
-      final container = ProviderContainer(
-        overrides: [
-          userContextProvider.overrideWith((ref) => UserContextNotifierTestHelper(
-                const UserContext(userId: 'test_uid', isInitializing: false),
-              )),
-          secretNotesLocalRepositoryProvider.overrideWithValue(repo),
-          secretNotesSecurityServiceProvider.overrideWithValue(securityService),
-        ],
-      );
-
-      container.read(secretNotesSessionProvider.notifier).unlock();
-
-      final routerNotifier = container.read(routerNotifierProvider);
-      final fakeState = FakeGoRouterState('/secret-notes');
-
-      final redirectResult = routerNotifier.redirect(FakeBuildContext(), fakeState);
       expect(redirectResult, isNull);
     });
+
+    test(
+      'Configured but locked user on /secret-notes is redirected to /secret-notes/unlock',
+      () async {
+        final repo = SecretNotesLocalRepository(inMemoryOnly: true);
+        final securityService = SecretNotesSecurityService(repository: repo);
+        await securityService.setupPin('123456');
+
+        final container = ProviderContainer(
+          overrides: [
+            userContextProvider.overrideWith(
+              (ref) => UserContextNotifierTestHelper(
+                const UserContext(userId: 'test_uid', isInitializing: false),
+              ),
+            ),
+            secretNotesLocalRepositoryProvider.overrideWithValue(repo),
+            secretNotesSecurityServiceProvider.overrideWithValue(
+              securityService,
+            ),
+          ],
+        );
+
+        final routerNotifier = container.read(routerNotifierProvider);
+        final fakeState = FakeGoRouterState('/secret-notes');
+
+        final redirectResult = routerNotifier.redirect(
+          FakeBuildContext(),
+          fakeState,
+        );
+        expect(redirectResult, equals('/secret-notes/unlock'));
+      },
+    );
+
+    test(
+      'Unlocked user can access /secret-notes without redirection',
+      () async {
+        final repo = SecretNotesLocalRepository(inMemoryOnly: true);
+        final securityService = SecretNotesSecurityService(repository: repo);
+        await securityService.setupPin('123456');
+
+        final container = ProviderContainer(
+          overrides: [
+            userContextProvider.overrideWith(
+              (ref) => UserContextNotifierTestHelper(
+                const UserContext(userId: 'test_uid', isInitializing: false),
+              ),
+            ),
+            secretNotesLocalRepositoryProvider.overrideWithValue(repo),
+            secretNotesSecurityServiceProvider.overrideWithValue(
+              securityService,
+            ),
+          ],
+        );
+
+        container.read(secretNotesSessionProvider.notifier).unlock();
+
+        final routerNotifier = container.read(routerNotifierProvider);
+        final fakeState = FakeGoRouterState('/secret-notes');
+
+        final redirectResult = routerNotifier.redirect(
+          FakeBuildContext(),
+          fakeState,
+        );
+        expect(redirectResult, isNull);
+      },
+    );
   });
 }
 

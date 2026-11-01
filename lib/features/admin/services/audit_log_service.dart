@@ -4,8 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart' as fs;
 class AuditLogService {
   final fs.FirebaseFirestore? _firestore;
 
-  AuditLogService({fs.FirebaseFirestore? firestore})
-      : _firestore = firestore;
+  AuditLogService({fs.FirebaseFirestore? firestore}) : _firestore = firestore;
 
   fs.FirebaseFirestore get _db => _firestore ?? fs.FirebaseFirestore.instance;
 

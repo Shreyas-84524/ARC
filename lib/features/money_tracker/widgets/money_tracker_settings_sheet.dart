@@ -29,10 +29,14 @@ class MoneyTrackerSettingsSheet extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkModal : AppColors.lightModal,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusCard)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppTheme.radiusCard),
+        ),
         border: Border(
           top: BorderSide(
-            color: isDark ? AppColors.borderStrong : AppColors.borderStrongLight,
+            color: isDark
+                ? AppColors.borderStrong
+                : AppColors.borderStrongLight,
             width: 1.5,
           ),
         ),
@@ -90,7 +94,9 @@ class MoneyTrackerSettingsSheet extends ConsumerWidget {
                     Text(
                       'Local Preferences & Automation',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                        color: isDark
+                            ? AppColors.textMutedDark
+                            : AppColors.textMutedLight,
                       ),
                     ),
                   ],
@@ -111,7 +117,9 @@ class MoneyTrackerSettingsSheet extends ConsumerWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppTheme.radiusCard),
               side: BorderSide(
-                color: isDark ? AppColors.borderStrong : AppColors.borderStrongLight,
+                color: isDark
+                    ? AppColors.borderStrong
+                    : AppColors.borderStrongLight,
                 width: 1.2,
               ),
             ),
@@ -120,7 +128,10 @@ class MoneyTrackerSettingsSheet extends ConsumerWidget {
               child: Column(
                 children: [
                   SwitchListTile(
-                    secondary: const Icon(LucideIcons.sparkles, color: AppColors.accent),
+                    secondary: const Icon(
+                      LucideIcons.sparkles,
+                      color: AppColors.accent,
+                    ),
                     title: const Text(
                       'Automatic Spending Tracking',
                       style: TextStyle(fontWeight: FontWeight.bold),
@@ -128,7 +139,9 @@ class MoneyTrackerSettingsSheet extends ConsumerWidget {
                     subtitle: Text(
                       'Detect confirmed spendings locally from notifications',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                        color: isDark
+                            ? AppColors.textMutedDark
+                            : AppColors.textMutedLight,
                       ),
                     ),
                     value: automationState.isEnabled,
@@ -141,10 +154,14 @@ class MoneyTrackerSettingsSheet extends ConsumerWidget {
                           builder: (ctx) => const AutomaticSpendingInfoDialog(),
                         );
                         if (confirmed == true) {
-                          await ref.read(moneyAutomationProvider.notifier).enableAutomation();
+                          await ref
+                              .read(moneyAutomationProvider.notifier)
+                              .enableAutomation();
                         }
                       } else {
-                        await ref.read(moneyAutomationProvider.notifier).disableAutomation();
+                        await ref
+                            .read(moneyAutomationProvider.notifier)
+                            .disableAutomation();
                       }
                     },
                   ),
@@ -158,20 +175,28 @@ class MoneyTrackerSettingsSheet extends ConsumerWidget {
                           'Status: ',
                           style: theme.textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.w600,
-                            color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                            color: isDark
+                                ? AppColors.textMutedDark
+                                : AppColors.textMutedLight,
                           ),
                         ),
                         _buildStatusBadge(context, status),
                         const Spacer(),
-                        if (status == MoneyAutomationListenerStatus.permissionRequired)
+                        if (status ==
+                            MoneyAutomationListenerStatus.permissionRequired)
                           TextButton(
                             onPressed: () {
                               AppHaptics.mediumImpact();
-                              ref.read(moneyAutomationProvider.notifier).requestPermissionAgain();
+                              ref
+                                  .read(moneyAutomationProvider.notifier)
+                                  .requestPermissionAgain();
                             },
                             style: TextButton.styleFrom(
                               visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
                             ),
                             child: const Text('Enable Access'),
                           ),
@@ -190,13 +215,19 @@ class MoneyTrackerSettingsSheet extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Row(
               children: [
-                const Icon(LucideIcons.shieldCheck, size: 14, color: AppColors.success),
+                const Icon(
+                  LucideIcons.shieldCheck,
+                  size: 14,
+                  color: AppColors.success,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Preferences are strictly stored locally on this device and are never synced to the cloud.',
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                      color: isDark
+                          ? AppColors.textMutedDark
+                          : AppColors.textMutedLight,
                     ),
                   ),
                 ),
@@ -210,7 +241,10 @@ class MoneyTrackerSettingsSheet extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatusBadge(BuildContext context, MoneyAutomationListenerStatus status) {
+  Widget _buildStatusBadge(
+    BuildContext context,
+    MoneyAutomationListenerStatus status,
+  ) {
     Color bg;
     Color fg;
     IconData icon;

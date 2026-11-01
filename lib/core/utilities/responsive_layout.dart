@@ -17,7 +17,10 @@ class ResponsiveLayout {
 
   /// Returns adaptive grid aspect ratio for 2-column metric cards.
   /// On small screens (< 360px width), provides a taller ratio (1.05 - 1.15) to prevent vertical text overflow.
-  static double gridAspectRatio(BuildContext context, {double defaultRatio = 1.25}) {
+  static double gridAspectRatio(
+    BuildContext context, {
+    double defaultRatio = 1.25,
+  }) {
     final width = MediaQuery.of(context).size.width;
     if (width < 320) return 1.0;
     if (width < smallPhoneThreshold) return 1.1;

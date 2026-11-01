@@ -116,10 +116,7 @@ class _SecretNotesDashboardScreenState
               icon: const Icon(LucideIcons.plus, size: 20),
               label: const Text(
                 'Add Note',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
             ),
           ],
@@ -133,6 +130,9 @@ class _SecretNotesDashboardScreenState
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final notesAsync = ref.watch(secretNotesListProvider);
+    final isPinConfigured =
+        ref.watch(secretNotesConfiguredProvider).valueOrNull ??
+        ref.read(secretNotesSecurityServiceProvider).isConfiguredSync();
 
     return PopScope(
       canPop: false,
@@ -155,63 +155,62 @@ class _SecretNotesDashboardScreenState
               icon: const Icon(LucideIcons.settings),
               onPressed: () => context.push('/secret-notes/settings'),
             ),
-            IconButton(
-              tooltip: 'Lock Secret Notes',
-              icon: const Icon(LucideIcons.lock),
-              onPressed: _exitToTasks,
-            ),
+            if (isPinConfigured)
+              IconButton(
+                tooltip: 'Lock Secret Notes',
+                icon: const Icon(LucideIcons.lock),
+                onPressed: _exitToTasks,
+              ),
             const SizedBox(width: 8),
           ],
         ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.accent,
-        foregroundColor: AppColors.textPrimaryLight,
-        onPressed: _openCreateNote,
-        icon: const Icon(LucideIcons.plus),
-        label: const Text(
-          'Add Note',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        floatingActionButton: FloatingActionButton.extended(
+          backgroundColor: AppColors.accent,
+          foregroundColor: AppColors.textPrimaryLight,
+          onPressed: _openCreateNote,
+          icon: const Icon(LucideIcons.plus),
+          label: const Text(
+            'Add Note',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
-      ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 680),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: ResponsiveLayout.horizontalPadding(context),
-              ),
-              child: notesAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(),
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 680),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: ResponsiveLayout.horizontalPadding(context),
                 ),
-                error: (error, _) => Center(
-                  child: Text('Failed to load notes: $error'),
-                ),
-                data: (notes) {
-                  if (notes.isEmpty) {
-                    return _buildEmptyState(context, theme, isDark);
-                  }
+                child: notesAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (error, _) =>
+                      Center(child: Text('Failed to load notes: $error')),
+                  data: (notes) {
+                    if (notes.isEmpty) {
+                      return _buildEmptyState(context, theme, isDark);
+                    }
 
-                  return ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.only(top: 12, bottom: 84),
-                    itemCount: notes.length,
-                    itemBuilder: (context, index) {
-                      final note = notes[index];
-                      return SecretNoteCard(
-                        note: note,
-                        onTap: () => _openEditNote(note),
-                      );
-                    },
-                  );
-                },
+                    return ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.only(top: 12, bottom: 84),
+                      itemCount: notes.length,
+                      itemBuilder: (context, index) {
+                        final note = notes[index];
+                        return SecretNoteCard(
+                          note: note,
+                          onTap: () => _openEditNote(note),
+                        );
+                      },
+                    );
+                  },
+                ),
               ),
             ),
           ),
         ),
       ),
-    ),
     );
   }
 }

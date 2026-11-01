@@ -7,7 +7,9 @@ import 'package:flutter/services.dart';
 // to prevent screenshots, screen recording, and Recent Apps exposure of secret notes.
 
 class SecretNotesWindowPrivacyService {
-  static const MethodChannel _channel = MethodChannel('com.arc.arc/secure_window');
+  static const MethodChannel _channel = MethodChannel(
+    'com.arc.arc/secure_window',
+  );
 
   bool _isSecure = false;
   bool get isSecure => _isSecure;

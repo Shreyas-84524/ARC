@@ -58,8 +58,9 @@ class DashboardScreen extends ConsumerWidget {
         dismissDirection: DismissDirection.down,
         duration: const Duration(seconds: 5),
         persist: false,
-        backgroundColor:
-            wasCompleted ? AppColors.accentPressed : AppColors.success,
+        backgroundColor: wasCompleted
+            ? AppColors.accentPressed
+            : AppColors.success,
         content: Row(
           children: [
             Icon(
@@ -90,9 +91,14 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _showSetBudgetDialog(BuildContext context, WidgetRef ref, double currentBudget) async {
+  Future<void> _showSetBudgetDialog(
+    BuildContext context,
+    WidgetRef ref,
+    double currentBudget,
+  ) async {
     final controller = TextEditingController(
-        text: currentBudget > 0 ? currentBudget.toString() : '');
+      text: currentBudget > 0 ? currentBudget.toString() : '',
+    );
     return showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -133,7 +139,11 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  void _showQuickAddDialog(BuildContext context, WidgetRef ref, double currentBudget) {
+  void _showQuickAddDialog(
+    BuildContext context,
+    WidgetRef ref,
+    double currentBudget,
+  ) {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -142,7 +152,10 @@ class DashboardScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(LucideIcons.checkSquare, color: AppColors.info),
+              leading: const Icon(
+                LucideIcons.checkSquare,
+                color: AppColors.info,
+              ),
               title: const Text('Create Task'),
               onTap: () {
                 Navigator.of(context).pop();
@@ -166,7 +179,10 @@ class DashboardScreen extends ConsumerWidget {
               },
             ),
             ListTile(
-              leading: const Icon(LucideIcons.dollarSign, color: AppColors.warning),
+              leading: const Icon(
+                LucideIcons.dollarSign,
+                color: AppColors.warning,
+              ),
               title: const Text('Update Monthly Budget'),
               onTap: () {
                 Navigator.of(context).pop();
@@ -186,7 +202,8 @@ class DashboardScreen extends ConsumerWidget {
 
     // Subscriptions
     final dashboardData = ref.watch(dashboardProvider);
-    final remainingBudget = (dashboardData['remainingBudget'] as double?) ?? 0.0;
+    final remainingBudget =
+        (dashboardData['remainingBudget'] as double?) ?? 0.0;
     final totalBudget = (dashboardData['totalBudget'] as double?) ?? 0.0;
     final streakDays = (dashboardData['streakDays'] as int?) ?? 0;
 
@@ -209,7 +226,9 @@ class DashboardScreen extends ConsumerWidget {
 
     final todayTasks = tasksList.where((t) {
       if (t.dueDate == null) return true;
-      return t.dueDate!.isAfter(todayStart.subtract(const Duration(seconds: 1))) &&
+      return t.dueDate!.isAfter(
+            todayStart.subtract(const Duration(seconds: 1)),
+          ) &&
           t.dueDate!.isBefore(todayEnd.add(const Duration(seconds: 1)));
     }).toList();
 
@@ -219,8 +238,10 @@ class DashboardScreen extends ConsumerWidget {
     }).toList();
 
     final totalTodayTasksCount = todayTasks.length;
-    final completedTodayTasksCount =
-        todayTasks.where((t) => t.completed).length.clamp(0, totalTodayTasksCount);
+    final completedTodayTasksCount = todayTasks
+        .where((t) => t.completed)
+        .length
+        .clamp(0, totalTodayTasksCount);
 
     final totalHabitsCount = habitsList.length;
     final completedTodayHabitsCount = entriesList
@@ -236,8 +257,14 @@ class DashboardScreen extends ConsumerWidget {
         ? (completedTodayHabitsCount / totalHabitsCount) * 50.0
         : 0.0;
 
-    final double finalProgressScore = (taskScore + habitScore).clamp(0.0, 100.0);
-    final double progressPercentage = (finalProgressScore / 100.0).clamp(0.0, 1.0);
+    final double finalProgressScore = (taskScore + habitScore).clamp(
+      0.0,
+      100.0,
+    );
+    final double progressPercentage = (finalProgressScore / 100.0).clamp(
+      0.0,
+      1.0,
+    );
 
     return Scaffold(
       appBar: const CustomTopBar(title: 'Dashboard'),
@@ -296,7 +323,8 @@ class DashboardScreen extends ConsumerWidget {
                                   ? AppColors.darkBgSecondary
                                   : AppColors.lightBgSecondary,
                               valueColor: const AlwaysStoppedAnimation<Color>(
-                                  AppColors.accent),
+                                AppColors.accent,
+                              ),
                             ),
                           ),
                           Text(
@@ -322,15 +350,20 @@ class DashboardScreen extends ConsumerWidget {
                 color: AppColors.accent.withValues(alpha: 0.1),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 20.0, vertical: 16.0),
+                    horizontal: 20.0,
+                    vertical: 16.0,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         child: Row(
                           children: [
-                            const Icon(LucideIcons.sparkles,
-                                color: AppColors.accent, size: 24),
+                            const Icon(
+                              LucideIcons.sparkles,
+                              color: AppColors.accent,
+                              size: 24,
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
@@ -363,7 +396,9 @@ class DashboardScreen extends ConsumerWidget {
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 6),
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.accent,
                           borderRadius: BorderRadius.circular(20),
@@ -396,7 +431,8 @@ class DashboardScreen extends ConsumerWidget {
                     context,
                     title: 'Remaining Budget',
                     value: CurrencyFormatter.format(remainingBudget),
-                    subtitle: 'Limit: ${CurrencyFormatter.format(totalBudget, decimalDigits: 0)}',
+                    subtitle:
+                        'Limit: ${CurrencyFormatter.format(totalBudget, decimalDigits: 0)}',
                     icon: LucideIcons.wallet,
                     color: remainingBudget >= 0
                         ? AppColors.success
@@ -414,7 +450,8 @@ class DashboardScreen extends ConsumerWidget {
                     context,
                     title: 'Today Expenses',
                     value: CurrencyFormatter.format(todayExpenses),
-                    subtitle: 'Income: ${CurrencyFormatter.format(todayIncome)}',
+                    subtitle:
+                        'Income: ${CurrencyFormatter.format(todayIncome)}',
                     icon: LucideIcons.trendingDown,
                     color: AppColors.danger,
                   ),
@@ -437,8 +474,9 @@ class DashboardScreen extends ConsumerWidget {
               if (habitsList.isNotEmpty) ...[
                 Text(
                   "Today's Habits",
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
@@ -464,16 +502,14 @@ class DashboardScreen extends ConsumerWidget {
                             AppHaptics.lightImpact();
                             ref
                                 .read(habitEntriesProvider.notifier)
-                                .toggleEntry(
-                                  habit.id,
-                                  todayStr,
-                                  !isCompleted,
-                                );
+                                .toggleEntry(habit.id, todayStr, !isCompleted);
                           },
                           borderRadius: BorderRadius.circular(12),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 16.0, vertical: 12.0),
+                              horizontal: 16.0,
+                              vertical: 12.0,
+                            ),
                             child: Row(
                               children: [
                                 Container(
@@ -488,8 +524,8 @@ class DashboardScreen extends ConsumerWidget {
                                       color: isCompleted
                                           ? Colors.transparent
                                           : (isDark
-                                              ? AppColors.borderSubtle
-                                              : AppColors.borderSubtleLight),
+                                                ? AppColors.borderSubtle
+                                                : AppColors.borderSubtleLight),
                                       width: 1.5,
                                     ),
                                   ),
@@ -513,15 +549,17 @@ class DashboardScreen extends ConsumerWidget {
                                       habit.name,
                                       style: theme.textTheme.bodyMedium
                                           ?.copyWith(
-                                              fontWeight: FontWeight.bold),
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                     ),
                                     Text(
                                       habit.category,
-                                      style: theme.textTheme.labelLarge?.copyWith(
-                                        color: isDark
-                                            ? AppColors.textMutedDark
-                                            : AppColors.textMutedLight,
-                                      ),
+                                      style: theme.textTheme.labelLarge
+                                          ?.copyWith(
+                                            color: isDark
+                                                ? AppColors.textMutedDark
+                                                : AppColors.textMutedLight,
+                                          ),
                                     ),
                                   ],
                                 ),
@@ -539,8 +577,9 @@ class DashboardScreen extends ConsumerWidget {
               // 5. Today's Tasks Checklist
               Text(
                 "Today's Tasks",
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 12),
               if (todayTasks.isEmpty)
@@ -555,8 +594,14 @@ class DashboardScreen extends ConsumerWidget {
                   itemBuilder: (context, index) {
                     final task = todayTasks[index];
                     Color pColor = AppColors.priorityLow;
-                    if (task.priority == 'High') pColor = AppColors.priorityHigh;
-                    if (task.priority == 'Much' || task.priority == 'Must') pColor = AppColors.priorityMust;
+                    if (task.priority == 'High') {
+                      pColor = AppColors.priorityHigh;
+                    }
+                    if (task.priority == 'Medium' ||
+                        task.priority == 'Much' ||
+                        task.priority == 'Must') {
+                      pColor = AppColors.priorityMust;
+                    }
 
                     return AnimatedOpacity(
                       opacity: task.completed ? 0.6 : 1.0,
@@ -569,9 +614,16 @@ class DashboardScreen extends ConsumerWidget {
                             onTap: () async {
                               AppHaptics.lightImpact();
                               final wasCompleted = task.completed;
-                              await ref.read(tasksProvider.notifier).toggleTask(task.id);
+                              await ref
+                                  .read(tasksProvider.notifier)
+                                  .toggleTask(task.id);
                               if (context.mounted) {
-                                _showTaskToggleSnackBar(context, ref, task.id, wasCompleted);
+                                _showTaskToggleSnackBar(
+                                  context,
+                                  ref,
+                                  task.id,
+                                  wasCompleted,
+                                );
                               }
                             },
                             borderRadius: BorderRadius.circular(100),
@@ -581,7 +633,9 @@ class DashboardScreen extends ConsumerWidget {
                               width: 20,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: task.completed ? pColor : Colors.transparent,
+                                color: task.completed
+                                    ? pColor
+                                    : Colors.transparent,
                                 border: Border.all(color: pColor, width: 2),
                               ),
                               alignment: Alignment.center,
@@ -603,8 +657,8 @@ class DashboardScreen extends ConsumerWidget {
                                   : null,
                               color: task.completed
                                   ? (isDark
-                                      ? AppColors.textDisabledDark
-                                      : AppColors.textDisabledLight)
+                                        ? AppColors.textDisabledDark
+                                        : AppColors.textDisabledLight)
                                   : null,
                             ),
                           ),
@@ -631,8 +685,9 @@ class DashboardScreen extends ConsumerWidget {
               if (upcomingDeadlines.isNotEmpty) ...[
                 Text(
                   "Upcoming Deadlines",
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 ListView.separated(
@@ -645,19 +700,24 @@ class DashboardScreen extends ConsumerWidget {
                       const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final task = upcomingDeadlines[index];
-                    final daysLeft =
-                        task.dueDate!.difference(todayStart).inDays;
+                    final daysLeft = task.dueDate!
+                        .difference(todayStart)
+                        .inDays;
 
                     return Card(
                       margin: EdgeInsets.zero,
                       child: ListTile(
                         onTap: () => _showTaskEditor(context, task),
-                        leading: const Icon(LucideIcons.calendar,
-                            color: AppColors.accent, size: 20),
+                        leading: const Icon(
+                          LucideIcons.calendar,
+                          color: AppColors.accent,
+                          size: 20,
+                        ),
                         title: Text(
                           task.title,
-                          style: theme.textTheme.bodyLarge
-                              ?.copyWith(fontWeight: FontWeight.bold),
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         subtitle: Text(
                           'Due in $daysLeft day${daysLeft > 1 ? 's' : ''} (${DateFormat('MMM d').format(task.dueDate!)})',
@@ -677,8 +737,9 @@ class DashboardScreen extends ConsumerWidget {
               // 7. Recent Activity (Top 10 Feed)
               Text(
                 "Recent Activity",
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 12),
               if (recentActivities.isEmpty)
@@ -726,8 +787,9 @@ class DashboardScreen extends ConsumerWidget {
                         ),
                         title: Text(
                           title,
-                          style: theme.textTheme.bodyLarge
-                              ?.copyWith(fontWeight: FontWeight.bold),
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         subtitle: Text(
                           '$subtitle • ${DateFormat('MMM d, h:mm a').format(timestamp)}',
@@ -769,10 +831,10 @@ class DashboardScreen extends ConsumerWidget {
         child: Text(
           message,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
-              ),
+            color: isDark
+                ? AppColors.textSecondaryDark
+                : AppColors.textSecondaryLight,
+          ),
         ),
       ),
     );

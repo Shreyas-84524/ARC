@@ -17,8 +17,9 @@ class AdminService {
     auth.FirebaseAuth? firebaseAuth,
     fs.FirebaseFirestore? firestore,
     AuditLogService? auditLogService,
-  })  : _firestore = firestore,
-        _auditLogService = auditLogService ?? AuditLogService(firestore: firestore) {
+  }) : _firestore = firestore,
+       _auditLogService =
+           auditLogService ?? AuditLogService(firestore: firestore) {
     _initializeDefaultUsers();
   }
 
@@ -26,14 +27,16 @@ class AdminService {
     final now = DateTime.now();
     for (final username in UserProfile.knownUsernames) {
       if (username.toUpperCase() == 'ADMIN') continue;
-      _registeredUsers.add(UserProfile(
-        id: 'uid_${username.toLowerCase()}',
-        username: username,
-        displayName: username,
-        email: UserProfile.emailForUsername(username),
-        role: 'user',
-        createdAt: now,
-      ));
+      _registeredUsers.add(
+        UserProfile(
+          id: 'uid_${username.toLowerCase()}',
+          username: username,
+          displayName: username,
+          email: UserProfile.emailForUsername(username),
+          role: 'user',
+          createdAt: now,
+        ),
+      );
     }
   }
 
@@ -59,7 +62,8 @@ class AdminService {
     final RegExp validUsernameRegex = RegExp(r'^[a-zA-Z0-9_]{3,20}$');
     if (!validUsernameRegex.hasMatch(cleanUsername)) {
       throw ArgumentError(
-          'Username must be 3-20 characters long and contain only letters, numbers, or underscores.');
+        'Username must be 3-20 characters long and contain only letters, numbers, or underscores.',
+      );
     }
 
     // Check duplicate username case-insensitively
@@ -70,7 +74,8 @@ class AdminService {
       throw ArgumentError('User "$cleanUsername" already exists.');
     }
 
-    final uid = 'uid_${cleanUsername.toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}';
+    final uid =
+        'uid_${cleanUsername.toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}';
     final email = UserProfile.emailForUsername(cleanUsername);
     final now = DateTime.now();
 
@@ -88,7 +93,12 @@ class AdminService {
     // Save metadata in Firestore
     try {
       final firestore = _firestore ?? fs.FirebaseFirestore.instance;
-      await firestore.collection('users').doc(uid).collection('settings').doc('profile').set(newProfile.toMap());
+      await firestore
+          .collection('users')
+          .doc(uid)
+          .collection('settings')
+          .doc('profile')
+          .set(newProfile.toMap());
     } catch (e) {
       debugPrint('AdminService Firestore profile creation notice: $e');
     }

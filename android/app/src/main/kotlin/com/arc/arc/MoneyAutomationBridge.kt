@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.flutter.plugin.common.EventChannel
@@ -24,6 +25,7 @@ import io.flutter.plugin.common.MethodChannel
  * - If [isEnabled] is false, all incoming events are immediately dropped.
  */
 object MoneyAutomationBridge {
+    private const val TAG = "ArcMoneyBridge"
     const val METHOD_CHANNEL = "com.arc.arc/money_automation"
     const val EVENT_CHANNEL = "com.arc.arc/money_automation_events"
     const val SMS_PERMISSION_REQUEST_CODE = 4201
@@ -119,6 +121,7 @@ object MoneyAutomationBridge {
                     if (!enabled) {
                         clearBufferedEvents()
                     }
+                    Log.i(TAG, "Automatic tracking listener enabled=$enabled")
                     result.success(true)
                 }
                 else -> {
@@ -130,6 +133,7 @@ object MoneyAutomationBridge {
         eventChannel.setStreamHandler(object : EventChannel.StreamHandler {
             override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
                 eventSink = events
+                Log.i(TAG, "Flutter event listener attached")
                 // Immediately flush any transient buffered events to Flutter
                 synchronized(pendingEventsBuffer) {
                     if (events != null && pendingEventsBuffer.isNotEmpty()) {
@@ -141,12 +145,14 @@ object MoneyAutomationBridge {
                             }
                         }
                         pendingEventsBuffer.clear()
+                        Log.i(TAG, "Buffered SMS events delivered to Flutter")
                     }
                 }
             }
 
             override fun onCancel(arguments: Any?) {
                 eventSink = null
+                Log.i(TAG, "Flutter event listener detached")
             }
         })
     }
@@ -199,8 +205,9 @@ object MoneyAutomationBridge {
             if (sink != null) {
                 try {
                     sink.success(eventMap)
+                    Log.i(TAG, "SMS event delivered to Flutter")
                 } catch (e: Exception) {
-                    // Ignore transient channel errors
+                    Log.e(TAG, "Flutter event delivery failed (${e.javaClass.simpleName})")
                 }
             } else {
                 // Buffer transient event until Flutter engine attaches onListen
@@ -209,6 +216,7 @@ object MoneyAutomationBridge {
                         pendingEventsBuffer.removeAt(0)
                     }
                     pendingEventsBuffer.add(eventMap)
+                    Log.i(TAG, "SMS event buffered in memory; Flutter listener unavailable")
                 }
             }
         }

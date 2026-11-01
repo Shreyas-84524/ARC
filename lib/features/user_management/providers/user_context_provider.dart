@@ -12,8 +12,8 @@ class UserContextNotifier extends StateNotifier<UserContext> {
   final auth.FirebaseAuth? _providedAuth;
 
   UserContextNotifier({auth.FirebaseAuth? firebaseAuth})
-      : _providedAuth = firebaseAuth,
-        super(UserContext.initializing) {
+    : _providedAuth = firebaseAuth,
+      super(UserContext.initializing) {
     _initAuthListener();
   }
 
@@ -57,7 +57,10 @@ class UserContextNotifier extends StateNotifier<UserContext> {
     // Check Hive cache first for instantaneous offline/startup display
     UserProfile? cachedProfile;
     try {
-      final box = HiveService().getUserBox(HiveService.settingsBoxName, user.uid);
+      final box = HiveService().getUserBox(
+        HiveService.settingsBoxName,
+        user.uid,
+      );
       final raw = box.get('cached_user_profile');
       if (raw is Map) {
         cachedProfile = UserProfile.fromMap(Map<String, dynamic>.from(raw));
@@ -67,17 +70,22 @@ class UserContextNotifier extends StateNotifier<UserContext> {
     }
 
     if (cachedProfile != null) {
-      state = UserContext(userId: user.uid, profile: cachedProfile, isInitializing: false);
+      state = UserContext(
+        userId: user.uid,
+        profile: cachedProfile,
+        isInitializing: false,
+      );
       unawaited(_reconcileProfile(user.uid));
       return;
     }
 
     final email = user.email;
-    final displayName = (user.displayName != null && user.displayName!.isNotEmpty)
+    final displayName =
+        (user.displayName != null && user.displayName!.isNotEmpty)
         ? user.displayName!
         : (email != null && email.isNotEmpty)
-            ? _usernameFromEmail(email)
-            : 'User';
+        ? _usernameFromEmail(email)
+        : 'User';
     final username = displayName;
 
     String role = 'user';
@@ -118,11 +126,18 @@ class UserContextNotifier extends StateNotifier<UserContext> {
     );
 
     try {
-      final box = HiveService().getUserBox(HiveService.settingsBoxName, user.uid);
+      final box = HiveService().getUserBox(
+        HiveService.settingsBoxName,
+        user.uid,
+      );
       await box.put('cached_user_profile', profile.toMap());
     } catch (_) {}
 
-    state = UserContext(userId: user.uid, profile: profile, isInitializing: false);
+    state = UserContext(
+      userId: user.uid,
+      profile: profile,
+      isInitializing: false,
+    );
     unawaited(_reconcileProfile(user.uid));
   }
 
@@ -157,20 +172,30 @@ class UserContextNotifier extends StateNotifier<UserContext> {
     try {
       HiveService().ensureUserBoxesOpened(userId);
       if (profile != null) {
-        final box = HiveService().getUserBox(HiveService.settingsBoxName, userId);
+        final box = HiveService().getUserBox(
+          HiveService.settingsBoxName,
+          userId,
+        );
         box.put('cached_user_profile', profile.toMap());
       }
     } catch (e) {
       // In mock/test environments HiveService might not be initialized
     }
-    state = UserContext(userId: userId, profile: profile, isInitializing: false);
+    state = UserContext(
+      userId: userId,
+      profile: profile,
+      isInitializing: false,
+    );
   }
 
   /// Updates the profile in state and syncs to user-scoped Hive cache.
   void updateProfile(UserProfile updatedProfile) {
     state = state.copyWith(profile: updatedProfile);
     try {
-      final box = HiveService().getUserBox(HiveService.settingsBoxName, updatedProfile.id);
+      final box = HiveService().getUserBox(
+        HiveService.settingsBoxName,
+        updatedProfile.id,
+      );
       box.put('cached_user_profile', updatedProfile.toMap());
     } catch (e) {
       debugPrint('UserContextNotifier updateProfile cache warning: $e');
@@ -192,5 +217,5 @@ class UserContextNotifier extends StateNotifier<UserContext> {
 /// Provider exposing the currently active user context across the app.
 final userContextProvider =
     StateNotifierProvider<UserContextNotifier, UserContext>((ref) {
-  return UserContextNotifier();
-});
+      return UserContextNotifier();
+    });

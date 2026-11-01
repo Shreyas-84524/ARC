@@ -18,8 +18,10 @@ class MoneyDeduplicationService {
   final Set<String> _processedReferenceIds = <String>{};
   String? _currentUserId;
 
-  MoneyDeduplicationService({HiveService? hiveService, this.inMemoryOnly = false})
-      : _hiveService = hiveService ?? HiveService();
+  MoneyDeduplicationService({
+    HiveService? hiveService,
+    this.inMemoryOnly = false,
+  }) : _hiveService = hiveService ?? HiveService();
 
   @visibleForTesting
   static void resetInMemoryStorage() {
@@ -28,10 +30,12 @@ class MoneyDeduplicationService {
   }
 
   @visibleForTesting
-  Set<String> get processedFingerprints => Set.unmodifiable(_processedFingerprints);
+  Set<String> get processedFingerprints =>
+      Set.unmodifiable(_processedFingerprints);
 
   @visibleForTesting
-  Set<String> get processedReferenceIds => Set.unmodifiable(_processedReferenceIds);
+  Set<String> get processedReferenceIds =>
+      Set.unmodifiable(_processedReferenceIds);
 
   /// Initializes deduplication cache for the current user.
   void initForUser(String? userId) {
@@ -51,14 +55,18 @@ class MoneyDeduplicationService {
 
     try {
       if (_hiveService.isInitialized) {
-        final box = _hiveService.getBox(HiveService.moneyAutomationPreferencesBoxName);
+        final box = _hiveService.getBox(
+          HiveService.moneyAutomationPreferencesBoxName,
+        );
         final storedFps = box.get('${userId}_dedup_fingerprints');
         if (storedFps is List) {
           _processedFingerprints.addAll(storedFps.map((e) => e.toString()));
         }
         final storedRefs = box.get('${userId}_dedup_refs');
         if (storedRefs is List) {
-          _processedReferenceIds.addAll(storedRefs.map((e) => e.toString().toUpperCase().trim()));
+          _processedReferenceIds.addAll(
+            storedRefs.map((e) => e.toString().toUpperCase().trim()),
+          );
         }
       }
     } catch (_) {
@@ -78,7 +86,10 @@ class MoneyDeduplicationService {
   }
 
   /// Records the transaction fingerprint and reference ID as processed.
-  Future<void> recordProcessed(String fingerprint, {String? referenceId}) async {
+  Future<void> recordProcessed(
+    String fingerprint, {
+    String? referenceId,
+  }) async {
     _processedFingerprints.add(fingerprint);
     if (referenceId != null && referenceId.trim().isNotEmpty) {
       _processedReferenceIds.add(referenceId.trim().toUpperCase());
@@ -95,13 +106,19 @@ class MoneyDeduplicationService {
 
     try {
       if (_hiveService.isInitialized) {
-        final box = _hiveService.getBox(HiveService.moneyAutomationPreferencesBoxName);
+        final box = _hiveService.getBox(
+          HiveService.moneyAutomationPreferencesBoxName,
+        );
         final fpsList = _processedFingerprints.toList();
-        final trimmedFps = fpsList.length > 500 ? fpsList.sublist(fpsList.length - 500) : fpsList;
+        final trimmedFps = fpsList.length > 500
+            ? fpsList.sublist(fpsList.length - 500)
+            : fpsList;
         await box.put('${userId}_dedup_fingerprints', trimmedFps);
 
         final refsList = _processedReferenceIds.toList();
-        final trimmedRefs = refsList.length > 500 ? refsList.sublist(refsList.length - 500) : refsList;
+        final trimmedRefs = refsList.length > 500
+            ? refsList.sublist(refsList.length - 500)
+            : refsList;
         await box.put('${userId}_dedup_refs', trimmedRefs);
       }
     } catch (_) {

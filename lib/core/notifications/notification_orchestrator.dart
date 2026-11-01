@@ -10,16 +10,14 @@ import 'package:arc/features/user_management/providers/user_context_provider.dar
 import 'package:arc/providers/global_providers.dart';
 import 'package:arc/routes/app_router.dart';
 import 'package:arc/features/feedback/providers/feedback_providers.dart';
+import 'package:arc/core/notifications/notification_service.dart';
 
 /// The single bridge between reactive application state and the centralized
 /// notification controller. Feature providers never schedule notifications.
 class NotificationOrchestrator extends ConsumerStatefulWidget {
   final Widget child;
 
-  const NotificationOrchestrator({
-    super.key,
-    required this.child,
-  });
+  const NotificationOrchestrator({super.key, required this.child});
 
   @override
   ConsumerState<NotificationOrchestrator> createState() =>
@@ -51,7 +49,9 @@ class _NotificationOrchestratorState
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      ref.read(notificationControllerProvider.notifier).refreshPermissionState();
+      ref
+          .read(notificationControllerProvider.notifier)
+          .refreshPermissionState();
       _queueReconciliation('app_resumed');
     }
   }
@@ -67,8 +67,9 @@ class _NotificationOrchestratorState
         settings: ref.read(appSettingsProvider),
         tasks: isAuthenticated ? ref.read(tasksProvider) : const [],
         habits: isAuthenticated ? ref.read(habitsProvider) : const [],
-        habitEntries:
-            isAuthenticated ? ref.read(habitEntriesProvider) : const [],
+        habitEntries: isAuthenticated
+            ? ref.read(habitEntriesProvider)
+            : const [],
         transactions: isAuthenticated ? ref.read(moneyProvider) : const [],
         now: DateTime.now(),
       );
@@ -78,12 +79,24 @@ class _NotificationOrchestratorState
     });
   }
 
-  void _tryHandleNavigation(
-    UserContext user,
-    NotificationHealth health,
-  ) {
+  void _tryHandleNavigation(UserContext user, NotificationHealth health) {
     final intent = health.navigationIntent;
     if (intent == null || !user.isAuthenticated || user.isAdmin) return;
+    if (intent.actionId == FlutterLocalNotificationGateway.completeTaskAction) {
+      final task = ref
+          .read(tasksProvider)
+          .where((item) => item.id == intent.entityId)
+          .firstOrNull;
+      if (task != null && !task.completed) {
+        ref.read(tasksProvider.notifier).toggleTask(task.id);
+      }
+      ref.read(notificationControllerProvider.notifier).clearNavigationIntent();
+      return;
+    }
+    if (intent.actionId == FlutterLocalNotificationGateway.dismissTaskAction) {
+      ref.read(notificationControllerProvider.notifier).clearNavigationIntent();
+      return;
+    }
     if (!intent.isValidDestination) {
       ref.read(notificationControllerProvider.notifier).clearNavigationIntent();
       return;
@@ -99,16 +112,15 @@ class _NotificationOrchestratorState
         return;
       }
       ref.read(routerProvider).go(intent.destination);
-      ref
-          .read(notificationControllerProvider.notifier)
-          .clearNavigationIntent();
+      ref.read(notificationControllerProvider.notifier).clearNavigationIntent();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     ref.listen(userContextProvider, (previous, next) {
-      final wasSwitch = previous?.userId != null &&
+      final wasSwitch =
+          previous?.userId != null &&
           next.userId != null &&
           previous!.userId != next.userId;
       final wasLogout =
@@ -118,7 +130,9 @@ class _NotificationOrchestratorState
         if (!next.isAuthenticated) {
           ref.read(notificationControllerProvider.notifier).handleLogout();
         }
-        ref.read(notificationControllerProvider.notifier).clearNavigationIntent();
+        ref
+            .read(notificationControllerProvider.notifier)
+            .clearNavigationIntent();
         ref.read(routerProvider).go('/');
         _queueReconciliation('user_changed');
       } else if (previous?.userId != next.userId) {
@@ -128,9 +142,15 @@ class _NotificationOrchestratorState
       }
       _tryHandleNavigation(next, ref.read(notificationControllerProvider));
     });
-    ref.listen(appSettingsProvider, (_, _) => _queueReconciliation('settings_changed'));
+    ref.listen(
+      appSettingsProvider,
+      (_, _) => _queueReconciliation('settings_changed'),
+    );
     ref.listen(tasksProvider, (_, _) => _queueReconciliation('tasks_changed'));
-    ref.listen(habitsProvider, (_, _) => _queueReconciliation('habits_changed'));
+    ref.listen(
+      habitsProvider,
+      (_, _) => _queueReconciliation('habits_changed'),
+    );
     ref.listen(
       habitEntriesProvider,
       (_, _) => _queueReconciliation('habit_entries_changed'),
@@ -140,10 +160,12 @@ class _NotificationOrchestratorState
       final user = ref.read(userContextProvider);
       if (user.isAuthenticated && user.userId != null) {
         asyncValue.whenData((feedbackList) {
-          ref.read(feedbackAcknowledgementServiceProvider).processFeedbackList(
-            userId: user.userId!,
-            feedbackList: feedbackList,
-          );
+          ref
+              .read(feedbackAcknowledgementServiceProvider)
+              .processFeedbackList(
+                userId: user.userId!,
+                feedbackList: feedbackList,
+              );
         });
       }
     });

@@ -27,7 +27,8 @@ class FeedbackCategoryInfo {
     FeedbackCategoryInfo(
       category: FeedbackCategory.bugReport,
       title: 'Report a Bug',
-      description: 'Encountered an unexpected glitch or error? Help us fix it with details.',
+      description:
+          'Encountered an unexpected glitch or error? Help us fix it with details.',
       icon: LucideIcons.bug,
       darkColor: AppColors.danger,
       lightColor: Color(0xFFDC2626),
@@ -35,7 +36,8 @@ class FeedbackCategoryInfo {
     FeedbackCategoryInfo(
       category: FeedbackCategory.featureRequest,
       title: 'Suggest a Feature',
-      description: 'Have an idea to make Arc more productive? Share your vision.',
+      description:
+          'Have an idea to make Arc more productive? Share your vision.',
       icon: LucideIcons.sparkles,
       darkColor: AppColors.accent,
       lightColor: AppColors.darkAccent,
@@ -43,7 +45,8 @@ class FeedbackCategoryInfo {
     FeedbackCategoryInfo(
       category: FeedbackCategory.generalFeedback,
       title: 'General Feedback',
-      description: 'Share your overall thoughts, workflow experience, or questions.',
+      description:
+          'Share your overall thoughts, workflow experience, or questions.',
       icon: LucideIcons.messageSquare,
       darkColor: AppColors.info,
       lightColor: Color(0xFF2563EB),
@@ -79,14 +82,46 @@ class FeedbackModuleInfo {
   });
 
   static const List<FeedbackModuleInfo> modules = [
-    FeedbackModuleInfo(key: 'task_manager', label: 'Task Manager', icon: LucideIcons.checkSquare),
-    FeedbackModuleInfo(key: 'habit_tracker', label: 'Habit Tracker', icon: LucideIcons.repeat),
-    FeedbackModuleInfo(key: 'money_tracker', label: 'Money Tracker', icon: LucideIcons.dollarSign),
-    FeedbackModuleInfo(key: 'secret_notes', label: 'Secret Notes', icon: LucideIcons.lock),
-    FeedbackModuleInfo(key: 'dashboard', label: 'Dashboard', icon: LucideIcons.layoutDashboard),
-    FeedbackModuleInfo(key: 'notifications', label: 'Notifications', icon: LucideIcons.bell),
-    FeedbackModuleInfo(key: 'settings', label: 'Settings & Sync', icon: LucideIcons.settings),
-    FeedbackModuleInfo(key: 'general', label: 'General / Other', icon: LucideIcons.globe),
+    FeedbackModuleInfo(
+      key: 'task_manager',
+      label: 'Task Manager',
+      icon: LucideIcons.checkSquare,
+    ),
+    FeedbackModuleInfo(
+      key: 'habit_tracker',
+      label: 'Habit Tracker',
+      icon: LucideIcons.repeat,
+    ),
+    FeedbackModuleInfo(
+      key: 'money_tracker',
+      label: 'Money Tracker',
+      icon: LucideIcons.dollarSign,
+    ),
+    FeedbackModuleInfo(
+      key: 'secret_notes',
+      label: 'Secret Notes',
+      icon: LucideIcons.lock,
+    ),
+    FeedbackModuleInfo(
+      key: 'dashboard',
+      label: 'Dashboard',
+      icon: LucideIcons.layoutDashboard,
+    ),
+    FeedbackModuleInfo(
+      key: 'notifications',
+      label: 'Notifications',
+      icon: LucideIcons.bell,
+    ),
+    FeedbackModuleInfo(
+      key: 'settings',
+      label: 'Settings & Sync',
+      icon: LucideIcons.settings,
+    ),
+    FeedbackModuleInfo(
+      key: 'general',
+      label: 'General / Other',
+      icon: LucideIcons.globe,
+    ),
   ];
 
   static FeedbackModuleInfo forModule(String moduleKey) {

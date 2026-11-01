@@ -10,21 +10,26 @@ class DisplayNameUtils {
         (rune >= 0x1F700 && rune <= 0x1F77F) || // Alchemical Symbols
         (rune >= 0x1F780 && rune <= 0x1F7FF) || // Geometric Shapes Extended
         (rune >= 0x1F800 && rune <= 0x1F8FF) || // Supplemental Arrows-C
-        (rune >= 0x1F900 && rune <= 0x1F9FF) || // Supplemental Symbols and Pictographs
+        (rune >= 0x1F900 &&
+            rune <= 0x1F9FF) || // Supplemental Symbols and Pictographs
         (rune >= 0x1FA00 && rune <= 0x1FA6F) || // Chess Symbols
-        (rune >= 0x1FA70 && rune <= 0x1FAFF) || // Symbols and Pictographs Extended-A
-        (rune >= 0x2600 && rune <= 0x26FF) || // Misc Symbols (☀️, ☕, ⚡, ⚠️, etc.)
+        (rune >= 0x1FA70 &&
+            rune <= 0x1FAFF) || // Symbols and Pictographs Extended-A
+        (rune >= 0x2600 &&
+            rune <= 0x26FF) || // Misc Symbols (☀️, ☕, ⚡, ⚠️, etc.)
         (rune >= 0x2700 && rune <= 0x27BF) || // Dingbats (✨, ✂️, etc.)
         (rune >= 0xFE00 && rune <= 0xFE0F) || // Variation Selectors
         (rune >= 0x1F1E6 && rune <= 0x1F1FF) || // Regional Indicators / Flags
-        (rune >= 0x1F191 && rune <= 0x1F251) || // Enclosed Ideographic Supplement
+        (rune >= 0x1F191 &&
+            rune <= 0x1F251) || // Enclosed Ideographic Supplement
         (rune >= 0x2300 && rune <= 0x23FF) || // Misc Technical
         rune == 0x2B50; // Star
   }
 
   /// Checks whether a Unicode code point is an unprintable control character.
   static bool _isControlChar(int rune) {
-    return (rune >= 0x0000 && rune <= 0x001F) || (rune >= 0x007F && rune <= 0x009F);
+    return (rune >= 0x0000 && rune <= 0x001F) ||
+        (rune >= 0x007F && rune <= 0x009F);
   }
 
   /// Checks whether a code point is a disallowed digit or symbol in names.
@@ -77,7 +82,8 @@ class DisplayNameUtils {
         rune == 0x27 || // Apostrophe '\''
         rune == 0x2E || // Period '.'
         rune == 0x200C || // ZWNJ
-        rune == 0x200D) { // ZWJ
+        rune == 0x200D) {
+      // ZWJ
       return true;
     }
 
@@ -149,7 +155,10 @@ class DisplayNameUtils {
   ///
   /// Preserves the user's intended capitalization and handles single words,
   /// multi-word names, and Unicode names safely.
-  static String extractFirstName(String? displayName, {String fallback = 'User'}) {
+  static String extractFirstName(
+    String? displayName, {
+    String fallback = 'User',
+  }) {
     if (displayName == null) return fallback;
     final normalized = normalize(displayName);
     if (normalized.isEmpty) return fallback;

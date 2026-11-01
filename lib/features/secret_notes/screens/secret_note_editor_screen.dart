@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +10,7 @@ import 'package:arc/core/utilities/responsive_layout.dart';
 import 'package:arc/features/secret_notes/models/secret_note.dart';
 import 'package:arc/features/secret_notes/models/secret_checklist_item.dart';
 import 'package:arc/features/secret_notes/models/secret_note_color.dart';
+import 'package:arc/features/secret_notes/models/secret_note_attachment.dart';
 import 'package:arc/features/secret_notes/providers/secret_notes_provider.dart';
 
 // LOCAL-ONLY ARCHITECTURE RULE:
@@ -51,6 +55,10 @@ class _SecretNoteEditorScreenState
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final List<_EditableChecklistItem> _checklistItems = [];
+  final List<String> _labels = [];
+  final List<SecretNoteAttachment> _attachments = [];
+  final List<SecretNoteAttachment> _pendingAttachmentDeletes = [];
+  late final String _draftId = widget.noteId ?? SecretNote.generateId();
 
   String _selectedColorId = SecretNoteColors.defaultColorId;
   DateTime? _createdAt;
@@ -58,12 +66,19 @@ class _SecretNoteEditorScreenState
   bool _isSaving = false;
   bool _isNewNote = true;
   bool _showChecklistSection = false;
+  bool _isRecording = false;
+  bool _isAddingMedia = false;
+  String? _recordingPath;
+  String? _playingAudioPath;
+  Timer? _playbackTimer;
 
   // Snapshot for unsaved changes detection
   String _initialTitle = '';
   String _initialDescription = '';
   String _initialColorId = SecretNoteColors.defaultColorId;
   List<Map<String, dynamic>> _initialChecklistSnapshot = [];
+  List<String> _initialLabels = [];
+  List<String> _initialAttachmentIds = [];
 
   @override
   void initState() {
@@ -73,6 +88,7 @@ class _SecretNoteEditorScreenState
 
   @override
   void dispose() {
+    _playbackTimer?.cancel();
     _titleController.dispose();
     _descriptionController.dispose();
     for (final item in _checklistItems) {
@@ -105,6 +121,12 @@ class _SecretNoteEditorScreenState
         _descriptionController.text = note.description;
         _selectedColorId = note.color;
         _createdAt = note.createdAt;
+        _labels
+          ..clear()
+          ..addAll(note.labels);
+        _attachments
+          ..clear()
+          ..addAll(note.attachments);
 
         _checklistItems.clear();
         for (var i = 0; i < note.checklist.length; i++) {
@@ -139,6 +161,7 @@ class _SecretNoteEditorScreenState
   }
 
   void _returnToDashboard() {
+    ref.read(secretNotesMediaServiceProvider).stopAudio();
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     } else {
@@ -154,25 +177,38 @@ class _SecretNoteEditorScreenState
     _initialDescription = _descriptionController.text.trim();
     _initialColorId = _selectedColorId;
     _initialChecklistSnapshot = _checklistItems
-        .map((item) => {
-              'id': item.id,
-              'text': item.controller.text.trim(),
-              'isCompleted': item.isCompleted,
-            })
+        .map(
+          (item) => {
+            'id': item.id,
+            'text': item.controller.text.trim(),
+            'isCompleted': item.isCompleted,
+          },
+        )
         .toList();
+    _initialLabels = List.of(_labels);
+    _initialAttachmentIds = _attachments.map((item) => item.id).toList();
   }
 
   bool _hasUnsavedChanges() {
     if (_titleController.text.trim() != _initialTitle) return true;
     if (_descriptionController.text.trim() != _initialDescription) return true;
     if (_selectedColorId != _initialColorId) return true;
+    if (!_stringListsEqual(_labels, _initialLabels)) return true;
+    if (!_stringListsEqual(
+      _attachments.map((item) => item.id).toList(),
+      _initialAttachmentIds,
+    )) {
+      return true;
+    }
 
     final currentItems = _checklistItems
-        .map((item) => {
-              'id': item.id,
-              'text': item.controller.text.trim(),
-              'isCompleted': item.isCompleted,
-            })
+        .map(
+          (item) => {
+            'id': item.id,
+            'text': item.controller.text.trim(),
+            'isCompleted': item.isCompleted,
+          },
+        )
         .toList();
 
     if (currentItems.length != _initialChecklistSnapshot.length) return true;
@@ -188,6 +224,146 @@ class _SecretNoteEditorScreenState
     }
 
     return false;
+  }
+
+  bool _stringListsEqual(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  Future<void> _addLabel() async {
+    final controller = TextEditingController();
+    final value = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Add label'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 30,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(hintText: 'e.g. Personal, Ideas'),
+          onSubmitted: (text) => Navigator.pop(dialogContext, text),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    final label = value?.trim();
+    if (label == null || label.isEmpty || !mounted) return;
+    if (_labels.any((item) => item.toLowerCase() == label.toLowerCase())) {
+      return;
+    }
+    setState(() => _labels.add(label));
+  }
+
+  Future<void> _addImage() async {
+    if (_isAddingMedia) return;
+    setState(() => _isAddingMedia = true);
+    try {
+      final attachment = await ref
+          .read(secretNotesMediaServiceProvider)
+          .pickImage(_draftId);
+      if (attachment != null && mounted) {
+        setState(() => _attachments.add(attachment));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not add that image.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isAddingMedia = false);
+    }
+  }
+
+  Future<void> _toggleRecording() async {
+    final media = ref.read(secretNotesMediaServiceProvider);
+    try {
+      if (_isRecording) {
+        final path = _recordingPath;
+        if (path == null) return;
+        final attachment = await media.stopRecording(path);
+        if (!mounted) return;
+        setState(() {
+          _isRecording = false;
+          _recordingPath = null;
+          if (attachment != null) _attachments.add(attachment);
+        });
+      } else {
+        final path = await media.startRecording(_draftId);
+        if (mounted) {
+          setState(() {
+            _isRecording = true;
+            _recordingPath = path;
+          });
+        }
+      }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isRecording = false;
+        _recordingPath = null;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Voice note unavailable: $error')));
+    }
+  }
+
+  Future<void> _toggleAudio(SecretNoteAttachment attachment) async {
+    final media = ref.read(secretNotesMediaServiceProvider);
+    try {
+      if (_playingAudioPath == attachment.localPath) {
+        _playbackTimer?.cancel();
+        await media.pauseAudio();
+        if (mounted) setState(() => _playingAudioPath = null);
+      } else {
+        await media.playAudio(attachment.localPath);
+        if (mounted) {
+          setState(() => _playingAudioPath = attachment.localPath);
+          _playbackTimer?.cancel();
+          if (attachment.durationMs > 0) {
+            _playbackTimer = Timer(
+              Duration(milliseconds: attachment.durationMs),
+              () {
+                if (mounted && _playingAudioPath == attachment.localPath) {
+                  setState(() => _playingAudioPath = null);
+                }
+              },
+            );
+          }
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('This voice note could not be played.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _removeAttachment(SecretNoteAttachment attachment) async {
+    if (mounted) {
+      setState(() {
+        _attachments.remove(attachment);
+        _pendingAttachmentDeletes.add(attachment);
+      });
+    }
   }
 
   Future<bool> _confirmDiscardChanges() async {
@@ -210,9 +386,7 @@ class _SecretNoteEditorScreenState
               child: const Text('Keep Editing'),
             ),
             FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.danger,
-              ),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
               onPressed: () => Navigator.of(dialogContext).pop(true),
               child: const Text('Discard'),
             ),
@@ -284,10 +458,13 @@ class _SecretNoteEditorScreenState
       title: trimmedTitle,
       description: trimmedDescription,
       checklist: validChecklist,
+      attachments: _attachments,
     )) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Note cannot be empty. Enter a title, note text, or checklist item.'),
+          content: Text(
+            'Note cannot be empty. Add text, a checklist item, an image, or a voice note.',
+          ),
           duration: Duration(seconds: 2),
         ),
       );
@@ -298,7 +475,7 @@ class _SecretNoteEditorScreenState
 
     try {
       final now = DateTime.now();
-      final id = widget.noteId ?? SecretNote.generateId();
+      final id = _draftId;
       final createdAt = _createdAt ?? now;
 
       final note = SecretNote(
@@ -307,11 +484,20 @@ class _SecretNoteEditorScreenState
         description: trimmedDescription,
         color: _selectedColorId,
         checklist: validChecklist,
+        labels: List.unmodifiable(_labels),
+        attachments: List.unmodifiable(_attachments),
         createdAt: createdAt,
         updatedAt: now,
       );
 
       await ref.read(secretNotesListProvider.notifier).saveNote(note);
+
+      for (final attachment in _pendingAttachmentDeletes) {
+        await ref
+            .read(secretNotesMediaServiceProvider)
+            .deleteAttachment(attachment);
+      }
+      _pendingAttachmentDeletes.clear();
 
       _captureInitialSnapshot();
 
@@ -355,9 +541,7 @@ class _SecretNoteEditorScreenState
               child: const Text('Cancel'),
             ),
             FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.danger,
-              ),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
               onPressed: () => Navigator.of(dialogContext).pop(true),
               child: const Text('Delete'),
             ),
@@ -367,6 +551,11 @@ class _SecretNoteEditorScreenState
     );
 
     if (confirmed == true && mounted) {
+      for (final attachment in _attachments) {
+        await ref
+            .read(secretNotesMediaServiceProvider)
+            .deleteAttachment(attachment);
+      }
       await ref.read(secretNotesListProvider.notifier).deleteNote(id);
       if (mounted) {
         _returnToDashboard();
@@ -375,8 +564,17 @@ class _SecretNoteEditorScreenState
   }
 
   Future<void> _handleBackPress() async {
+    if (_isRecording) await _toggleRecording();
     final canLeave = await _confirmDiscardChanges();
     if (canLeave && mounted) {
+      final initialIds = _initialAttachmentIds.toSet();
+      for (final attachment in _attachments) {
+        if (!initialIds.contains(attachment.id)) {
+          await ref
+              .read(secretNotesMediaServiceProvider)
+              .deleteAttachment(attachment);
+        }
+      }
       _returnToDashboard();
     }
   }
@@ -449,7 +647,9 @@ class _SecretNoteEditorScreenState
               'Checklist',
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
               ),
             ),
             TextButton.icon(
@@ -460,18 +660,24 @@ class _SecretNoteEditorScreenState
           ],
         ),
         const SizedBox(height: 4),
-        ...pendingItems.map((item) => _buildChecklistItemRow(item, theme, isDark)),
+        ...pendingItems.map(
+          (item) => _buildChecklistItemRow(item, theme, isDark),
+        ),
         if (completedItems.isNotEmpty) ...[
           const SizedBox(height: 16),
           Text(
             'Completed (${completedItems.length})',
             style: theme.textTheme.labelMedium?.copyWith(
-              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+              color: isDark
+                  ? AppColors.textMutedDark
+                  : AppColors.textMutedLight,
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 6),
-          ...completedItems.map((item) => _buildChecklistItemRow(item, theme, isDark)),
+          ...completedItems.map(
+            (item) => _buildChecklistItemRow(item, theme, isDark),
+          ),
         ],
         const SizedBox(height: 8),
         InkWell(
@@ -484,13 +690,17 @@ class _SecretNoteEditorScreenState
                 Icon(
                   LucideIcons.plus,
                   size: 18,
-                  color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                  color: isDark
+                      ? AppColors.textMutedDark
+                      : AppColors.textMutedLight,
                 ),
                 const SizedBox(width: 12),
                 Text(
                   'List item',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                    color: isDark
+                        ? AppColors.textMutedDark
+                        : AppColors.textMutedLight,
                   ),
                 ),
               ],
@@ -501,7 +711,11 @@ class _SecretNoteEditorScreenState
     );
   }
 
-  Widget _buildChecklistItemRow(_EditableChecklistItem item, ThemeData theme, bool isDark) {
+  Widget _buildChecklistItemRow(
+    _EditableChecklistItem item,
+    ThemeData theme,
+    bool isDark,
+  ) {
     final index = _checklistItems.indexOf(item);
 
     return Padding(
@@ -518,7 +732,9 @@ class _SecretNoteEditorScreenState
               size: 20,
               color: item.isCompleted
                   ? AppColors.accent
-                  : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                  : (isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight),
             ),
             onPressed: () {
               setState(() {
@@ -533,14 +749,22 @@ class _SecretNoteEditorScreenState
               focusNode: item.focusNode,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: item.isCompleted
-                    ? (isDark ? AppColors.textMutedDark : AppColors.textMutedLight)
-                    : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
-                decoration: item.isCompleted ? TextDecoration.lineThrough : null,
+                    ? (isDark
+                          ? AppColors.textMutedDark
+                          : AppColors.textMutedLight)
+                    : (isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight),
+                decoration: item.isCompleted
+                    ? TextDecoration.lineThrough
+                    : null,
               ),
               decoration: InputDecoration(
                 hintText: 'Item...',
                 hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                  color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                  color: isDark
+                      ? AppColors.textMutedDark
+                      : AppColors.textMutedLight,
                 ),
                 border: InputBorder.none,
                 isDense: true,
@@ -559,12 +783,151 @@ class _SecretNoteEditorScreenState
             icon: Icon(
               LucideIcons.x,
               size: 18,
-              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+              color: isDark
+                  ? AppColors.textMutedDark
+                  : AppColors.textMutedLight,
             ),
             onPressed: () => _removeChecklistItem(index),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildLabels(ThemeData theme) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        ..._labels.map(
+          (label) => InputChip(
+            avatar: const Icon(LucideIcons.tag, size: 14),
+            label: Text(label),
+            onDeleted: () => setState(() => _labels.remove(label)),
+          ),
+        ),
+        ActionChip(
+          avatar: const Icon(LucideIcons.plus, size: 15),
+          label: const Text('Label'),
+          onPressed: _addLabel,
+        ),
+      ],
+    );
+  }
+
+  String _formatDuration(int milliseconds) {
+    final duration = Duration(milliseconds: milliseconds);
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
+  Widget _buildAttachments(ThemeData theme, bool isDark) {
+    if (_attachments.isEmpty && !_isRecording) return const SizedBox.shrink();
+    final images = _attachments
+        .where((item) => item.type == SecretNoteAttachmentType.image)
+        .toList();
+    final audio = _attachments
+        .where((item) => item.type == SecretNoteAttachmentType.audio)
+        .toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 18),
+        if (_isRecording)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.danger.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Row(
+              children: [
+                Icon(LucideIcons.mic, color: AppColors.danger),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text('Recording… tap the microphone to finish'),
+                ),
+              ],
+            ),
+          ),
+        if (images.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 150,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: images.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              itemBuilder: (context, index) {
+                final attachment = images[index];
+                return Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.file(
+                        File(attachment.localPath),
+                        width: 190,
+                        height: 150,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          width: 190,
+                          color: isDark
+                              ? Colors.grey.shade800
+                              : Colors.grey.shade200,
+                          child: const Center(
+                            child: Icon(LucideIcons.imageOff),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: IconButton.filled(
+                        visualDensity: VisualDensity.compact,
+                        tooltip: 'Remove image',
+                        icon: const Icon(LucideIcons.x, size: 16),
+                        onPressed: () => _removeAttachment(attachment),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+        if (audio.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          ...audio.map(
+            (attachment) => Card(
+              elevation: 0,
+              child: ListTile(
+                leading: IconButton.filledTonal(
+                  tooltip: _playingAudioPath == attachment.localPath
+                      ? 'Pause'
+                      : 'Play',
+                  icon: Icon(
+                    _playingAudioPath == attachment.localPath
+                        ? LucideIcons.pause
+                        : LucideIcons.play,
+                  ),
+                  onPressed: () => _toggleAudio(attachment),
+                ),
+                title: Text(
+                  attachment.name.isEmpty ? 'Voice note' : attachment.name,
+                ),
+                subtitle: Text(_formatDuration(attachment.durationMs)),
+                trailing: IconButton(
+                  tooltip: 'Remove voice note',
+                  icon: const Icon(LucideIcons.trash2),
+                  onPressed: () => _removeAttachment(attachment),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -574,11 +937,7 @@ class _SecretNoteEditorScreenState
     final isDark = theme.brightness == Brightness.dark;
 
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final currentColor = SecretNoteColors.getById(_selectedColorId);
@@ -608,14 +967,20 @@ class _SecretNoteEditorScreenState
           actions: [
             IconButton(
               icon: Icon(
-                _showChecklistSection ? LucideIcons.checkSquare : LucideIcons.listPlus,
+                _showChecklistSection
+                    ? LucideIcons.checkSquare
+                    : LucideIcons.listPlus,
               ),
-              tooltip: _showChecklistSection ? 'Checklist Active' : 'Add Checklist',
+              tooltip: _showChecklistSection
+                  ? 'Checklist Active'
+                  : 'Add Checklist',
               onPressed: () {
                 if (!_showChecklistSection) {
                   _addChecklistItem();
                 } else {
-                  setState(() => _showChecklistSection = !_showChecklistSection);
+                  setState(
+                    () => _showChecklistSection = !_showChecklistSection,
+                  );
                 }
               },
             ),
@@ -665,6 +1030,35 @@ class _SecretNoteEditorScreenState
                   children: [
                     _buildColorSelector(isDark),
                     const Divider(height: 1),
+                    SizedBox(
+                      height: 48,
+                      child: Row(
+                        children: [
+                          TextButton.icon(
+                            onPressed: _isAddingMedia ? null : _addImage,
+                            icon: const Icon(LucideIcons.imagePlus, size: 18),
+                            label: const Text('Image'),
+                          ),
+                          TextButton.icon(
+                            onPressed: _toggleRecording,
+                            icon: Icon(
+                              _isRecording
+                                  ? LucideIcons.square
+                                  : LucideIcons.mic,
+                              size: 18,
+                              color: _isRecording ? AppColors.danger : null,
+                            ),
+                            label: Text(_isRecording ? 'Stop' : 'Voice'),
+                          ),
+                          TextButton.icon(
+                            onPressed: _addLabel,
+                            icon: const Icon(LucideIcons.tag, size: 18),
+                            label: const Text('Label'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
                     Expanded(
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
@@ -680,13 +1074,14 @@ class _SecretNoteEditorScreenState
                               ),
                               decoration: InputDecoration(
                                 hintText: 'Title',
-                                hintStyle: theme.textTheme.headlineSmall?.copyWith(
-                                  color: isDark
-                                      ? AppColors.textMutedDark
-                                      : AppColors.textMutedLight,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: -0.5,
-                                ),
+                                hintStyle: theme.textTheme.headlineSmall
+                                    ?.copyWith(
+                                      color: isDark
+                                          ? AppColors.textMutedDark
+                                          : AppColors.textMutedLight,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: -0.5,
+                                    ),
                                 border: InputBorder.none,
                                 contentPadding: EdgeInsets.zero,
                               ),
@@ -713,6 +1108,9 @@ class _SecretNoteEditorScreenState
                               keyboardType: TextInputType.multiline,
                               maxLines: null,
                             ),
+                            const SizedBox(height: 14),
+                            _buildLabels(theme),
+                            _buildAttachments(theme, isDark),
                             if (_showChecklistSection) ...[
                               _buildChecklistSection(theme, isDark),
                             ],

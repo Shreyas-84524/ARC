@@ -14,10 +14,7 @@ import 'package:arc/features/user_management/providers/user_context_provider.dar
 class FeedbackFormScreen extends ConsumerStatefulWidget {
   final String? initialCategory;
 
-  const FeedbackFormScreen({
-    super.key,
-    this.initialCategory,
-  });
+  const FeedbackFormScreen({super.key, this.initialCategory});
 
   @override
   ConsumerState<FeedbackFormScreen> createState() => _FeedbackFormScreenState();
@@ -44,7 +41,8 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedCategory = widget.initialCategory ?? FeedbackCategory.generalFeedback;
+    _selectedCategory =
+        widget.initialCategory ?? FeedbackCategory.generalFeedback;
     if (!FeedbackCategory.isValid(_selectedCategory)) {
       _selectedCategory = FeedbackCategory.generalFeedback;
     }
@@ -71,7 +69,8 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
           _selectedModule = (draft['module'] as String?) ?? 'general';
           _messageController.text = (draft['message'] as String?) ?? '';
           _rating = (draft['rating'] as num?)?.toInt();
-          _emailController.text = (draft['contactEmail'] as String?) ?? userEmail ?? '';
+          _emailController.text =
+              (draft['contactEmail'] as String?) ?? userEmail ?? '';
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -85,11 +84,15 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
             ),
             behavior: SnackBarBehavior.floating,
             backgroundColor: AppColors.accent,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             duration: const Duration(seconds: 3),
           ),
         );
-      } else if (userEmail != null && userEmail.isNotEmpty && _emailController.text.isEmpty) {
+      } else if (userEmail != null &&
+          userEmail.isNotEmpty &&
+          _emailController.text.isEmpty) {
         setState(() {
           _emailController.text = userEmail;
         });
@@ -98,7 +101,9 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
   }
 
   void _onFieldChanged() {
-    setState(() {}); // Updates live character counter & submit button enabled state
+    setState(
+      () {},
+    ); // Updates live character counter & submit button enabled state
     _saveDraftDebounced();
   }
 
@@ -106,7 +111,9 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
     _draftDebounce?.cancel();
     _draftDebounce = Timer(const Duration(milliseconds: 600), () {
       if (!mounted) return;
-      ref.read(feedbackDraftServiceProvider).saveDraft(
+      ref
+          .read(feedbackDraftServiceProvider)
+          .saveDraft(
             category: _selectedCategory,
             module: _selectedModule,
             message: _messageController.text,
@@ -133,7 +140,9 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
     AppHaptics.selectionClick();
 
     // Save existing draft for current category before switching
-    await ref.read(feedbackDraftServiceProvider).saveDraft(
+    await ref
+        .read(feedbackDraftServiceProvider)
+        .saveDraft(
           category: _selectedCategory,
           module: _selectedModule,
           message: _messageController.text,
@@ -148,7 +157,9 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
     });
 
     // Check if new category has a draft
-    final draft = await ref.read(feedbackDraftServiceProvider).loadDraft(newCategory);
+    final draft = await ref
+        .read(feedbackDraftServiceProvider)
+        .loadDraft(newCategory);
     if (mounted) {
       if (draft != null) {
         setState(() {
@@ -216,7 +227,9 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
       ref.invalidate(currentUserFeedbackProvider);
 
       // Clear local draft on confirmed acceptance by Firestore
-      await ref.read(feedbackDraftServiceProvider).clearDraft(_selectedCategory);
+      await ref
+          .read(feedbackDraftServiceProvider)
+          .clearDraft(_selectedCategory);
 
       if (!mounted) return;
 
@@ -226,7 +239,9 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
       if (!mounted) return;
 
       // Preserving draft locally on failure
-      await ref.read(feedbackDraftServiceProvider).saveDraft(
+      await ref
+          .read(feedbackDraftServiceProvider)
+          .saveDraft(
             category: _selectedCategory,
             module: _selectedModule,
             message: _messageController.text,
@@ -266,7 +281,11 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                 color: AppColors.accent.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(LucideIcons.check, color: AppColors.accent, size: 24),
+              child: const Icon(
+                LucideIcons.check,
+                color: AppColors.accent,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -274,7 +293,9 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                 'Feedback Received',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
                 ),
               ),
             ),
@@ -287,31 +308,44 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
             Text(
               'Thank you for helping us refine Project Arc. Your submission has been securely recorded.',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
               ),
             ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
+                color: isDark
+                    ? AppColors.darkSurface
+                    : AppColors.lightBgSecondary,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
                 children: [
-                  const Icon(LucideIcons.hash, size: 16, color: AppColors.textMutedDark),
+                  const Icon(
+                    LucideIcons.hash,
+                    size: 16,
+                    color: AppColors.textMutedDark,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       'Ref: ${feedback.feedbackId.substring(0, 8)}...',
                       style: theme.textTheme.labelMedium?.copyWith(
                         fontFamily: 'monospace',
-                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                        color: isDark
+                            ? AppColors.textMutedDark
+                            : AppColors.textMutedLight,
                       ),
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.accent.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(999),
@@ -349,7 +383,10 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
               Navigator.of(ctx).pop();
               context.pushReplacement('/feedback/my-feedback');
             },
-            child: const Text('View My Feedback', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'View My Feedback',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -358,7 +395,8 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
 
   void _showErrorNotice(dynamic error) {
     final errorString = error.toString().toLowerCase();
-    final isNetworkOrOffline = errorString.contains('network') ||
+    final isNetworkOrOffline =
+        errorString.contains('network') ||
         errorString.contains('unavailable') ||
         errorString.contains('offline') ||
         errorString.contains('socket');
@@ -376,7 +414,9 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
             Expanded(child: Text(message)),
           ],
         ),
-        backgroundColor: isNetworkOrOffline ? AppColors.warning : AppColors.danger,
+        backgroundColor: isNetworkOrOffline
+            ? AppColors.warning
+            : AppColors.danger,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         duration: const Duration(seconds: 4),
@@ -407,7 +447,9 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
           'Help & Feedback',
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : AppColors.textPrimaryLight,
           ),
         ),
         actions: [
@@ -445,7 +487,9 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                               size: 16,
                               color: isSelected
                                   ? Colors.black
-                                  : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                                  : (isDark
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondaryLight),
                             ),
                             const SizedBox(width: 6),
                             Text(cat.title),
@@ -453,19 +497,27 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                         ),
                         selected: isSelected,
                         selectedColor: AppColors.accent,
-                        backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
+                        backgroundColor: isDark
+                            ? AppColors.darkCard
+                            : AppColors.lightCard,
                         labelStyle: TextStyle(
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                           color: isSelected
                               ? Colors.black
-                              : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                              : (isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight),
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(999),
                           side: BorderSide(
                             color: isSelected
                                 ? AppColors.accent
-                                : (isDark ? AppColors.borderMedium : AppColors.borderMediumLight),
+                                : (isDark
+                                      ? AppColors.borderMedium
+                                      : AppColors.borderMediumLight),
                           ),
                         ),
                         onSelected: (_) => _onCategoryChanged(cat.category),
@@ -484,7 +536,9 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                   color: isDark ? AppColors.darkCard : AppColors.lightCard,
                   borderRadius: BorderRadius.circular(AppTheme.radiusCard),
                   border: Border.all(
-                    color: categoryInfo.getColor(isDark).withValues(alpha: 0.35),
+                    color: categoryInfo
+                        .getColor(isDark)
+                        .withValues(alpha: 0.35),
                     width: 1.2,
                   ),
                 ),
@@ -494,7 +548,9 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: categoryInfo.getColor(isDark).withValues(alpha: 0.15),
+                        color: categoryInfo
+                            .getColor(isDark)
+                            .withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Icon(
@@ -512,14 +568,18 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                             categoryInfo.title,
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimaryLight,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             categoryInfo.description,
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
                             ),
                           ),
                         ],
@@ -537,7 +597,9 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                   'Rate Your Experience',
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -547,7 +609,10 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                     borderRadius: BorderRadius.circular(AppTheme.radiusCard),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 18,
+                    ),
                     child: StarRatingInput(
                       rating: _rating,
                       isRequired: true,
@@ -566,7 +631,9 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                 'Related Module',
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
                 ),
               ),
               const SizedBox(height: 8),
@@ -575,7 +642,9 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                   color: isDark ? AppColors.darkCard : AppColors.lightCard,
                   borderRadius: BorderRadius.circular(AppTheme.radiusInput),
                   border: Border.all(
-                    color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                    color: isDark
+                        ? AppColors.borderMedium
+                        : AppColors.borderMediumLight,
                   ),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -583,7 +652,9 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                   child: DropdownButton<String>(
                     value: _selectedModule,
                     isExpanded: true,
-                    dropdownColor: isDark ? AppColors.darkElevated : AppColors.lightCard,
+                    dropdownColor: isDark
+                        ? AppColors.darkElevated
+                        : AppColors.lightCard,
                     icon: const Icon(LucideIcons.chevronDown, size: 20),
                     borderRadius: BorderRadius.circular(AppTheme.radiusInput),
                     items: FeedbackModuleInfo.modules.map((m) {
@@ -594,14 +665,18 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                             Icon(
                               m.icon,
                               size: 18,
-                              color: isDark ? AppColors.accent : AppColors.darkAccent,
+                              color: isDark
+                                  ? AppColors.accent
+                                  : AppColors.darkAccent,
                             ),
                             const SizedBox(width: 12),
                             Text(
                               m.label,
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 fontWeight: FontWeight.w600,
-                                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimaryLight,
                               ),
                             ),
                           ],
@@ -630,13 +705,17 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                       'Feature Rating',
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
                       ),
                     ),
                     Text(
                       'Optional',
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                        color: isDark
+                            ? AppColors.textMutedDark
+                            : AppColors.textMutedLight,
                       ),
                     ),
                   ],
@@ -648,7 +727,10 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                     borderRadius: BorderRadius.circular(AppTheme.radiusCard),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                     child: StarRatingInput(
                       rating: _rating,
                       isRequired: false,
@@ -670,11 +752,13 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                     _selectedCategory == FeedbackCategory.bugReport
                         ? 'Bug Description & Steps'
                         : _selectedCategory == FeedbackCategory.featureRequest
-                            ? 'Feature Concept & Details'
-                            : 'Feedback Message',
+                        ? 'Feature Concept & Details'
+                        : 'Feedback Message',
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
                     ),
                   ),
                   Text(
@@ -682,8 +766,11 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: _messageController.text.length > _maxMessageChars
                           ? AppColors.danger
-                          : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
-                      fontWeight: _messageController.text.length > _maxMessageChars
+                          : (isDark
+                                ? AppColors.textMutedDark
+                                : AppColors.textMutedLight),
+                      fontWeight:
+                          _messageController.text.length > _maxMessageChars
                           ? FontWeight.bold
                           : FontWeight.normal,
                     ),
@@ -697,21 +784,31 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                 minLines: 5,
                 maxLines: 10,
                 maxLength: _maxMessageChars,
-                buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
+                buildCounter:
+                    (
+                      _, {
+                      required currentLength,
+                      required isFocused,
+                      maxLength,
+                    }) => null,
                 keyboardType: TextInputType.multiline,
                 style: TextStyle(
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
                 ),
                 decoration: InputDecoration(
                   hintText: _selectedCategory == FeedbackCategory.bugReport
                       ? 'What happened? What did you expect instead? Please share reproduction steps...'
                       : _selectedCategory == FeedbackCategory.featureRequest
-                          ? 'Describe the new feature or enhancement you would love to see in Arc...'
-                          : _selectedCategory == FeedbackCategory.appRating
-                              ? 'Tell us what you love most about Arc or what we can do better...'
-                              : 'Tell us your thoughts, ideas or observations...',
+                      ? 'Describe the new feature or enhancement you would love to see in Arc...'
+                      : _selectedCategory == FeedbackCategory.appRating
+                      ? 'Tell us what you love most about Arc or what we can do better...'
+                      : 'Tell us your thoughts, ideas or observations...',
                   hintStyle: TextStyle(
-                    color: isDark ? AppColors.textPlaceholderDark : AppColors.textPlaceholderLight,
+                    color: isDark
+                        ? AppColors.textPlaceholderDark
+                        : AppColors.textPlaceholderLight,
                   ),
                   filled: true,
                   fillColor: isDark ? AppColors.darkCard : AppColors.lightCard,
@@ -719,13 +816,17 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppTheme.radiusInput),
                     borderSide: BorderSide(
-                      color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                      color: isDark
+                          ? AppColors.borderMedium
+                          : AppColors.borderMediumLight,
                     ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppTheme.radiusInput),
                     borderSide: BorderSide(
-                      color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                      color: isDark
+                          ? AppColors.borderMedium
+                          : AppColors.borderMediumLight,
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
@@ -744,7 +845,8 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                   if (text.length > _maxMessageChars) {
                     return 'Message cannot exceed $_maxMessageChars characters.';
                   }
-                  if (_selectedCategory == FeedbackCategory.bugReport && text.length < 10) {
+                  if (_selectedCategory == FeedbackCategory.bugReport &&
+                      text.length < 10) {
                     return 'Please provide a bit more detail (at least 10 characters).';
                   }
                   return null;
@@ -761,13 +863,17 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                     'Contact Email',
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
                     ),
                   ),
                   Text(
                     'Optional',
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                      color: isDark
+                          ? AppColors.textMutedDark
+                          : AppColors.textMutedLight,
                     ),
                   ),
                 ],
@@ -778,28 +884,40 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                 focusNode: _emailFocusNode,
                 keyboardType: TextInputType.emailAddress,
                 style: TextStyle(
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
                 ),
                 decoration: InputDecoration(
                   prefixIcon: const Icon(LucideIcons.mail, size: 20),
                   hintText: 'yourname@example.com',
                   hintStyle: TextStyle(
-                    color: isDark ? AppColors.textPlaceholderDark : AppColors.textPlaceholderLight,
+                    color: isDark
+                        ? AppColors.textPlaceholderDark
+                        : AppColors.textPlaceholderLight,
                   ),
-                  helperText: 'We may reach out if we need reproduction details or updates.',
+                  helperText:
+                      'We may reach out if we need reproduction details or updates.',
                   filled: true,
                   fillColor: isDark ? AppColors.darkCard : AppColors.lightCard,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppTheme.radiusInput),
                     borderSide: BorderSide(
-                      color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                      color: isDark
+                          ? AppColors.borderMedium
+                          : AppColors.borderMediumLight,
                     ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppTheme.radiusInput),
                     borderSide: BorderSide(
-                      color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+                      color: isDark
+                          ? AppColors.borderMedium
+                          : AppColors.borderMediumLight,
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
@@ -833,11 +951,17 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accent,
                     foregroundColor: Colors.black,
-                    disabledBackgroundColor: (isDark ? AppColors.darkCard : AppColors.lightBgSecondary),
-                    disabledForegroundColor: (isDark ? AppColors.textDisabledDark : AppColors.textDisabledLight),
+                    disabledBackgroundColor: (isDark
+                        ? AppColors.darkCard
+                        : AppColors.lightBgSecondary),
+                    disabledForegroundColor: (isDark
+                        ? AppColors.textDisabledDark
+                        : AppColors.textDisabledLight),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.radiusButton,
+                      ),
                     ),
                   ),
                   onPressed: _canSubmit ? _handleSubmit : null,
@@ -847,7 +971,9 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
                           width: 22,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.4,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.black,
+                            ),
                           ),
                         )
                       : const Row(

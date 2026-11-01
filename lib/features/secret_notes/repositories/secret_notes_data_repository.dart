@@ -22,7 +22,7 @@ class SecretNotesDataRepository {
   bool _isInitialized = false;
 
   SecretNotesDataRepository({this.inMemoryOnly = false, Box<dynamic>? dataBox})
-      : _dataBox = dataBox;
+    : _dataBox = dataBox;
 
   Future<void> init() async {
     if (_isInitialized) return;
@@ -51,7 +51,8 @@ class SecretNotesDataRepository {
       debugPrint('Secret Notes: data namespace successfully initialized.');
     } catch (e) {
       debugPrint(
-          'Secret Notes: data storage initialization warning, operating with memory fallback: $e');
+        'Secret Notes: data storage initialization warning, operating with memory fallback: $e',
+      );
       _isInitialized = true;
     }
   }
@@ -72,7 +73,9 @@ class SecretNotesDataRepository {
             }
           } catch (e) {
             // Isolate individual corrupted record without breaking other notes
-            debugPrint('Secret Notes: skipped corrupted record during load: $e');
+            debugPrint(
+              'Secret Notes: skipped corrupted record during load: $e',
+            );
           }
         }
       } else {
@@ -127,7 +130,9 @@ class SecretNotesDataRepository {
         _inMemoryStore[note.id] = map;
       }
     } catch (e) {
-      debugPrint('Secret Notes: failed to save note locally, fallback to memory: $e');
+      debugPrint(
+        'Secret Notes: failed to save note locally, fallback to memory: $e',
+      );
       _inMemoryStore[note.id] = note.toMap();
     }
   }
