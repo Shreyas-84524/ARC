@@ -360,7 +360,7 @@ void main() {
       // Verify module filter chips
       expect(find.text('Task Manager'), findsWidgets);
       expect(find.text('Habit Tracker'), findsWidgets);
-      expect(find.text('Secret Notes'), findsWidgets);
+      expect(find.text('Secret Notes'), findsNothing);
 
       // Verify Submit Button
       expect(find.text('Submit Suggestion'), findsOneWidget);

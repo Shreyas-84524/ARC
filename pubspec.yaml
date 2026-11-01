@@ -29,8 +29,6 @@ dependencies:
   lucide_icons: ^0.257.0
   google_sign_in: ^6.2.1
   crypto: ^3.0.3
-  local_auth: ^3.0.2
-  image_picker: ^1.2.4
   path_provider: ^2.1.6
 
 dev_dependencies:

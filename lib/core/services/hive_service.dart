@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:arc/features/task_manager/models/task_model.dart';
 import 'package:arc/features/habit_tracker/models/habit_model.dart';
 import 'package:arc/features/habit_tracker/models/habit_entry_model.dart';
@@ -27,11 +30,6 @@ class HiveService {
   static const String moneyBoxName = 'money_box';
   static const String moneySyncQueueBoxName = 'money_sync_queue_box';
   static const String settingsBoxName = 'settings_box';
-  // Local-only Secret Notes namespaces (NEVER synced with cloud/Firebase)
-  static const String secretNotesSecurityBoxName = 'secret_notes_security';
-  static const String secretNotesPreferencesBoxName =
-      'secret_notes_preferences';
-  static const String secretNotesDataBoxName = 'secret_notes_data';
   // Local-only Money Automation preferences (NEVER synced with cloud/Firebase)
   static const String moneyAutomationPreferencesBoxName =
       'money_automation_preferences';
@@ -45,6 +43,7 @@ class HiveService {
     try {
       // Initialize Hive for Flutter
       await Hive.initFlutter();
+      await _removeRetiredPrivateNotesData();
 
       // Register Adapters
       if (!Hive.isAdapterRegistered(0)) Hive.registerAdapter(TaskAdapter());
@@ -65,9 +64,6 @@ class HiveService {
       await Hive.openBox<Transaction>(moneyBoxName);
       await Hive.openBox(moneySyncQueueBoxName);
       await Hive.openBox(settingsBoxName);
-      await Hive.openBox(secretNotesSecurityBoxName);
-      await Hive.openBox(secretNotesPreferencesBoxName);
-      await Hive.openBox(secretNotesDataBoxName);
       await Hive.openBox(moneyAutomationPreferencesBoxName);
       await Hive.openBox(feedbackAcknowledgementsBoxName);
 
@@ -75,6 +71,34 @@ class HiveService {
       debugPrint('HiveService: successfully initialized and boxes opened.');
     } catch (e) {
       debugPrint('HiveService initialization failed: $e');
+    }
+  }
+
+  Future<void> _removeRetiredPrivateNotesData() async {
+    const retiredBoxNames = [
+      'secret_notes_security',
+      'secret_notes_preferences',
+      'secret_notes_data',
+    ];
+    for (final boxName in retiredBoxNames) {
+      try {
+        if (Hive.isBoxOpen(boxName)) await Hive.box(boxName).close();
+        await Hive.deleteBoxFromDisk(boxName);
+      } catch (error) {
+        debugPrint('HiveService: retired box cleanup notice: $error');
+      }
+    }
+
+    try {
+      final documents = await getApplicationDocumentsDirectory();
+      final mediaDirectory = Directory(
+        '${documents.path}${Platform.pathSeparator}secret_notes_media',
+      );
+      if (await mediaDirectory.exists()) {
+        await mediaDirectory.delete(recursive: true);
+      }
+    } catch (error) {
+      debugPrint('HiveService: retired media cleanup notice: $error');
     }
   }
 

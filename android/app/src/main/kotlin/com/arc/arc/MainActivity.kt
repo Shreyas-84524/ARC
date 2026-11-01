@@ -13,7 +13,6 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterFragmentActivity() {
     private val HAPTICS_CHANNEL = "com.arc.arc/haptics"
-    private var secretNotesMediaBridge: SecretNotesMediaBridge? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -25,11 +24,6 @@ class MainActivity : FlutterFragmentActivity() {
             methodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, MoneyAutomationBridge.METHOD_CHANNEL),
             eventChannel = EventChannel(flutterEngine.dartExecutor.binaryMessenger, MoneyAutomationBridge.EVENT_CHANNEL)
         )
-        secretNotesMediaBridge = SecretNotesMediaBridge(
-            this,
-            MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SecretNotesMediaBridge.CHANNEL),
-        )
-
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, HAPTICS_CHANNEL).setMethodCallHandler { call, result ->
             if (call.method != "vibrate") {
                 result.notImplemented()
@@ -88,7 +82,6 @@ class MainActivity : FlutterFragmentActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         MoneyAutomationBridge.handleRequestPermissionsResult(this, requestCode, permissions, grantResults)
-        secretNotesMediaBridge?.handlePermissionResult(requestCode, grantResults)
     }
 
     private data class HapticPulse(val durationMs: Long, val amplitude: Int)
