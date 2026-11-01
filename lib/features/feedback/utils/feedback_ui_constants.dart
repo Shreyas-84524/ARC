@@ -98,11 +98,6 @@ class FeedbackModuleInfo {
       icon: LucideIcons.dollarSign,
     ),
     FeedbackModuleInfo(
-      key: 'secret_notes',
-      label: 'Secret Notes',
-      icon: LucideIcons.lock,
-    ),
-    FeedbackModuleInfo(
       key: 'dashboard',
       label: 'Dashboard',
       icon: LucideIcons.layoutDashboard,

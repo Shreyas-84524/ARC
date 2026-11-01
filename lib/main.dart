@@ -10,7 +10,6 @@ import 'package:arc/core/notifications/notification_orchestrator.dart';
 import 'package:arc/providers/global_providers.dart';
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
 import 'package:arc/features/user_management/models/user_context.dart';
-import 'package:arc/features/secret_notes/providers/secret_notes_provider.dart';
 import 'package:arc/features/money_tracker/providers/money_automation_provider.dart';
 
 void main() async {
@@ -116,47 +115,11 @@ class _SyncInitializerState extends ConsumerState<SyncInitializer> {
   }
 }
 
-class ProjectArcApp extends ConsumerStatefulWidget {
+class ProjectArcApp extends ConsumerWidget {
   const ProjectArcApp({super.key});
 
   @override
-  ConsumerState<ProjectArcApp> createState() => _ProjectArcAppState();
-}
-
-class _ProjectArcAppState extends ConsumerState<ProjectArcApp>
-    with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    // Automatic lock when ARC leaves foreground (inactive, paused, hidden, detached)
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached ||
-        state == AppLifecycleState.hidden) {
-      final isUnlocked = ref.read(secretNotesSessionProvider);
-      if (isUnlocked) {
-        ref.read(secretNotesSessionProvider.notifier).lock();
-        debugPrint(
-          'ProjectArcApp: app backgrounded (${state.name}). Secret Notes automatically locked.',
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Read the active theme state and reactive router from Riverpod
     final activeThemeMode = ref.watch(themeModeProvider);
     final router = ref.watch(routerProvider);
