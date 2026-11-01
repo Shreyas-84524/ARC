@@ -168,9 +168,10 @@ The manifest declares the permissions and receivers needed by these features.
 Any new native permission must have a visible user action, denial handling, and
 a testable Dart boundary.
 
-Release builds enable R8 code shrinking and Android resource shrinking. Keep
-rules should be as narrow as possible and must be validated with a release
-build whenever plugin serialization changes.
+Release shrinking is disabled until authentication, notifications, and native
+integrations have a repeatable physical-device smoke test. Keep rules should be
+as narrow as possible and must be validated with a signed release build before
+shrinking is enabled again.
 
 ## Cloudflare Worker
 
@@ -248,7 +249,7 @@ distribution is required.
 
 ARC controls installed and runtime storage through:
 
-- R8 code shrinking and Android resource shrinking;
+- dependency and plugin pruning;
 - a reduced timezone database covering the recent ten-year window;
 - removal of unused native plugin dependency trees;
 - a 10 MiB Firestore disk-cache limit;
@@ -262,9 +263,9 @@ Repository-generated directories such as `build`, `.dart_tool`, `.gradle`,
 
 ### Scheduled reminders cannot be read
 
-Confirm the installed build contains `android/app/proguard-rules.pro` and that
-the release build type references it. Reinstall the corrected build and pull
-down on Scheduled Reminders to refresh the health state.
+Confirm release shrinking is disabled, reinstall the corrected build, and pull
+down on Scheduled Reminders to refresh the health state. The rules in
+`android/app/proguard-rules.pro` must be used if shrinking is enabled again.
 
 ### Flutter plugin symlink error on Windows
 
