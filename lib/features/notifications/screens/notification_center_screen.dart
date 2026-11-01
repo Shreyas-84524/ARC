@@ -6,6 +6,16 @@ import 'package:arc/core/notifications/notification_controller.dart';
 import 'package:arc/core/notifications/notification_models.dart';
 import 'package:arc/core/theme/app_theme.dart';
 
+String notificationErrorMessage(String error) {
+  final normalized = error.toLowerCase();
+  if (normalized.contains('typetoken') ||
+      normalized.contains('loadschedulednotifications') ||
+      normalized.contains('pendingnotificationrequests')) {
+    return 'Scheduled reminders could not be read. Update the app and try again.';
+  }
+  return 'Reminder status is temporarily unavailable. Pull down to retry.';
+}
+
 /// Shows the coordinator's expected/pending notification state.
 /// This is not a delivery history because Flutter has no reliable,
 /// cross-platform delivery receipt for local notifications.
@@ -70,9 +80,28 @@ class _HealthCard extends StatelessWidget {
             if (health.lastReason != null)
               Text('Last sync: ${health.lastReason}'),
             if (health.lastError != null)
-              Text(
-                health.lastError!,
-                style: const TextStyle(color: AppColors.danger),
+              Semantics(
+                liveRegion: true,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        LucideIcons.circleAlert,
+                        color: AppColors.danger,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          notificationErrorMessage(health.lastError!),
+                          style: const TextStyle(color: AppColors.danger),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
           ],
         ),
