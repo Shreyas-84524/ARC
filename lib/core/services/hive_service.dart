@@ -16,6 +16,10 @@ class HiveService {
   bool _initialized = false;
   bool get isInitialized => _initialized;
 
+  static bool _shouldCompact(int entries, int deletedEntries) {
+    return deletedEntries >= 50 && deletedEntries / entries >= 0.2;
+  }
+
   @visibleForTesting
   void setInitializedForTesting(bool value) {
     _initialized = value;
@@ -56,21 +60,76 @@ class HiveService {
       }
 
       // Open caching boxes
-      await Hive.openBox<Task>(tasksBoxName);
-      await Hive.openBox(tasksSyncQueueBoxName);
-      await Hive.openBox<Habit>(habitsBoxName);
-      await Hive.openBox<HabitEntry>(habitEntriesBoxName);
-      await Hive.openBox(habitsSyncQueueBoxName);
-      await Hive.openBox<Transaction>(moneyBoxName);
-      await Hive.openBox(moneySyncQueueBoxName);
-      await Hive.openBox(settingsBoxName);
-      await Hive.openBox(moneyAutomationPreferencesBoxName);
-      await Hive.openBox(feedbackAcknowledgementsBoxName);
+      await Hive.openBox<Task>(
+        tasksBoxName,
+        compactionStrategy: _shouldCompact,
+      );
+      await Hive.openBox(
+        tasksSyncQueueBoxName,
+        compactionStrategy: _shouldCompact,
+      );
+      await Hive.openBox<Habit>(
+        habitsBoxName,
+        compactionStrategy: _shouldCompact,
+      );
+      await Hive.openBox<HabitEntry>(
+        habitEntriesBoxName,
+        compactionStrategy: _shouldCompact,
+      );
+      await Hive.openBox(
+        habitsSyncQueueBoxName,
+        compactionStrategy: _shouldCompact,
+      );
+      await Hive.openBox<Transaction>(
+        moneyBoxName,
+        compactionStrategy: _shouldCompact,
+      );
+      await Hive.openBox(
+        moneySyncQueueBoxName,
+        compactionStrategy: _shouldCompact,
+      );
+      await Hive.openBox(settingsBoxName, compactionStrategy: _shouldCompact);
+      await Hive.openBox(
+        moneyAutomationPreferencesBoxName,
+        compactionStrategy: _shouldCompact,
+      );
+      await Hive.openBox(
+        feedbackAcknowledgementsBoxName,
+        compactionStrategy: _shouldCompact,
+      );
 
       _initialized = true;
       debugPrint('HiveService: successfully initialized and boxes opened.');
     } catch (e) {
       debugPrint('HiveService initialization failed: $e');
+    }
+  }
+
+  Future<void> compactStorage({String? userId}) async {
+    final baseNames = <String>[
+      tasksBoxName,
+      tasksSyncQueueBoxName,
+      habitsBoxName,
+      habitEntriesBoxName,
+      habitsSyncQueueBoxName,
+      moneyBoxName,
+      moneySyncQueueBoxName,
+      settingsBoxName,
+      moneyAutomationPreferencesBoxName,
+      feedbackAcknowledgementsBoxName,
+    ];
+    final names = <String>{...baseNames};
+    if (userId != null && userId.isNotEmpty) {
+      names.addAll(baseNames.map((name) => getUserBoxName(name, userId)));
+    }
+
+    for (final name in names) {
+      if (!Hive.isBoxOpen(name)) continue;
+      try {
+        await Hive.box(name).compact();
+      } catch (error) {
+        debugPrint('HiveService: compaction notice for $name: $error');
+      }
     }
   }
 
@@ -200,7 +259,7 @@ class HiveService {
   ) async {
     final scopedName = getUserBoxName(baseBoxName, userId);
     if (!Hive.isBoxOpen(scopedName)) {
-      await Hive.openBox<T>(scopedName);
+      await Hive.openBox<T>(scopedName, compactionStrategy: _shouldCompact);
     }
     final scopedBox = Hive.box<T>(scopedName);
 
@@ -228,7 +287,7 @@ class HiveService {
   ) async {
     final scopedName = getUserBoxName(baseBoxName, userId);
     if (!Hive.isBoxOpen(scopedName)) {
-      await Hive.openBox(scopedName);
+      await Hive.openBox(scopedName, compactionStrategy: _shouldCompact);
     }
     final scopedBox = Hive.box(scopedName);
 

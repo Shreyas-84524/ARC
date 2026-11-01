@@ -144,6 +144,7 @@ class SyncService {
         );
         return false;
       } finally {
+        await HiveService().compactStorage(userId: _userId);
         _isSyncing = false;
       }
     });
