@@ -70,7 +70,6 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
   }
 
   Future<void> _selectDueDate(BuildContext context) async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDueDate ?? DateTime.now(),
@@ -79,19 +78,12 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: isDark
-                ? const ColorScheme.dark(
-                    primary: AppColors.accent,
-                    onPrimary: AppColors.textPrimaryLight,
-                    surface: AppColors.darkModal,
-                    onSurface: AppColors.textPrimaryDark,
-                  )
-                : const ColorScheme.light(
-                    primary: AppColors.accentPressed,
-                    onPrimary: Colors.white,
-                    surface: AppColors.lightModal,
-                    onSurface: AppColors.textPrimaryLight,
-                  ),
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.accent,
+              onPrimary: AppColors.textPrimaryLight,
+              surface: AppColors.darkModal,
+              onSurface: AppColors.textPrimaryDark,
+            ),
           ),
           child: child!,
         );
@@ -105,26 +97,18 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
   }
 
   Future<void> _selectDueTime(BuildContext context) async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: _selectedDueTime ?? TimeOfDay.now(),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: isDark
-                ? const ColorScheme.dark(
-                    primary: AppColors.accent,
-                    onPrimary: AppColors.textPrimaryLight,
-                    surface: AppColors.darkModal,
-                    onSurface: AppColors.textPrimaryDark,
-                  )
-                : const ColorScheme.light(
-                    primary: AppColors.accentPressed,
-                    onPrimary: Colors.white,
-                    surface: AppColors.lightModal,
-                    onSurface: AppColors.textPrimaryLight,
-                  ),
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.accent,
+              onPrimary: AppColors.textPrimaryLight,
+              surface: AppColors.darkModal,
+              onSurface: AppColors.textPrimaryDark,
+            ),
           ),
           child: child!,
         );
@@ -142,24 +126,98 @@ class _TaskEditorSheetState extends ConsumerState<TaskEditorSheet> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedDueTime == null) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
       final continueWithoutTime = await showDialog<bool>(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Set a Time for Your Task?'),
-          content: Text(
-            'Add a time to ${_titleController.text.trim()} so we can remind you when it\'s time to get started.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Set Time'),
+        builder: (dialogContext) {
+          final dialogTheme = Theme.of(dialogContext);
+          return AlertDialog(
+            backgroundColor: isDark ? AppColors.darkModal : AppColors.lightModal,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+              side: BorderSide(
+                color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+              ),
             ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Continue Without Time'),
+            titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+            contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+            actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            actionsOverflowButtonSpacing: 10,
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    LucideIcons.clock,
+                    color: AppColors.accent,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    'Set a Time for Your Task?',
+                    style: dialogTheme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+            content: Text(
+              'Add a time to ${_titleController.text.trim()} so we can remind you when it\'s time to get started.',
+              style: dialogTheme.textTheme.bodyMedium?.copyWith(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+                height: 1.4,
+              ),
+            ),
+            actions: [
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                  side: BorderSide(
+                    color: isDark
+                        ? AppColors.borderMedium
+                        : AppColors.borderMediumLight,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Continue Without Time'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: AppColors.textPrimaryLight,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  elevation: 0,
+                ),
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text(
+                  'Set Time',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          );
+        },
       );
       if (!mounted || continueWithoutTime == null) return;
       if (!continueWithoutTime) {

@@ -3,9 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:arc/core/theme/app_theme.dart';
 import 'package:arc/core/services/app_haptics.dart';
-import 'package:arc/features/money_tracker/models/money_automation_listener_status.dart';
-import 'package:arc/features/money_tracker/providers/money_automation_provider.dart';
-import 'package:arc/features/money_tracker/widgets/automatic_spending_info_dialog.dart';
+import 'package:arc/features/money_tracker/providers/money_settings_provider.dart';
 
 class MoneyTrackerSettingsSheet extends ConsumerWidget {
   const MoneyTrackerSettingsSheet({super.key});
@@ -23,34 +21,38 @@ class MoneyTrackerSettingsSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final automationState = ref.watch(moneyAutomationProvider);
-    final status = automationState.listenerStatus;
+    final addIncomeToBudget = ref.watch(addIncomeToBudgetProvider);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkModal : AppColors.lightModal,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(AppTheme.radiusCard),
-        ),
-        border: Border(
-          top: BorderSide(
-            color: isDark
-                ? AppColors.borderStrong
-                : AppColors.borderStrongLight,
-            width: 1.5,
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.88,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkModal : AppColors.lightModal,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppTheme.radiusCard),
+          ),
+          border: Border(
+            top: BorderSide(
+              color: isDark
+                  ? AppColors.borderStrong
+                  : AppColors.borderStrongLight,
+              width: 1.5,
+            ),
           ),
         ),
-      ),
-      padding: EdgeInsets.fromLTRB(
-        24,
-        16,
-        24,
-        MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+        padding: EdgeInsets.fromLTRB(
+          24,
+          16,
+          24,
+          MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
           // Drag handle
           Center(
             child: Container(
@@ -92,7 +94,7 @@ class MoneyTrackerSettingsSheet extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Local Preferences & Automation',
+                      'Local Preferences',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: isDark
                             ? AppColors.textMutedDark
@@ -111,7 +113,7 @@ class MoneyTrackerSettingsSheet extends ConsumerWidget {
 
           const SizedBox(height: 20),
 
-          // Automatic Spending Tracking Card
+          // Add income to Monthly budget Card
           Card(
             color: isDark ? AppColors.darkCard : AppColors.lightCard,
             shape: RoundedRectangleBorder(
@@ -128,51 +130,62 @@ class MoneyTrackerSettingsSheet extends ConsumerWidget {
               child: Column(
                 children: [
                   SwitchListTile(
-                    secondary: const Icon(
-                      LucideIcons.sparkles,
-                      color: AppColors.accent,
-                    ),
-                    title: const Text(
-                      'Automatic Spending Tracking',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      'Detect confirmed spendings locally from notifications',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: isDark
-                            ? AppColors.textMutedDark
-                            : AppColors.textMutedLight,
+                    secondary: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: addIncomeToBudget
+                            ? AppColors.accent.withValues(alpha: 0.15)
+                            : (isDark
+                                ? AppColors.darkSurface
+                                : AppColors.lightBgSecondary),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        LucideIcons.plusCircle,
+                        color: addIncomeToBudget
+                            ? AppColors.accent
+                            : (isDark
+                                ? AppColors.textMutedDark
+                                : AppColors.textMutedLight),
+                        size: 20,
                       ),
                     ),
-                    value: automationState.isEnabled,
+                    title: const Text(
+                      'Add income to Monthly budget ?',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        addIncomeToBudget
+                            ? 'Income is added to your total monthly budget and reflected in analytics.'
+                            : 'Income is kept separate and will not increase your monthly budget limit or analytics summary.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: isDark
+                              ? AppColors.textMutedDark
+                              : AppColors.textMutedLight,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                    value: addIncomeToBudget,
                     activeThumbColor: AppColors.accent,
                     onChanged: (val) async {
                       AppHaptics.lightImpact();
-                      if (val) {
-                        final confirmed = await showDialog<bool>(
-                          context: context,
-                          builder: (ctx) => const AutomaticSpendingInfoDialog(),
-                        );
-                        if (confirmed == true) {
-                          await ref
-                              .read(moneyAutomationProvider.notifier)
-                              .enableAutomation();
-                        }
-                      } else {
-                        await ref
-                            .read(moneyAutomationProvider.notifier)
-                            .disableAutomation();
-                      }
+                      await ref
+                          .read(addIncomeToBudgetProvider.notifier)
+                          .setAddIncomeToBudget(val);
                     },
                   ),
-
-                  // Status indicator row
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                     child: Row(
                       children: [
                         Text(
-                          'Status: ',
+                          'Mode: ',
                           style: theme.textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: isDark
@@ -180,26 +193,32 @@ class MoneyTrackerSettingsSheet extends ConsumerWidget {
                                 : AppColors.textMutedLight,
                           ),
                         ),
-                        _buildStatusBadge(context, status),
-                        const Spacer(),
-                        if (status ==
-                            MoneyAutomationListenerStatus.permissionRequired)
-                          TextButton(
-                            onPressed: () {
-                              AppHaptics.mediumImpact();
-                              ref
-                                  .read(moneyAutomationProvider.notifier)
-                                  .requestPermissionAgain();
-                            },
-                            style: TextButton.styleFrom(
-                              visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                            ),
-                            child: const Text('Enable Access'),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
                           ),
+                          decoration: BoxDecoration(
+                            color: addIncomeToBudget
+                                ? AppColors.accent.withValues(alpha: 0.15)
+                                : Colors.grey.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            addIncomeToBudget
+                                ? 'Included in Budget'
+                                : 'Separated from Budget',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: addIncomeToBudget
+                                  ? (isDark
+                                      ? AppColors.accent
+                                      : AppColors.darkAccent)
+                                  : Colors.grey,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -208,7 +227,7 @@ class MoneyTrackerSettingsSheet extends ConsumerWidget {
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
           // Privacy note
           Padding(
@@ -238,66 +257,8 @@ class MoneyTrackerSettingsSheet extends ConsumerWidget {
           const SizedBox(height: 12),
         ],
       ),
-    );
-  }
-
-  Widget _buildStatusBadge(
-    BuildContext context,
-    MoneyAutomationListenerStatus status,
-  ) {
-    Color bg;
-    Color fg;
-    IconData icon;
-
-    switch (status) {
-      case MoneyAutomationListenerStatus.ready:
-        bg = AppColors.success.withValues(alpha: 0.15);
-        fg = AppColors.success;
-        icon = LucideIcons.checkCircle2;
-        break;
-      case MoneyAutomationListenerStatus.permissionRequired:
-        bg = AppColors.warning.withValues(alpha: 0.15);
-        fg = AppColors.warning;
-        icon = LucideIcons.alertCircle;
-        break;
-      case MoneyAutomationListenerStatus.unavailable:
-        bg = Colors.grey.withValues(alpha: 0.15);
-        fg = Colors.grey;
-        icon = LucideIcons.ban;
-        break;
-      case MoneyAutomationListenerStatus.error:
-        bg = AppColors.danger.withValues(alpha: 0.15);
-        fg = AppColors.danger;
-        icon = LucideIcons.alertTriangle;
-        break;
-      case MoneyAutomationListenerStatus.disabled:
-        bg = Colors.grey.withValues(alpha: 0.15);
-        fg = Colors.grey;
-        icon = LucideIcons.power;
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: fg),
-          const SizedBox(width: 5),
-          Text(
-            status.label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: fg,
-            ),
-          ),
-        ],
-      ),
-    );
+    ),
+  ),
+);
   }
 }

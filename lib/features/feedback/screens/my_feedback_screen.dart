@@ -228,6 +228,7 @@ class MyFeedbackScreen extends ConsumerWidget {
 
               return RefreshIndicator(
                 color: AppColors.accent,
+                backgroundColor: isDark ? AppColors.darkElevated : Colors.white,
                 onRefresh: () async {
                   ref.invalidate(currentUserFeedbackStreamProvider);
                   ref.invalidate(currentUserFeedbackProvider);
@@ -469,30 +470,21 @@ class _StatusBadge extends StatelessWidget {
     String label;
 
     switch (status) {
+      case FeedbackStatus.submitting:
       case FeedbackStatus.submitted:
         bg = AppColors.warning.withValues(alpha: 0.15);
         fg = AppColors.warning;
-        label = 'Submitted';
+        label = 'Submitting';
         break;
+      case FeedbackStatus.dispatched:
       case FeedbackStatus.emailed:
+      case FeedbackStatus.reviewed:
+      case FeedbackStatus.acknowledged:
+      default:
         bg = AppColors.info.withValues(alpha: 0.15);
         fg = AppColors.info;
         label = 'Dispatched';
         break;
-      case FeedbackStatus.reviewed:
-        bg = const Color(0xFF8B5CF6).withValues(alpha: 0.15);
-        fg = const Color(0xFFA78BFA);
-        label = 'In Review';
-        break;
-      case FeedbackStatus.acknowledged:
-        bg = AppColors.accent.withValues(alpha: 0.2);
-        fg = const Color(0xFF5C7000);
-        label = 'Acknowledged';
-        break;
-      default:
-        bg = Colors.grey.withValues(alpha: 0.15);
-        fg = Colors.grey;
-        label = status;
     }
 
     return Container(

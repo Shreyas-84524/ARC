@@ -217,13 +217,17 @@ class TransactionDetailsSheet extends ConsumerWidget {
                       'Date & Time',
                       style: TextStyle(fontSize: 14, color: secondaryTextColor),
                     ),
-                    const Spacer(),
-                    Text(
-                      '${DateFormat('MMM d, yyyy').format(transaction.date)} at ${transaction.time}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: primaryTextColor,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '${DateFormat('MMM d, yyyy').format(transaction.date)} at ${transaction.time}',
+                        textAlign: TextAlign.end,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: primaryTextColor,
+                        ),
                       ),
                     ),
                   ],

@@ -1,3 +1,4 @@
+import 'package:arc/core/notifications/notification_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -190,6 +191,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _onAuthSuccess(UserProfile profile) {
+    ref.read(notificationControllerProvider.notifier).requestPermissionFromUserAction();
     ref
         .read(userContextProvider.notifier)
         .setActiveUser(userId: profile.id, profile: profile);

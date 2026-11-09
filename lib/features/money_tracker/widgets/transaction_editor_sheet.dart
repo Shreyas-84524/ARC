@@ -67,7 +67,6 @@ class _TransactionEditorSheetState
   }
 
   Future<void> _selectDate(BuildContext context) async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
@@ -76,19 +75,12 @@ class _TransactionEditorSheetState
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: isDark
-                ? const ColorScheme.dark(
-                    primary: AppColors.accent,
-                    onPrimary: AppColors.textPrimaryLight,
-                    surface: AppColors.darkModal,
-                    onSurface: AppColors.textPrimaryDark,
-                  )
-                : const ColorScheme.light(
-                    primary: AppColors.accentPressed,
-                    onPrimary: Colors.white,
-                    surface: AppColors.lightModal,
-                    onSurface: AppColors.textPrimaryLight,
-                  ),
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.accent,
+              onPrimary: AppColors.textPrimaryLight,
+              surface: AppColors.darkModal,
+              onSurface: AppColors.textPrimaryDark,
+            ),
           ),
           child: child!,
         );
@@ -102,26 +94,18 @@ class _TransactionEditorSheetState
   }
 
   Future<void> _selectTime(BuildContext context) async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: _selectedTime,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: isDark
-                ? const ColorScheme.dark(
-                    primary: AppColors.accent,
-                    onPrimary: AppColors.textPrimaryLight,
-                    surface: AppColors.darkModal,
-                    onSurface: AppColors.textPrimaryDark,
-                  )
-                : const ColorScheme.light(
-                    primary: AppColors.accentPressed,
-                    onPrimary: Colors.white,
-                    surface: AppColors.lightModal,
-                    onSurface: AppColors.textPrimaryLight,
-                  ),
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.accent,
+              onPrimary: AppColors.textPrimaryLight,
+              surface: AppColors.darkModal,
+              onSurface: AppColors.textPrimaryDark,
+            ),
           ),
           child: child!,
         );

@@ -100,6 +100,16 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.darkBg,
       primaryColor: AppColors.accent,
       cardColor: AppColors.darkCard,
+      colorScheme: const ColorScheme.dark(
+        primary: AppColors.accent,
+        onPrimary: AppColors.textPrimaryLight,
+        secondary: AppColors.darkAccent,
+        onSecondary: Colors.white,
+        surface: AppColors.darkSurface,
+        onSurface: AppColors.textPrimaryDark,
+        error: AppColors.danger,
+        onError: Colors.white,
+      ),
       textTheme: const TextTheme(
         headlineLarge: TextStyle(
           fontSize: 42,
@@ -175,6 +185,44 @@ class AppTheme {
           ),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.accent,
+          foregroundColor: AppColors.textPrimaryLight,
+          minimumSize: const Size(double.infinity, 50),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusButton),
+          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          elevation: 0,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.textSecondaryDark,
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: AppColors.accent,
+        foregroundColor: AppColors.textPrimaryLight,
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusPill),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusButton),
+        ),
+        elevation: 6,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.accent,
+        refreshBackgroundColor: AppColors.darkElevated,
       ),
       cardTheme: CardThemeData(
         color: AppColors.darkCard,
@@ -311,11 +359,35 @@ class AppTheme {
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.accent,
+          foregroundColor: AppColors.textPrimaryLight,
+          minimumSize: const Size(double.infinity, 50),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusButton),
+          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          elevation: 0,
+        ),
+      ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.textSecondaryLight,
           textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusButton),
+        ),
+        elevation: 6,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.accent,
+        refreshBackgroundColor: Colors.white,
       ),
       cardTheme: CardThemeData(
         color: AppColors.lightCard,

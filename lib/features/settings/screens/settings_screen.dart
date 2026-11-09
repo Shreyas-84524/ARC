@@ -1,3 +1,4 @@
+import 'package:arc/core/utilities/responsive_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:arc/core/services/app_haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,14 +11,10 @@ import 'package:arc/providers/global_providers.dart';
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
 import 'package:arc/features/user_management/models/user_profile.dart';
 import 'package:arc/features/user_management/services/auth_service.dart';
-import 'package:arc/features/user_management/models/auth_exception.dart';
 import 'package:arc/features/user_management/views/widgets/google_logo.dart';
 import 'package:arc/core/services/hive_service.dart';
 import 'package:arc/core/notifications/notification_controller.dart';
 import 'package:arc/core/notifications/notification_models.dart';
-import 'package:arc/features/money_tracker/models/money_automation_listener_status.dart';
-import 'package:arc/features/money_tracker/providers/money_automation_provider.dart';
-import 'package:arc/features/money_tracker/widgets/automatic_spending_info_dialog.dart';
 import 'package:arc/features/settings/widgets/edit_display_name_dialog.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -80,253 +77,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     super.dispose();
   }
 
-  Future<void> _showAddPasswordDialog(String email) async {
-    final formKey = GlobalKey<FormState>();
-    final newPasswordController = TextEditingController();
-    final confirmPasswordController = TextEditingController();
-    bool obscureNew = true;
-    bool obscureConfirm = true;
-    bool isSubmitting = false;
-    String? localError;
-
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: !isSubmitting,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (sbContext, setDialogState) {
-            final theme = Theme.of(sbContext);
-            final isDark = theme.brightness == Brightness.dark;
-
-            return AlertDialog(
-              backgroundColor: isDark
-                  ? AppColors.darkModal
-                  : AppColors.lightModal,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-              ),
-              title: Row(
-                children: [
-                  const Icon(
-                    LucideIcons.keyRound,
-                    color: AppColors.accent,
-                    size: 22,
-                  ),
-                  const SizedBox(width: 10),
-                  const Text('Add ARC Password'),
-                ],
-              ),
-              content: SingleChildScrollView(
-                child: SizedBox(
-                  width: 400,
-                  child: Form(
-                    key: formKey,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          'Adding an ARC password gives you another way to sign in. Your Google Sign-In will continue working normally.',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        if (localError != null) ...[
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.errorContainer,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              localError!,
-                              style: TextStyle(
-                                color: theme.colorScheme.onErrorContainer,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-                        // Verified Google Email (Read-Only)
-                        TextFormField(
-                          initialValue: email,
-                          enabled: false,
-                          style: TextStyle(
-                            color: isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimaryLight,
-                          ),
-                          decoration: InputDecoration(
-                            labelText: 'Verified Email',
-                            labelStyle: TextStyle(
-                              color: isDark
-                                  ? AppColors.textSecondaryDark
-                                  : AppColors.textSecondaryLight,
-                            ),
-                            prefixIcon: const Icon(LucideIcons.mail),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        // New Password
-                        TextFormField(
-                          controller: newPasswordController,
-                          obscureText: obscureNew,
-                          enabled: !isSubmitting,
-                          style: TextStyle(
-                            color: isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimaryLight,
-                          ),
-                          decoration: InputDecoration(
-                            labelText: 'New Password',
-                            labelStyle: TextStyle(
-                              color: isDark
-                                  ? AppColors.textSecondaryDark
-                                  : AppColors.textSecondaryLight,
-                            ),
-                            prefixIcon: const Icon(LucideIcons.lock),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                obscureNew
-                                    ? LucideIcons.eyeOff
-                                    : LucideIcons.eye,
-                              ),
-                              onPressed: () => setDialogState(
-                                () => obscureNew = !obscureNew,
-                              ),
-                            ),
-                          ),
-                          validator: (v) {
-                            if (v == null || v.isEmpty) {
-                              return 'Please enter a password';
-                            }
-                            if (v.length < 6) {
-                              return 'Password must be at least 6 characters';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        // Confirm Password
-                        TextFormField(
-                          controller: confirmPasswordController,
-                          obscureText: obscureConfirm,
-                          enabled: !isSubmitting,
-                          style: TextStyle(
-                            color: isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimaryLight,
-                          ),
-                          decoration: InputDecoration(
-                            labelText: 'Confirm Password',
-                            labelStyle: TextStyle(
-                              color: isDark
-                                  ? AppColors.textSecondaryDark
-                                  : AppColors.textSecondaryLight,
-                            ),
-                            prefixIcon: const Icon(LucideIcons.checkCheck),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                obscureConfirm
-                                    ? LucideIcons.eyeOff
-                                    : LucideIcons.eye,
-                              ),
-                              onPressed: () => setDialogState(
-                                () => obscureConfirm = !obscureConfirm,
-                              ),
-                            ),
-                          ),
-                          validator: (v) {
-                            if (v != newPasswordController.text) {
-                              return 'Passwords do not match';
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isSubmitting
-                      ? null
-                      : () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    foregroundColor: Colors.black,
-                  ),
-                  onPressed: isSubmitting
-                      ? null
-                      : () async {
-                          if (!formKey.currentState!.validate()) return;
-                          setDialogState(() {
-                            isSubmitting = true;
-                            localError = null;
-                          });
-
-                          try {
-                            await _authService.linkPassword(
-                              newPassword: newPasswordController.text,
-                            );
-                            if (dialogContext.mounted) {
-                              Navigator.of(dialogContext).pop();
-                            }
-                            if (mounted) {
-                              setState(() {});
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text(
-                                    'ARC Password added successfully! You can now log in with either Google or your email and password.',
-                                  ),
-                                  backgroundColor: Theme.of(
-                                    context,
-                                  ).colorScheme.primary,
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            setDialogState(() {
-                              isSubmitting = false;
-                              localError = e is AuthException
-                                  ? e.message
-                                  : e.toString();
-                            });
-                          }
-                        },
-                  child: isSubmitting
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.black,
-                          ),
-                        )
-                      : const Text(
-                          'Add Password',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    newPasswordController.dispose();
-    confirmPasswordController.dispose();
-  }
 
   Future<void> _handleChangePassword() async {
     if (!_changePasswordFormKey.currentState!.validate()) return;
@@ -613,9 +363,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ref.invalidate(habitEntriesProvider);
       ref.invalidate(moneyProvider);
       ref.invalidate(monthlyBudgetProvider);
-      ref.read(moneyAutomationProvider.notifier).onLogout();
-      ref.invalidate(moneyAutomationProvider);
-      ref.invalidate(moneyAutomationRepositoryProvider);
       ref.invalidate(appSettingsProvider);
       ref.invalidate(taskRepositoryProvider);
       ref.invalidate(habitRepositoryProvider);
@@ -640,89 +387,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  Future<void> _confirmClearCache() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear Local Cache'),
-        content: const Text(
-          'This will clean temporary cache files from local storage. Your saved data will remain intact.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white70
-                    : AppColors.textSecondaryLight,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.warning,
-              foregroundColor: Colors.black,
-            ),
-            onPressed: () {
-              AppHaptics.mediumImpact();
-              Navigator.of(context).pop(true);
-            },
-            child: const Text('Clear Cache'),
-          ),
-        ],
-      ),
-    );
 
-    if (confirm == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Local database cache cleared.')),
-      );
-    }
-  }
-
-  Future<void> _confirmResetData() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reset Application Data'),
-        content: const Text(
-          'CAUTION: This action will reset local settings and offline cache. Cloud backup on Firestore will not be deleted.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white70
-                    : AppColors.textSecondaryLight,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              AppHaptics.heavyImpact();
-              Navigator.of(context).pop(true);
-            },
-            child: const Text('Reset Data'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Application data reset.')));
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -733,7 +398,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final appSettings = ref.watch(appSettingsProvider);
     final notificationHealth = ref.watch(notificationControllerProvider);
     final userContext = ref.watch(userContextProvider);
-    final automationState = ref.watch(moneyAutomationProvider);
     final currentUsername =
         userContext.profile?.displayName ??
         userContext.profile?.username ??
@@ -760,7 +424,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: EdgeInsets.symmetric(
+          horizontal: ResponsiveLayout.horizontalPadding(context),
+          vertical: 16,
+        ),
         children: [
           // ==========================================
           // 1. ACCOUNT & CHANGE PASSWORD (START OF SETTINGS)
@@ -858,43 +525,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     ? AppColors.textMutedDark
                                     : AppColors.textMutedLight,
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            InkWell(
-                              key: const Key('edit_display_name_text_button'),
-                              onTap: () {
-                                final profile =
-                                    userContext.profile ??
-                                    UserProfile(
-                                      id: userContext.userId ?? '',
-                                      username: currentUsername,
-                                      displayName: currentUsername,
-                                      email: userEmail,
-                                      createdAt: DateTime.now(),
-                                    );
-                                showDialog(
-                                  context: context,
-                                  builder: (dialogCtx) => EditDisplayNameDialog(
-                                    currentProfile: profile,
-                                    authService: _authService,
-                                  ),
-                                );
-                              },
-                              borderRadius: BorderRadius.circular(4),
-                              child: Text(
-                                'Edit Display Name',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark
-                                      ? AppColors.accent
-                                      : AppColors.darkAccent,
-                                  decoration: TextDecoration.underline,
-                                  decorationColor: isDark
-                                      ? AppColors.accent
-                                      : AppColors.darkAccent,
-                                ),
-                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -945,86 +577,67 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
                   const Divider(height: 28),
 
-                  // Sign-in Method Section
-                  Text(
-                    'Sign-in Method',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Google Row (Only shown if signed in with Google)
-                  if (hasGoogle)
-                    Row(
-                      children: [
-                        const GoogleLogo(size: 18),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Google',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: isDark
-                                  ? AppColors.textPrimaryDark
-                                  : AppColors.textPrimaryLight,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                  if (hasGoogle && hasPassword) const SizedBox(height: 10),
-
-                  // Email & Password Row (Only shown if signed in with Email & Password)
-                  if (hasPassword)
-                    Row(
-                      children: [
-                        const Icon(
-                          LucideIcons.mail,
-                          size: 18,
-                          color: AppColors.accent,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Email & Password',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: isDark
-                                  ? AppColors.textPrimaryDark
-                                  : AppColors.textPrimaryLight,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                  // Optional Add ARC Password button (Requirement 4 & 5)
-                  if (!hasPassword) ...[
-                    const SizedBox(height: 14),
-                    SizedBox(
-                      height: 42,
-                      child: OutlinedButton.icon(
-                        onPressed: () => _showAddPasswordDialog(userEmail),
-                        icon: const Icon(LucideIcons.plusCircle, size: 16),
-                        label: const Text(
-                          'Add ARC Password',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.accent,
-                          side: const BorderSide(color: AppColors.accent),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.radiusButton,
-                            ),
-                          ),
+                  // Sign-in Method Row (Sign-in Method on left, provider on right)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Sign-in Method',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                  ],
-
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (hasGoogle) ...[
+                            const GoogleLogo(size: 18),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Google',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimaryLight,
+                              ),
+                            ),
+                          ],
+                          if (hasGoogle && hasPassword)
+                            const SizedBox(width: 12),
+                          if (hasPassword) ...[
+                            const Icon(
+                              LucideIcons.mail,
+                              size: 18,
+                              color: AppColors.accent,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Email & Password',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimaryLight,
+                              ),
+                            ),
+                          ],
+                          if (!hasGoogle && !hasPassword) ...[
+                            Text(
+                              userContext.profile?.authProvider ?? 'Unknown',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimaryLight,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                   if (_isPasswordSectionExpanded) ...[
                     const Divider(height: 28),
                     Form(
@@ -1473,89 +1086,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const SizedBox(height: 20),
 
-          // 4. Money Tracker Section
-          Text(
-            'Money Tracker',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            child: Column(
-              children: [
-                SwitchListTile(
-                  secondary: const Icon(
-                    LucideIcons.sparkles,
-                    color: AppColors.accent,
-                  ),
-                  title: const Text(
-                    'Automatic Spending Tracking',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    automationState.isEnabled
-                        ? 'Status: ${automationState.listenerStatus.label}'
-                        : 'Automatically detect confirmed spending transactions',
-                  ),
-                  value: automationState.isEnabled,
-                  activeThumbColor: AppColors.accent,
-                  onChanged: (val) async {
-                    AppHaptics.lightImpact();
-                    if (val) {
-                      final confirmed = await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => const AutomaticSpendingInfoDialog(),
-                      );
-                      if (confirmed == true) {
-                        await ref
-                            .read(moneyAutomationProvider.notifier)
-                            .enableAutomation();
-                      }
-                    } else {
-                      await ref
-                          .read(moneyAutomationProvider.notifier)
-                          .disableAutomation();
-                    }
-                  },
-                ),
-                if (automationState.listenerStatus ==
-                    MoneyAutomationListenerStatus.permissionRequired) ...[
-                  const Divider(height: 1, indent: 56),
-                  ListTile(
-                    leading: const Icon(
-                      LucideIcons.alertCircle,
-                      color: AppColors.warning,
-                    ),
-                    title: const Text(
-                      'Android Permission Required',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: const Text(
-                      'Tap to grant SMS permission or open Settings',
-                    ),
-                    trailing: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.warning,
-                        foregroundColor: Colors.black,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      onPressed: () {
-                        AppHaptics.mediumImpact();
-                        ref
-                            .read(moneyAutomationProvider.notifier)
-                            .requestPermissionAgain();
-                      },
-                      child: const Text('Enable Access'),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
           // 5. Help & Feedback
           Text(
             'Help & Feedback',
@@ -1655,47 +1185,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
 
-          const SizedBox(height: 20),
 
-          // 6. Backup & Maintenance
-          Text(
-            'Backup & Maintenance',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(
-                    LucideIcons.hardDrive,
-                    color: AppColors.accent,
-                  ),
-                  title: const Text(
-                    'Clear Local Cache',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: const Text('Clean cached temporary indexes'),
-                  onTap: _confirmClearCache,
-                ),
-                const Divider(height: 1, indent: 56),
-                ListTile(
-                  leading: const Icon(
-                    LucideIcons.alertTriangle,
-                    color: AppColors.danger,
-                  ),
-                  title: const Text(
-                    'Reset Local Data',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: const Text('Reset local storage cache'),
-                  onTap: _confirmResetData,
-                ),
-              ],
-            ),
-          ),
 
           Card(
             color: isDark ? AppColors.darkCard : AppColors.lightCard,
@@ -1776,7 +1266,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Column(
               children: [
                 Text(
-                  'Project Arc',
+                  'ARC',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: isDark

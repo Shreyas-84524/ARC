@@ -15,12 +15,12 @@ class BugReportPayload {
   final String? contactEmail;
 
   const BugReportPayload({
-    required this.module,
-    required this.title,
+    this.module = 'general',
+    this.title = '',
     required this.description,
-    required this.stepsToReproduce,
-    required this.expectedBehavior,
-    required this.actualBehavior,
+    this.stepsToReproduce = '',
+    this.expectedBehavior = '',
+    this.actualBehavior = '',
     this.contactEmail,
   });
 
@@ -28,24 +28,32 @@ class BugReportPayload {
   String toSerializedMessage() {
     final buffer = StringBuffer();
 
-    buffer.writeln('[ISSUE TITLE]');
-    buffer.writeln(title.trim());
-    buffer.writeln();
+    if (title.trim().isNotEmpty) {
+      buffer.writeln('[ISSUE TITLE]');
+      buffer.writeln(title.trim());
+      buffer.writeln();
+    }
 
     buffer.writeln('[PROBLEM DESCRIPTION]');
     buffer.writeln(description.trim());
-    buffer.writeln();
 
-    buffer.writeln('[STEPS TO REPRODUCE]');
-    buffer.writeln(stepsToReproduce.trim());
-    buffer.writeln();
+    if (stepsToReproduce.trim().isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln('[STEPS TO REPRODUCE]');
+      buffer.writeln(stepsToReproduce.trim());
+    }
 
-    buffer.writeln('[EXPECTED BEHAVIOR]');
-    buffer.writeln(expectedBehavior.trim());
-    buffer.writeln();
+    if (expectedBehavior.trim().isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln('[EXPECTED BEHAVIOR]');
+      buffer.writeln(expectedBehavior.trim());
+    }
 
-    buffer.writeln('[ACTUAL BEHAVIOR]');
-    buffer.writeln(actualBehavior.trim());
+    if (actualBehavior.trim().isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln('[ACTUAL BEHAVIOR]');
+      buffer.writeln(actualBehavior.trim());
+    }
 
     return buffer.toString().trim();
   }
@@ -55,9 +63,9 @@ class BugReportPayload {
     return {
       'title': title,
       'description': description,
-      'stepsToReproduce': stepsToReproduce,
-      'expectedBehavior': expectedBehavior,
-      'actualBehavior': actualBehavior,
+      if (stepsToReproduce.isNotEmpty) 'stepsToReproduce': stepsToReproduce,
+      if (expectedBehavior.isNotEmpty) 'expectedBehavior': expectedBehavior,
+      if (actualBehavior.isNotEmpty) 'actualBehavior': actualBehavior,
     };
   }
 
@@ -87,15 +95,6 @@ class BugReportPayload {
     }
     if (description.trim().length < 10) {
       return 'Please provide at least 10 characters describing the problem.';
-    }
-    if (stepsToReproduce.trim().isEmpty) {
-      return 'Please provide steps to reproduce the issue.';
-    }
-    if (expectedBehavior.trim().isEmpty) {
-      return 'Please describe what you expected to happen.';
-    }
-    if (actualBehavior.trim().isEmpty) {
-      return 'Please describe what actually happened.';
     }
     final serialized = toSerializedMessage();
     if (serialized.length > 5000) {

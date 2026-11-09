@@ -56,6 +56,12 @@ class DashboardScreen extends ConsumerWidget {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+        ),
+        elevation: 6,
         dismissDirection: DismissDirection.down,
         duration: const Duration(seconds: 5),
         persist: false,
@@ -69,12 +75,15 @@ class DashboardScreen extends ConsumerWidget {
               color: Colors.black,
               size: 20,
             ),
-            const SizedBox(width: 8),
-            Text(
-              wasCompleted ? 'Task Marked Incomplete' : 'Task Completed',
-              style: const TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                wasCompleted ? 'Task Marked Incomplete' : 'Task Completed',
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
             ),
           ],
@@ -218,6 +227,8 @@ class DashboardScreen extends ConsumerWidget {
     return Scaffold(
       appBar: const CustomTopBar(title: 'Dashboard'),
       body: RefreshIndicator(
+        color: AppColors.accent,
+        backgroundColor: isDark ? AppColors.darkElevated : Colors.white,
         onRefresh: () async {
           await ref.read(syncServiceProvider).syncAllPending();
         },

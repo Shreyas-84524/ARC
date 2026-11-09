@@ -16,10 +16,9 @@ import 'package:arc/features/money_tracker/widgets/transaction_details_sheet.dar
 import 'package:arc/core/widgets/empty_state.dart';
 import 'package:arc/core/widgets/premium_segmented_control.dart';
 import 'package:arc/providers/global_providers.dart';
-import 'package:arc/features/money_tracker/providers/money_automation_provider.dart';
-import 'package:arc/features/money_tracker/widgets/automatic_spending_prompt_card.dart';
-import 'package:arc/features/money_tracker/widgets/automatic_spending_info_dialog.dart';
 import 'package:arc/features/money_tracker/widgets/money_tracker_settings_sheet.dart';
+import 'package:arc/features/money_tracker/widgets/money_tracker_onboarding_sheet.dart';
+import 'package:arc/features/money_tracker/providers/money_settings_provider.dart';
 
 class MoneyScreen extends ConsumerStatefulWidget {
   const MoneyScreen({super.key});
@@ -51,22 +50,15 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen>
     _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        ref.read(moneyAutomationProvider.notifier).resetVisitState();
-        ref.read(moneyAutomationProvider.notifier).checkListenerHealth();
-        _checkAndRecordPromptAppearance();
+        _checkFirstTimeOnboarding();
       }
     });
   }
 
-  void _checkAndRecordPromptAppearance() {
-    final state = ref.read(moneyAutomationProvider);
-    final budget = ref.read(monthlyBudgetProvider);
-    final month = ref.read(currentMonthProvider);
-    if (state.shouldShowPrompt(
-      hasMonthlyBudget: budget > 0,
-      currentMonth: month,
-    )) {
-      ref.read(moneyAutomationProvider.notifier).markPromptShown(month);
+  void _checkFirstTimeOnboarding() {
+    final moneyRepo = ref.read(moneyRepositoryProvider);
+    if (!moneyRepo.hasCompletedMoneyOnboarding()) {
+      MoneyTrackerOnboardingSheet.show(context);
     }
   }
 
@@ -99,45 +91,183 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen>
     double currentBudget,
   ) async {
     final controller = TextEditingController(
-      text: currentBudget > 0 ? currentBudget.toString() : '',
+      text: currentBudget > 0
+          ? (currentBudget.truncateToDouble() == currentBudget
+              ? currentBudget.toInt().toString()
+              : currentBudget.toString())
+          : '',
     );
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Set Monthly Budget'),
-        content: TextField(
-          controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            hintText: 'Enter monthly budget amount...',
-            prefixText: '${CurrencyFormatter.symbol} ',
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+          side: BorderSide(
+            color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white70
-                    : AppColors.textSecondaryLight,
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+        contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.accent.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                LucideIcons.wallet,
+                color: AppColors.accent,
+                size: 22,
               ),
             ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final double? amount = double.tryParse(controller.text.trim());
-              if (amount != null && amount >= 0) {
-                AppHaptics.mediumImpact();
-                ref.read(monthlyBudgetProvider.notifier).setBudget(amount);
-                _checkAndRecordPromptAppearance();
-                Navigator.of(context).pop();
-              }
-            },
-            child: const Text('Set'),
-          ),
-        ],
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Set Monthly Budget',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Target spending limit for this month',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: isDark
+                          ? AppColors.textMutedDark
+                          : AppColors.textMutedLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isDark
+                      ? AppColors.borderMedium
+                      : AppColors.borderMediumLight,
+                ),
+              ),
+              child: TextField(
+                controller: controller,
+                autofocus: true,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
+                ),
+                decoration: InputDecoration(
+                  hintText: '0',
+                  hintStyle: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.normal,
+                    color: isDark
+                        ? AppColors.textPlaceholderDark
+                        : AppColors.textPlaceholderLight,
+                  ),
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.only(left: 16, right: 8),
+                    child: Center(
+                      widthFactor: 0.0,
+                      child: Text(
+                        CurrencyFormatter.symbol,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.accent,
+                        ),
+                      ),
+                    ),
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                        side: BorderSide(
+                          color: isDark
+                              ? AppColors.borderMedium
+                              : AppColors.borderMediumLight,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () => Navigator.of(dialogCtx).pop(),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: Colors.black,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        final double? amount = double.tryParse(controller.text.trim());
+                        if (amount != null && amount >= 0) {
+                          AppHaptics.mediumImpact();
+                          ref.read(monthlyBudgetProvider.notifier).setBudget(amount);
+                          Navigator.of(dialogCtx).pop();
+                        }
+                      },
+                      child: const Text(
+                        'Save Budget',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -189,6 +319,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen>
     final transactions = ref.watch(moneyProvider);
     final monthlyBudget = ref.watch(monthlyBudgetProvider);
     final currentMonthStr = ref.watch(currentMonthProvider);
+    final addIncomeToBudget = ref.watch(addIncomeToBudgetProvider);
 
     // Filter current month transactions
     final currentMonthTransactions = transactions.where((tx) {
@@ -202,7 +333,6 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen>
     double totalIncome = 0.0;
     double totalExpenses = 0.0;
     Map<String, double> categoryExpenses = {};
-    Map<int, double> dailySpending = {};
 
     for (final tx in currentMonthTransactions) {
       if (tx.type == 'Income') {
@@ -212,26 +342,19 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen>
         // Category breakdown
         categoryExpenses[tx.category] =
             (categoryExpenses[tx.category] ?? 0.0) + tx.amount;
-        // Daily breakdown
-        final day = tx.date.day;
-        dailySpending[day] = (dailySpending[day] ?? 0.0) + tx.amount;
       }
     }
 
+    final double effectiveBudget = addIncomeToBudget
+        ? (monthlyBudget + totalIncome)
+        : monthlyBudget;
     final double savings = totalIncome - totalExpenses;
-    final double remainingBudget = monthlyBudget - totalExpenses;
+    final double remainingBudget = effectiveBudget - totalExpenses;
 
     // Savings Progress calculations
     final double savingsRate = totalIncome > 0
         ? (savings / totalIncome).clamp(0.0, 1.0)
         : 0.0;
-
-    final automationState = ref.watch(moneyAutomationProvider);
-    final hasMonthlyBudget = monthlyBudget > 0.0;
-    final bool showAutomationPrompt = automationState.shouldShowPrompt(
-      hasMonthlyBudget: hasMonthlyBudget,
-      currentMonth: currentMonthStr,
-    );
 
     return Scaffold(
       appBar: CustomTopBar(
@@ -258,6 +381,8 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen>
               children: [
                 // ------------------ TRANSACTIONS VIEW ------------------
                 RefreshIndicator(
+                  color: AppColors.accent,
+                  backgroundColor: isDark ? AppColors.darkElevated : Colors.white,
                   onRefresh: () async {
                     await ref.read(moneyProvider.notifier).syncTransactions();
                   },
@@ -270,29 +395,6 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Automatic Spending Tracking Prompt (shown above Monthly Budget when budget exists)
-                        if (showAutomationPrompt) ...[
-                          AutomaticSpendingPromptCard(
-                            onYes: () async {
-                              final confirmed = await showDialog<bool>(
-                                context: context,
-                                builder: (ctx) =>
-                                    const AutomaticSpendingInfoDialog(),
-                              );
-                              if (confirmed == true && context.mounted) {
-                                await ref
-                                    .read(moneyAutomationProvider.notifier)
-                                    .enableAutomation();
-                              }
-                            },
-                            onNo: () {
-                              ref
-                                  .read(moneyAutomationProvider.notifier)
-                                  .dismissPromptForSession();
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                        ],
 
                         // Set Budget Banner
                         if (monthlyBudget == 0.0)
@@ -405,9 +507,11 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen>
                                       Expanded(
                                         child: _buildBudgetStat(
                                           context,
-                                          label: 'Budget Limit',
+                                          label: addIncomeToBudget
+                                              ? (totalIncome > 0 ? 'Total Budget' : 'Budget Limit')
+                                              : 'Budget Limit',
                                           value: CurrencyFormatter.format(
-                                            monthlyBudget,
+                                            effectiveBudget,
                                           ),
                                         ),
                                       ),
@@ -476,13 +580,15 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen>
 
                 // ------------------ ANALYTICS VIEW ------------------
                 RefreshIndicator(
+                  color: AppColors.accent,
+                  backgroundColor: isDark ? AppColors.darkElevated : Colors.white,
                   onRefresh: () async {
                     await ref.read(moneyProvider.notifier).syncTransactions();
                   },
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: ResponsiveLayout.horizontalPadding(context),
                       vertical: 12,
                     ),
                     child: Column(
@@ -504,37 +610,21 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen>
                                 const SizedBox(height: 16),
                                 _buildSummaryRow(
                                   context,
-                                  'Monthly Budget Limit',
+                                  'Monthly Budget',
                                   monthlyBudget,
                                   isMuted: true,
                                 ),
                                 const SizedBox(height: 10),
                                 _buildSummaryRow(
                                   context,
-                                  'Total Monthly Income',
-                                  totalIncome,
-                                  color: AppColors.success,
-                                ),
-                                const SizedBox(height: 10),
-                                _buildSummaryRow(
-                                  context,
-                                  'Total Monthly Expenses',
+                                  'Total Monthly Expenses (-)',
                                   totalExpenses,
                                   color: AppColors.danger,
-                                ),
-                                const SizedBox(height: 10),
-                                _buildSummaryRow(
-                                  context,
-                                  'Savings (Income - Expense)',
-                                  savings,
-                                  color: savings >= 0
-                                      ? AppColors.accent
-                                      : AppColors.danger,
                                 ),
                                 const Divider(height: 24),
                                 _buildSummaryRow(
                                   context,
-                                  'Remaining Budget Balance',
+                                  'Remaining Balance',
                                   remainingBudget,
                                   color: remainingBudget >= 0
                                       ? AppColors.success
@@ -548,77 +638,153 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen>
 
                         const SizedBox(height: 24),
 
-                        // 2. Savings Progress Card (Ring)
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(20.0),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "Savings Rate",
-                                        style: theme.textTheme.titleSmall
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        savings >= 0
-                                            ? "You've saved ${savingsRate > 0 ? (savingsRate * 100).toInt() : 0}% of your total earnings this month."
-                                            : "You are spending more than your earnings this month.",
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                              color: isDark
-                                                  ? AppColors.textSecondaryDark
-                                                  : AppColors
-                                                        .textSecondaryLight,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 24),
-                                Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    SizedBox(
-                                      height: 72,
-                                      width: 72,
-                                      child: CircularProgressIndicator(
-                                        value: savingsRate,
-                                        strokeWidth: 7,
-                                        backgroundColor: isDark
-                                            ? AppColors.darkBgSecondary
-                                            : AppColors.lightBgSecondary,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                              savings >= 0
-                                                  ? AppColors.accent
-                                                  : AppColors.danger,
-                                            ),
-                                      ),
+                        // 2. Savings Progress / Budget Consumption Card (Ring)
+                        if (addIncomeToBudget)
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(20.0),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Savings Rate",
+                                          style: theme.textTheme.titleSmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          savings >= 0
+                                              ? "You've saved ${savingsRate > 0 ? (savingsRate * 100).toInt() : 0}% of your total earnings this month."
+                                              : "You are spending more than your earnings this month.",
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                color: isDark
+                                                    ? AppColors.textSecondaryDark
+                                                    : AppColors
+                                                          .textSecondaryLight,
+                                              ),
+                                        ),
+                                      ],
                                     ),
-                                    Text(
-                                      "${(savingsRate * 100).toInt()}%",
-                                      style: theme.textTheme.bodyMedium
+                                  ),
+                                  const SizedBox(width: 24),
+                                  Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      SizedBox(
+                                        height: 72,
+                                        width: 72,
+                                        child: CircularProgressIndicator(
+                                          value: savingsRate,
+                                          strokeWidth: 7,
+                                          backgroundColor: isDark
+                                              ? AppColors.darkBgSecondary
+                                              : AppColors.lightBgSecondary,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                savings >= 0
+                                                    ? AppColors.accent
+                                                    : AppColors.danger,
+                                              ),
+                                        ),
+                                      ),
+                                      Text(
+                                        "${(savingsRate * 100).toInt()}%",
+                                        style: theme.textTheme.bodyMedium
                                           ?.copyWith(
                                             fontWeight: FontWeight.bold,
                                             color: isDark
                                                 ? AppColors.textPrimaryDark
                                                 : AppColors.textPrimaryLight,
                                           ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ).animate().fade(delay: 100.ms, duration: 250.ms),
+                          ).animate().fade(delay: 100.ms, duration: 250.ms)
+                        else
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(20.0),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Budget Consumption",
+                                          style: theme.textTheme.titleSmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          monthlyBudget > 0
+                                              ? "You have used ${((totalExpenses / monthlyBudget) * 100).clamp(0, 999).round()}% of your monthly budget limit."
+                                              : "Set a monthly budget to track consumption rate.",
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                color: isDark
+                                                    ? AppColors.textSecondaryDark
+                                                    : AppColors
+                                                          .textSecondaryLight,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 24),
+                                  Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      SizedBox(
+                                        height: 72,
+                                        width: 72,
+                                        child: CircularProgressIndicator(
+                                          value: monthlyBudget > 0
+                                              ? (totalExpenses / monthlyBudget).clamp(0.0, 1.0)
+                                              : 0.0,
+                                          strokeWidth: 7,
+                                          backgroundColor: isDark
+                                              ? AppColors.darkBgSecondary
+                                              : AppColors.lightBgSecondary,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                totalExpenses > monthlyBudget && monthlyBudget > 0
+                                                    ? AppColors.danger
+                                                    : AppColors.accent,
+                                              ),
+                                        ),
+                                      ),
+                                      Text(
+                                        monthlyBudget > 0
+                                            ? "${((totalExpenses / monthlyBudget) * 100).clamp(0, 999).round()}%"
+                                            : "0%",
+                                        style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: isDark
+                                                ? AppColors.textPrimaryDark
+                                                : AppColors.textPrimaryLight,
+                                          ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ).animate().fade(delay: 100.ms, duration: 250.ms),
 
                         const SizedBox(height: 24),
 
@@ -630,7 +796,9 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "Income vs Expense Compare",
+                                  addIncomeToBudget
+                                      ? "Income vs Expense Compare"
+                                      : "Budget vs Expense Compare",
                                   style: theme.textTheme.titleSmall?.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -641,9 +809,13 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen>
                                   child: BarChart(
                                     BarChartData(
                                       alignment: BarChartAlignment.spaceEvenly,
-                                      maxY: totalIncome > totalExpenses
-                                          ? (totalIncome * 1.2 + 10)
-                                          : (totalExpenses * 1.2 + 10),
+                                      maxY: addIncomeToBudget
+                                          ? (totalIncome > totalExpenses
+                                              ? (totalIncome * 1.2 + 10)
+                                              : (totalExpenses * 1.2 + 10))
+                                          : (monthlyBudget > totalExpenses
+                                              ? (monthlyBudget * 1.2 + 10)
+                                              : (totalExpenses * 1.2 + 10)),
                                       barTouchData: BarTouchData(enabled: true),
                                       titlesData: FlTitlesData(
                                         show: true,
@@ -667,9 +839,9 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen>
                                             showTitles: true,
                                             getTitlesWidget: (value, meta) {
                                               if (value == 0) {
-                                                return const Text(
-                                                  'Income',
-                                                  style: TextStyle(
+                                                return Text(
+                                                  addIncomeToBudget ? 'Income' : 'Budget',
+                                                  style: const TextStyle(
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: 12,
                                                   ),
@@ -696,8 +868,8 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen>
                                           x: 0,
                                           barRods: [
                                             BarChartRodData(
-                                              toY: totalIncome,
-                                              color: AppColors.success,
+                                              toY: addIncomeToBudget ? totalIncome : monthlyBudget,
+                                              color: addIncomeToBudget ? AppColors.success : AppColors.accent,
                                               width: 32,
                                               borderRadius:
                                                   const BorderRadius.vertical(
@@ -736,25 +908,25 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen>
                         // 4. Monthly Budget Based Spending Donut Chart
                         Builder(
                           builder: (context) {
-                            final double effectiveBudget = monthlyBudget > 0
-                                ? monthlyBudget
+                            final double effectiveBudgetLimit = effectiveBudget > 0
+                                ? effectiveBudget
                                 : (totalExpenses > 0 ? totalExpenses : 1.0);
                             final double remainingUnspentAmount =
-                                (monthlyBudget - totalExpenses).clamp(
+                                (effectiveBudget - totalExpenses).clamp(
                                   0.0,
-                                  effectiveBudget,
+                                  effectiveBudgetLimit,
                                 );
                             final double remainingPct =
-                                (remainingUnspentAmount / effectiveBudget) *
+                                (remainingUnspentAmount / effectiveBudgetLimit) *
                                 100.0;
                             final bool isOverBudget =
-                                monthlyBudget > 0 &&
-                                totalExpenses > monthlyBudget;
+                                effectiveBudget > 0 &&
+                                totalExpenses > effectiveBudget;
                             final double excessAmount = isOverBudget
-                                ? totalExpenses - monthlyBudget
+                                ? totalExpenses - effectiveBudget
                                 : 0.0;
-                            final int budgetUsedPct = monthlyBudget > 0
-                                ? ((totalExpenses / monthlyBudget) * 100.0)
+                            final int budgetUsedPct = effectiveBudget > 0
+                                ? ((totalExpenses / effectiveBudget) * 100.0)
                                       .round()
                                 : 100;
 
@@ -804,10 +976,10 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen>
 
                                 final double sliceValue = isOverBudget
                                     ? (catAmount / totalExpenses) *
-                                          effectiveBudget
+                                          effectiveBudgetLimit
                                     : catAmount;
                                 final double catPct =
-                                    (catAmount / effectiveBudget) * 100.0;
+                                    (catAmount / effectiveBudgetLimit) * 100.0;
 
                                 donutSections.add(
                                   PieChartSectionData(
@@ -942,7 +1114,7 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen>
                                                 _redPalette[index %
                                                     _redPalette.length];
                                             final pct =
-                                                (val / effectiveBudget) * 100.0;
+                                                (val / effectiveBudgetLimit) * 100.0;
                                             return Row(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
@@ -1034,119 +1206,6 @@ class _MoneyScreenState extends ConsumerState<MoneyScreen>
 
                         const SizedBox(height: 24),
 
-                        // 5. Monthly Spending Trend Line Chart
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(20.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Monthly Spending Trend",
-                                  style: theme.textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 24),
-
-                                SizedBox(
-                                  height: 160,
-                                  child: currentMonthTransactions.isEmpty
-                                      ? Center(
-                                          child: Text(
-                                            "No transactions this month",
-                                            style: theme.textTheme.bodyMedium
-                                                ?.copyWith(
-                                                  color: isDark
-                                                      ? AppColors.textMutedDark
-                                                      : AppColors
-                                                            .textMutedLight,
-                                                ),
-                                          ),
-                                        )
-                                      : LineChart(
-                                          LineChartData(
-                                            lineTouchData: const LineTouchData(
-                                              enabled: true,
-                                            ),
-                                            gridData: const FlGridData(
-                                              show: false,
-                                            ),
-                                            titlesData: FlTitlesData(
-                                              show: true,
-                                              leftTitles: const AxisTitles(
-                                                sideTitles: SideTitles(
-                                                  showTitles: false,
-                                                ),
-                                              ),
-                                              topTitles: const AxisTitles(
-                                                sideTitles: SideTitles(
-                                                  showTitles: false,
-                                                ),
-                                              ),
-                                              rightTitles: const AxisTitles(
-                                                sideTitles: SideTitles(
-                                                  showTitles: false,
-                                                ),
-                                              ),
-                                              bottomTitles: AxisTitles(
-                                                sideTitles: SideTitles(
-                                                  showTitles: true,
-                                                  interval: 5,
-                                                  getTitlesWidget:
-                                                      (value, meta) {
-                                                        return Text(
-                                                          '${value.toInt()}',
-                                                          style:
-                                                              const TextStyle(
-                                                                fontSize: 10,
-                                                              ),
-                                                        );
-                                                      },
-                                                ),
-                                              ),
-                                            ),
-                                            borderData: FlBorderData(
-                                              show: false,
-                                            ),
-                                            lineBarsData: [
-                                              LineChartBarData(
-                                                spots: List.generate(31, (
-                                                  index,
-                                                ) {
-                                                  final day = index + 1;
-                                                  final val =
-                                                      dailySpending[day] ?? 0.0;
-                                                  return FlSpot(
-                                                    day.toDouble(),
-                                                    val,
-                                                  );
-                                                }),
-                                                isCurved: true,
-                                                color: AppColors.accent,
-                                                barWidth: 3,
-                                                isStrokeCapRound: true,
-                                                dotData: const FlDotData(
-                                                  show: false,
-                                                ),
-                                                belowBarData: BarAreaData(
-                                                  show: true,
-                                                  color: AppColors.accent
-                                                      .withValues(alpha: 0.1),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          duration: const Duration(
-                                            milliseconds: 300,
-                                          ),
-                                          curve: Curves.easeInOut,
-                                        ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ).animate().fade(delay: 250.ms, duration: 250.ms),
                         const SizedBox(height: 80),
                       ],
                     ),

@@ -42,7 +42,7 @@ class SettingsNotifier extends StateNotifier<SettingsModel> {
   }
 
   Future<void> updateThemeMode(bool isDarkMode) async {
-    final updated = state.copyWith(isDarkMode: isDarkMode);
+    final updated = state.copyWith(isDarkMode: true);
     state = updated;
     await _repository.saveSettings(updated);
   }
@@ -54,7 +54,11 @@ class SettingsNotifier extends StateNotifier<SettingsModel> {
   }
 
   Future<void> updateMasterNotifications(bool enabled) async {
-    final updated = state.copyWith(masterNotificationsEnabled: enabled);
+    final updated = state.copyWith(
+      masterNotificationsEnabled: enabled,
+      taskRemindersEnabled: enabled,
+      habitRemindersEnabled: enabled,
+    );
     state = updated;
     await _repository.saveSettings(updated);
   }
@@ -64,10 +68,9 @@ class SettingsNotifier extends StateNotifier<SettingsModel> {
   }
 }
 
-// Theme Mode Provider (Reads from AppSettings)
+// Theme Mode Provider (Arc is exclusively dark theme)
 final themeModeProvider = StateProvider<ThemeMode>((ref) {
-  final settings = ref.watch(appSettingsProvider);
-  return settings.isDarkMode ? ThemeMode.dark : ThemeMode.light;
+  return ThemeMode.dark;
 });
 
 // Task Repository Provider

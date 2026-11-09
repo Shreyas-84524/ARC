@@ -58,6 +58,38 @@ class MoneyRepository {
 
   List<Transaction> getTransactions() => _txBox.values.toList();
 
+  static const String addIncomeToBudgetPrefKey = 'add_income_to_budget';
+  static const String moneyOnboardingCompletedKey =
+      'money_tracker_onboarding_completed';
+
+  bool getAddIncomeToBudget() {
+    try {
+      final value =
+          _settingsBox.get(addIncomeToBudgetPrefKey, defaultValue: false);
+      return value is bool ? value : false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> setAddIncomeToBudget(bool value) async {
+    await _settingsBox.put(addIncomeToBudgetPrefKey, value);
+  }
+
+  bool hasCompletedMoneyOnboarding() {
+    try {
+      final value =
+          _settingsBox.get(moneyOnboardingCompletedKey, defaultValue: false);
+      return value is bool ? value : false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> setMoneyOnboardingCompleted(bool value) async {
+    await _settingsBox.put(moneyOnboardingCompletedKey, value);
+  }
+
   double getMonthlyBudget(String yearMonth) {
     try {
       final value = _settingsBox.get('budget_$yearMonth', defaultValue: 0.0);

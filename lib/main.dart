@@ -11,7 +11,6 @@ import 'package:arc/core/notifications/notification_orchestrator.dart';
 import 'package:arc/providers/global_providers.dart';
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
 import 'package:arc/features/user_management/models/user_context.dart';
-import 'package:arc/features/money_tracker/providers/money_automation_provider.dart';
 
 void main() async {
   runZonedGuarded<Future<void>>(
@@ -125,18 +124,15 @@ class ProjectArcApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Read the active theme state and reactive router from Riverpod
-    final activeThemeMode = ref.watch(themeModeProvider);
+    // Read the reactive router from Riverpod
     final router = ref.watch(routerProvider);
-    // Restore opted-in tracking at app startup, before Money is visited.
-    ref.watch(moneyAutomationProvider);
 
     return MaterialApp.router(
-      title: 'Project Arc',
+      title: 'ARC',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
+      theme: AppTheme.darkTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: activeThemeMode,
+      themeMode: ThemeMode.dark,
       routerConfig: router,
     );
   }

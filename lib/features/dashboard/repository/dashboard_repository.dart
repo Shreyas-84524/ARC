@@ -29,6 +29,7 @@ class DashboardRepository {
     final entries = _habitRepository.getEntries();
     final transactions = _moneyRepository.getTransactions();
     final monthlyBudget = _moneyRepository.getMonthlyBudget(currentMonthStr);
+    final addIncomeToBudget = _moneyRepository.getAddIncomeToBudget();
 
     return calculate(
       tasks: tasks,
@@ -36,6 +37,7 @@ class DashboardRepository {
       entries: entries,
       transactions: transactions,
       monthlyBudget: monthlyBudget,
+      addIncomeToBudget: addIncomeToBudget,
       currentMonth: currentMonthStr,
       now: now ?? DateTime.now(),
     );
@@ -79,6 +81,7 @@ class DashboardRepository {
     required List<HabitEntry> entries,
     required List<Transaction> transactions,
     required double monthlyBudget,
+    bool addIncomeToBudget = false,
     required String currentMonth,
     required DateTime now,
   }) {
@@ -122,7 +125,9 @@ class DashboardRepository {
       }
     }
 
-    final remainingBudget = monthlyBudget - totalExpenses;
+    final effectiveBudget =
+        addIncomeToBudget ? (monthlyBudget + totalIncome) : monthlyBudget;
+    final remainingBudget = effectiveBudget - totalExpenses;
     final monthlySavings = totalIncome - totalExpenses;
     final monthlySavingsRate = totalIncome > 0
         ? (monthlySavings / totalIncome).clamp(0.0, 1.0)
@@ -220,7 +225,7 @@ class DashboardRepository {
       completedHabits: completedHabits,
       totalHabits: habits.length,
       remainingBudget: remainingBudget,
-      totalBudget: monthlyBudget,
+      totalBudget: effectiveBudget,
       streakDays: maxStreak,
       todayIncome: todayIncome,
       todayExpenses: todayExpenses,

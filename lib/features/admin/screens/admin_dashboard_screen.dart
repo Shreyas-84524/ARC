@@ -260,6 +260,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
+              color: AppColors.accent,
+              backgroundColor: isDark ? AppColors.darkElevated : Colors.white,
               onRefresh: _loadUsers,
               child: ListView(
                 padding: const EdgeInsets.all(20.0),
@@ -284,7 +286,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Manage Project Arc multi-user accounts safely.',
+                                    'Manage ARC multi-user accounts safely.',
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: isDark
                                           ? AppColors.textMutedDark

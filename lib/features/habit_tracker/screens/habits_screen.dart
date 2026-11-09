@@ -151,6 +151,8 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen>
               children: [
                 // ------------------ CHECK-IN VIEW ------------------
                 RefreshIndicator(
+                  color: AppColors.accent,
+                  backgroundColor: isDark ? AppColors.darkElevated : Colors.white,
                   onRefresh: () async {
                     await ref.read(habitsProvider.notifier).syncHabits();
                   },
@@ -464,13 +466,15 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen>
 
                 // ------------------ ANALYTICS VIEW ------------------
                 RefreshIndicator(
+                  color: AppColors.accent,
+                  backgroundColor: isDark ? AppColors.darkElevated : Colors.white,
                   onRefresh: () async {
                     await ref.read(habitsProvider.notifier).syncHabits();
                   },
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: ResponsiveLayout.horizontalPadding(context),
                       vertical: 12,
                     ),
                     child: Column(
@@ -587,7 +591,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen>
                                                   value: remainingCount
                                                       .toDouble(),
                                                   title: '$remainingCount',
-                                                  radius: 36,
+                                                  radius: 46,
                                                   titleStyle: TextStyle(
                                                     fontWeight: FontWeight.bold,
                                                     color: isDark
@@ -595,7 +599,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen>
                                                               .textSecondaryDark
                                                         : AppColors
                                                               .textSecondaryLight,
-                                                    fontSize: 12,
+                                                    fontSize: 14,
                                                   ),
                                                 ),
                                             ],

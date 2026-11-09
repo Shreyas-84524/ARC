@@ -135,10 +135,24 @@ class _NotificationOrchestratorState
             .clearNavigationIntent();
         ref.read(routerProvider).go('/');
         _queueReconciliation('user_changed');
+        if (next.isAuthenticated) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref
+                .read(notificationControllerProvider.notifier)
+                .requestPermissionFromUserAction();
+          });
+        }
       } else if (previous?.userId != next.userId) {
         // Cold start auth resolution or login from unauthenticated state:
         // Preserve pending navigation intent and reconcile schedules for new user
         _queueReconciliation('user_changed');
+        if (next.isAuthenticated) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref
+                .read(notificationControllerProvider.notifier)
+                .requestPermissionFromUserAction();
+          });
+        }
       }
       _tryHandleNavigation(next, ref.read(notificationControllerProvider));
     });

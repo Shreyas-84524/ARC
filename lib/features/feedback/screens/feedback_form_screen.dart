@@ -306,7 +306,7 @@ class _FeedbackFormScreenState extends ConsumerState<FeedbackFormScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Thank you for helping us refine Project Arc. Your submission has been securely recorded.',
+              'Thank you for helping us refine ARC. Your submission has been securely recorded.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: isDark
                     ? AppColors.textSecondaryDark

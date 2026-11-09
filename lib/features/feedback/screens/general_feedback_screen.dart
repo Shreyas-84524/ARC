@@ -7,14 +7,13 @@ import 'package:arc/core/services/app_haptics.dart';
 import 'package:arc/core/theme/app_theme.dart';
 import 'package:arc/features/feedback/models/feedback_model.dart';
 import 'package:arc/features/feedback/providers/feedback_providers.dart';
-import 'package:arc/features/feedback/utils/feedback_ui_constants.dart';
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
 
 /// Dedicated Conversational Interface for General User Feedback.
 ///
 /// Features a minimal, warm, and inviting layout encouraging honest thoughts,
-/// optional prompt inspirations, comfortable distraction-free writing canvas,
-/// and debounced category-isolated draft preservation.
+/// comfortable distraction-free writing canvas, and debounced category-isolated
+/// draft preservation.
 class GeneralFeedbackScreen extends ConsumerStatefulWidget {
   const GeneralFeedbackScreen({super.key});
 
@@ -26,33 +25,18 @@ class GeneralFeedbackScreen extends ConsumerStatefulWidget {
 class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  String _selectedModule = 'general';
-  String? _selectedPrompt;
-
   final TextEditingController _messageController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-
   final FocusNode _messageFocusNode = FocusNode();
-  final FocusNode _emailFocusNode = FocusNode();
 
   bool _isSubmitting = false;
-  bool _showDetails = false;
   Timer? _draftDebounce;
 
   static const Color _conversationalCyan = Color(0xFF38BDF8);
-
-  static const List<String> _inspirationPrompts = [
-    'What do you enjoy about Arc?',
-    'What could we improve?',
-    'Is anything making the app difficult to use?',
-    'How does Arc fit into your daily routine?',
-  ];
 
   @override
   void initState() {
     super.initState();
     _messageController.addListener(_onFieldChanged);
-    _emailController.addListener(_onFieldChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initUserEmailAndDraft();
@@ -63,16 +47,11 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
   void dispose() {
     _draftDebounce?.cancel();
     _messageController.dispose();
-    _emailController.dispose();
     _messageFocusNode.dispose();
-    _emailFocusNode.dispose();
     super.dispose();
   }
 
   Future<void> _initUserEmailAndDraft() async {
-    final userContext = ref.read(userContextProvider);
-    final userEmail = userContext.profile?.email;
-
     final draftService = ref.read(feedbackDraftServiceProvider);
     final draft = await draftService.loadDraft(
       FeedbackCategory.generalFeedback,
@@ -82,10 +61,7 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
       if (draft != null) {
         final payload = GeneralFeedbackPayload.fromDraft(draft);
         setState(() {
-          _selectedModule = payload.module;
-          _selectedPrompt = payload.selectedPrompt;
           _messageController.text = payload.message;
-          _emailController.text = payload.contactEmail ?? userEmail ?? '';
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -102,10 +78,6 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
             backgroundColor: AppColors.darkCard,
           ),
         );
-      } else if (userEmail != null && userEmail.isNotEmpty) {
-        setState(() {
-          _emailController.text = userEmail;
-        });
       }
     }
   }
@@ -120,17 +92,16 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
 
   Future<void> _saveDraft() async {
     if (!mounted) return;
+    final userContext = ref.read(userContextProvider);
+    final userEmail = userContext.profile?.email;
     final draftService = ref.read(feedbackDraftServiceProvider);
     final payload = GeneralFeedbackPayload(
-      module: _selectedModule,
+      module: 'general',
       message: _messageController.text,
-      selectedPrompt: _selectedPrompt,
-      contactEmail: _emailController.text.trim().isEmpty
-          ? null
-          : _emailController.text.trim(),
+      contactEmail: userEmail,
     );
 
-    if (payload.message.trim().isEmpty && _selectedPrompt == null) {
+    if (payload.message.trim().isEmpty) {
       await draftService.clearDraft(FeedbackCategory.generalFeedback);
     } else {
       await draftService.saveDraft(
@@ -143,28 +114,15 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
     }
   }
 
-  void _togglePrompt(String prompt) {
-    AppHaptics.selectionClick();
-    setState(() {
-      if (_selectedPrompt == prompt) {
-        _selectedPrompt = null;
-      } else {
-        _selectedPrompt = prompt;
-      }
-    });
-    _onFieldChanged();
-  }
-
   Future<void> _submitFeedback() async {
     FocusScope.of(context).unfocus();
 
+    final userContext = ref.read(userContextProvider);
+    final userEmail = userContext.profile?.email;
     final payload = GeneralFeedbackPayload(
-      module: _selectedModule,
+      module: 'general',
       message: _messageController.text,
-      selectedPrompt: _selectedPrompt,
-      contactEmail: _emailController.text.trim().isEmpty
-          ? null
-          : _emailController.text.trim(),
+      contactEmail: userEmail,
     );
 
     final error = payload.validate();
@@ -383,34 +341,33 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
             context.pop();
           },
         ),
+        actions: [
+          IconButton(
+            tooltip: 'My Feedback Submissions',
+            icon: const Icon(LucideIcons.inbox),
+            onPressed: () {
+              AppHaptics.lightImpact();
+              context.push('/feedback/my-feedback');
+            },
+          ),
+        ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Form(
-            key: _formKey,
+        child: Form(
+          key: _formKey,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Welcoming Conversational Hero Header
-                _buildConversationalHero(theme, isDark),
-                const SizedBox(height: 24),
-
-                // Inspiration Prompts Section
-                _buildPromptChips(theme, isDark),
-                const SizedBox(height: 20),
-
-                // Large Comfortable Writing Area
-                _buildMessageCanvas(theme, isDark),
+                Expanded(
+                  child: _buildMergedFeedbackCard(theme, isDark),
+                ),
                 const SizedBox(height: 16),
-
-                // Expandable Details (Module & Email)
-                _buildOptionalDetails(theme, isDark),
-                const SizedBox(height: 28),
-
-                // Submit Button
-                _buildSubmitButton(theme, isDark),
-                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: _buildSubmitButton(theme, isDark),
+                ),
               ],
             ),
           ),
@@ -419,23 +376,19 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
     );
   }
 
-  Widget _buildConversationalHero(ThemeData theme, bool isDark) {
+  Widget _buildMergedFeedbackCard(ThemeData theme, bool isDark) {
+    final currentLength = _messageController.text.length;
+    const hintText = 'What\'s on your mind? Tell us anything about your experience...';
+
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _conversationalCyan.withValues(alpha: 0.2)),
-        boxShadow: isDark
-            ? []
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        border: Border.all(
+          color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -443,7 +396,7 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: _conversationalCyan.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
@@ -451,10 +404,10 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
                 child: const Icon(
                   LucideIcons.messageCircle,
                   color: _conversationalCyan,
-                  size: 24,
+                  size: 20,
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -463,6 +416,7 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
                       'We\'re All Ears',
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
+                        fontSize: 16,
                         color: isDark
                             ? AppColors.textPrimaryDark
                             : AppColors.textPrimaryLight,
@@ -472,6 +426,7 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
                     Text(
                       'Direct, thoughtful conversations with the builders',
                       style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 12,
                         color: isDark
                             ? AppColors.textMutedDark
                             : AppColors.textMutedLight,
@@ -482,163 +437,36 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           Text(
             'Whether you love an aspect of Arc, feel friction with a workflow, or just want to share an impression — we read every single message.',
             style: theme.textTheme.bodyMedium?.copyWith(
+              fontSize: 12,
               color: isDark
                   ? AppColors.textSecondaryDark
                   : AppColors.textSecondaryLight,
-              height: 1.45,
+              height: 1.4,
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPromptChips(ThemeData theme, bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(
-              LucideIcons.sparkles,
-              size: 14,
-              color: _conversationalCyan,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              'INSPIRATION PROMPTS (OPTIONAL)',
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.8,
-                color: isDark
-                    ? AppColors.textMutedDark
-                    : AppColors.textMutedLight,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _inspirationPrompts.map((prompt) {
-            final isSelected = _selectedPrompt == prompt;
-            return FilterChip(
-              selected: isSelected,
-              showCheckmark: false,
-              label: Text(
-                prompt,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  color: isSelected
-                      ? Colors.white
-                      : (isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight),
+          const SizedBox(height: 14),
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
+                borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+                border: Border.all(
+                  color: isDark
+                      ? AppColors.borderMedium
+                      : AppColors.borderMediumLight,
                 ),
               ),
-              backgroundColor: isDark
-                  ? AppColors.darkSurface
-                  : AppColors.lightBgSecondary,
-              selectedColor: _conversationalCyan.withValues(alpha: 0.85),
-              side: BorderSide(
-                color: isSelected
-                    ? _conversationalCyan
-                    : (isDark
-                          ? AppColors.borderSubtle
-                          : AppColors.borderSubtleLight),
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              onSelected: (_) => _togglePrompt(prompt),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMessageCanvas(ThemeData theme, bool isDark) {
-    final currentLength = _messageController.text.length;
-    final hintText = _selectedPrompt != null
-        ? 'Regarding "$_selectedPrompt":\n\nShare your thoughts here...'
-        : 'What\'s on your mind? Tell us anything about your experience...';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (_selectedPrompt != null) ...[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            margin: const EdgeInsets.only(bottom: 10),
-            decoration: BoxDecoration(
-              color: _conversationalCyan.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: _conversationalCyan.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  LucideIcons.tag,
-                  size: 13,
-                  color: _conversationalCyan,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    'Topic: $_selectedPrompt',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : Colors.black87,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    AppHaptics.selectionClick();
-                    setState(() => _selectedPrompt = null);
-                    _onFieldChanged();
-                  },
-                  child: Icon(
-                    LucideIcons.x,
-                    size: 14,
-                    color: isDark
-                        ? AppColors.textMutedDark
-                        : AppColors.textMutedLight,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-        Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.darkCard : AppColors.lightCard,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isDark
-                  ? AppColors.borderMedium
-                  : AppColors.borderMediumLight,
-            ),
-          ),
-          child: Column(
-            children: [
-              TextFormField(
+              child: TextFormField(
                 controller: _messageController,
                 focusNode: _messageFocusNode,
-                minLines: 6,
-                maxLines: 12,
+                expands: true,
+                maxLines: null,
+                minLines: null,
+                textAlignVertical: TextAlignVertical.top,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   height: 1.5,
                   color: isDark
@@ -647,6 +475,7 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
                 ),
                 decoration: InputDecoration(
                   hintText: hintText,
+                  counterText: '$currentLength / 5,000',
                   hintStyle: TextStyle(
                     color: isDark
                         ? AppColors.textPlaceholderDark
@@ -654,174 +483,19 @@ class _GeneralFeedbackScreenState extends ConsumerState<GeneralFeedbackScreen> {
                     fontSize: 14,
                   ),
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.all(16),
+                  contentPadding: const EdgeInsets.all(14),
                 ),
+                validator: (v) {
+                  if (v == null || v.trim().length < 10) {
+                    return 'Please enter at least 10 characters.';
+                  }
+                  return null;
+                },
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      '$currentLength / 5,000',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: currentLength > 4500
-                            ? AppColors.danger
-                            : (isDark
-                                  ? AppColors.textMutedDark
-                                  : AppColors.textMutedLight),
-                        fontFamily: 'monospace',
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOptionalDetails(ThemeData theme, bool isDark) {
-    return Column(
-      children: [
-        InkWell(
-          onTap: () {
-            AppHaptics.selectionClick();
-            setState(() => _showDetails = !_showDetails);
-          },
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              children: [
-                Icon(
-                  _showDetails
-                      ? LucideIcons.chevronDown
-                      : LucideIcons.chevronRight,
-                  size: 16,
-                  color: isDark
-                      ? AppColors.textMutedDark
-                      : AppColors.textMutedLight,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _showDetails
-                      ? 'Hide additional context'
-                      : 'Add context (component & follow-up email)',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: isDark
-                        ? AppColors.textMutedDark
-                        : AppColors.textMutedLight,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (_showDetails) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkCard : AppColors.lightCard,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: isDark
-                    ? AppColors.borderSubtle
-                    : AppColors.borderSubtleLight,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'APP COMPONENT',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.8,
-                    color: isDark
-                        ? AppColors.textMutedDark
-                        : AppColors.textMutedLight,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedModule,
-                  dropdownColor: isDark
-                      ? AppColors.darkElevated
-                      : AppColors.lightSurface,
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(
-                        color: isDark
-                            ? AppColors.borderMedium
-                            : AppColors.borderMediumLight,
-                      ),
-                    ),
-                  ),
-                  items: FeedbackModuleInfo.modules.map((opt) {
-                    return DropdownMenuItem(
-                      value: opt.key,
-                      child: Text(opt.label),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() => _selectedModule = val);
-                      _onFieldChanged();
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'FOLLOW-UP EMAIL (OPTIONAL)',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.8,
-                    color: isDark
-                        ? AppColors.textMutedDark
-                        : AppColors.textMutedLight,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _emailController,
-                  focusNode: _emailFocusNode,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(
-                    hintText: 'name@example.com',
-                    prefixIcon: const Icon(LucideIcons.mail, size: 18),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(
-                        color: isDark
-                            ? AppColors.borderMedium
-                            : AppColors.borderMediumLight,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
             ),
           ),
         ],
-      ],
+      ),
     );
   }
 

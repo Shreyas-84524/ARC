@@ -34,9 +34,6 @@ class HiveService {
   static const String moneyBoxName = 'money_box';
   static const String moneySyncQueueBoxName = 'money_sync_queue_box';
   static const String settingsBoxName = 'settings_box';
-  // Local-only Money Automation preferences (NEVER synced with cloud/Firebase)
-  static const String moneyAutomationPreferencesBoxName =
-      'money_automation_preferences';
   // Local-only Feedback Acknowledgement deduplication box
   static const String feedbackAcknowledgementsBoxName =
       'feedback_acknowledgements_box';
@@ -90,10 +87,6 @@ class HiveService {
       );
       await Hive.openBox(settingsBoxName, compactionStrategy: _shouldCompact);
       await Hive.openBox(
-        moneyAutomationPreferencesBoxName,
-        compactionStrategy: _shouldCompact,
-      );
-      await Hive.openBox(
         feedbackAcknowledgementsBoxName,
         compactionStrategy: _shouldCompact,
       );
@@ -115,7 +108,6 @@ class HiveService {
       moneyBoxName,
       moneySyncQueueBoxName,
       settingsBoxName,
-      moneyAutomationPreferencesBoxName,
       feedbackAcknowledgementsBoxName,
     ];
     final names = <String>{...baseNames};
@@ -197,7 +189,6 @@ class HiveService {
     await _openAndMigrateUserBox<Transaction>(moneyBoxName, userId);
     await _openAndMigrateUntypedBox(moneySyncQueueBoxName, userId);
     await _openAndMigrateUntypedBox(settingsBoxName, userId);
-    await _openAndMigrateUntypedBox(moneyAutomationPreferencesBoxName, userId);
 
     debugPrint('HiveService: All user-scoped boxes opened for UID: $userId');
   }
@@ -238,7 +229,6 @@ class HiveService {
       getUserBoxName(habitsSyncQueueBoxName, userId),
       getUserBoxName(moneySyncQueueBoxName, userId),
       getUserBoxName(settingsBoxName, userId),
-      getUserBoxName(moneyAutomationPreferencesBoxName, userId),
     ];
 
     for (final name in untypedBoxNames) {

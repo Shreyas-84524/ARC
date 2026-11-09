@@ -26,10 +26,7 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
 
   int? _rating;
   final TextEditingController _reviewController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-
   final FocusNode _reviewFocusNode = FocusNode();
-  final FocusNode _emailFocusNode = FocusNode();
 
   bool _isSubmitting = false;
   Timer? _draftDebounce;
@@ -40,7 +37,6 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
   void initState() {
     super.initState();
     _reviewController.addListener(_onFieldChanged);
-    _emailController.addListener(_onFieldChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initUserEmailAndDraft();
@@ -51,16 +47,11 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
   void dispose() {
     _draftDebounce?.cancel();
     _reviewController.dispose();
-    _emailController.dispose();
     _reviewFocusNode.dispose();
-    _emailFocusNode.dispose();
     super.dispose();
   }
 
   Future<void> _initUserEmailAndDraft() async {
-    final userContext = ref.read(userContextProvider);
-    final userEmail = userContext.profile?.email;
-
     final draftService = ref.read(feedbackDraftServiceProvider);
     final draft = await draftService.loadDraft(FeedbackCategory.appRating);
 
@@ -72,7 +63,6 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
             _rating = payload.rating;
           }
           _reviewController.text = payload.writtenReview ?? '';
-          _emailController.text = payload.contactEmail ?? userEmail ?? '';
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -89,10 +79,6 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
             backgroundColor: AppColors.darkCard,
           ),
         );
-      } else if (userEmail != null && userEmail.isNotEmpty) {
-        setState(() {
-          _emailController.text = userEmail;
-        });
       }
     }
   }
@@ -107,15 +93,15 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
 
   Future<void> _saveDraft() async {
     if (!mounted) return;
+    final userContext = ref.read(userContextProvider);
+    final userEmail = userContext.profile?.email;
     final draftService = ref.read(feedbackDraftServiceProvider);
     final payload = RateArcPayload(
       rating: _rating ?? 0,
       writtenReview: _reviewController.text.trim().isEmpty
           ? null
           : _reviewController.text.trim(),
-      contactEmail: _emailController.text.trim().isEmpty
-          ? null
-          : _emailController.text.trim(),
+      contactEmail: userEmail,
     );
 
     if (payload.rating == 0 &&
@@ -158,14 +144,14 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
       return;
     }
 
+    final userContext = ref.read(userContextProvider);
+    final userEmail = userContext.profile?.email;
     final payload = RateArcPayload(
       rating: _rating!,
       writtenReview: _reviewController.text.trim().isEmpty
           ? null
           : _reviewController.text.trim(),
-      contactEmail: _emailController.text.trim().isEmpty
-          ? null
-          : _emailController.text.trim(),
+      contactEmail: userEmail,
     );
 
     final error = payload.validate();
@@ -406,6 +392,16 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
             context.pop();
           },
         ),
+        actions: [
+          IconButton(
+            tooltip: 'My Feedback Submissions',
+            icon: const Icon(LucideIcons.inbox),
+            onPressed: () {
+              AppHaptics.lightImpact();
+              context.push('/feedback/my-feedback');
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -429,10 +425,6 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
 
                 // Optional Written Review Section
                 _buildWrittenReviewSection(theme, isDark),
-                const SizedBox(height: 20),
-
-                // Optional Follow-up Email
-                _buildContactEmailField(theme, isDark),
                 const SizedBox(height: 28),
 
                 // Submit Rating CTA
@@ -465,6 +457,7 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
               ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.all(12),
@@ -477,6 +470,7 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
           const SizedBox(height: 12),
           Text(
             'Your Opinion Matters',
+            textAlign: TextAlign.left,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: isDark
@@ -487,7 +481,7 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
           const SizedBox(height: 4),
           Text(
             'How well is Arc helping you achieve daily momentum and focus?',
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.left,
             style: theme.textTheme.bodySmall?.copyWith(
               color: isDark
                   ? AppColors.textSecondaryDark
@@ -518,9 +512,11 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
       ),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(5, (index) {
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(5, (index) {
               final starNumber = index + 1;
               final isFilled = _rating != null && _rating! >= starNumber;
 
@@ -552,6 +548,7 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
                 ),
               );
             }),
+            ),
           ),
           const SizedBox(height: 12),
           // Score Pill
@@ -732,8 +729,8 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
           child: TextFormField(
             controller: _reviewController,
             focusNode: _reviewFocusNode,
-            minLines: 3,
-            maxLines: 6,
+            minLines: 6,
+            maxLines: 10,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: isDark
                   ? AppColors.textPrimaryDark
@@ -749,54 +746,6 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
               ),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(14),
-            ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Written comments are completely optional. You can submit with just your star rating.',
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-            fontSize: 11,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildContactEmailField(ThemeData theme, bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'FOLLOW-UP EMAIL (OPTIONAL)',
-          style: theme.textTheme.labelSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.8,
-            color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _emailController,
-          focusNode: _emailFocusNode,
-          keyboardType: TextInputType.emailAddress,
-          decoration: InputDecoration(
-            hintText: 'name@example.com',
-            prefixIcon: const Icon(LucideIcons.mail, size: 18),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 12,
-            ),
-            filled: true,
-            fillColor: isDark ? AppColors.darkCard : AppColors.lightCard,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: isDark
-                    ? AppColors.borderMedium
-                    : AppColors.borderMediumLight,
-              ),
             ),
           ),
         ),
@@ -849,9 +798,7 @@ class _RateArcScreenState extends ConsumerState<RateArcScreen> {
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    hasRating
-                        ? 'Submit $_rating-Star Rating'
-                        : 'Tap a Star to Rate',
+                    'Rate ARC',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

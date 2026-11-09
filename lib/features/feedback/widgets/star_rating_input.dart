@@ -47,9 +47,11 @@ class StarRatingInput extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(5, (index) {
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (index) {
             final starNumber = index + 1;
             final isFilled = rating != null && rating! >= starNumber;
 
@@ -88,6 +90,7 @@ class StarRatingInput extends StatelessWidget {
               ),
             );
           }),
+          ),
         ),
         const SizedBox(height: 8),
         Center(

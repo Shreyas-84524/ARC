@@ -20,12 +20,21 @@ class FeedbackCategory {
 
 /// Lifecycle status for feedback submissions.
 class FeedbackStatus {
+  static const String submitting = 'submitting';
+  static const String dispatched = 'dispatched';
   static const String submitted = 'submitted';
   static const String emailed = 'emailed';
   static const String reviewed = 'reviewed';
   static const String acknowledged = 'acknowledged';
 
-  static const List<String> all = [submitted, emailed, reviewed, acknowledged];
+  static const List<String> all = [
+    submitting,
+    dispatched,
+    submitted,
+    emailed,
+    reviewed,
+    acknowledged,
+  ];
 
   static bool isValid(String status) => all.contains(status);
 }

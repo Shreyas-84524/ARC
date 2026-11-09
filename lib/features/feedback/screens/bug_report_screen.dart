@@ -7,10 +7,9 @@ import 'package:arc/core/services/app_haptics.dart';
 import 'package:arc/core/theme/app_theme.dart';
 import 'package:arc/features/feedback/models/feedback_model.dart';
 import 'package:arc/features/feedback/providers/feedback_providers.dart';
-import 'package:arc/features/feedback/utils/feedback_ui_constants.dart';
 import 'package:arc/features/user_management/providers/user_context_provider.dart';
 
-/// Dedicated diagnostic bug report screen for technical problem logging.
+/// Dedicated screen for reporting technical issues and bugs.
 class BugReportScreen extends ConsumerStatefulWidget {
   const BugReportScreen({super.key});
 
@@ -21,21 +20,8 @@ class BugReportScreen extends ConsumerStatefulWidget {
 class _BugReportScreenState extends ConsumerState<BugReportScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  String _selectedModule = 'general';
-
-  final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _stepsController = TextEditingController();
-  final TextEditingController _expectedController = TextEditingController();
-  final TextEditingController _actualController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-
-  final FocusNode _titleFocusNode = FocusNode();
   final FocusNode _descFocusNode = FocusNode();
-  final FocusNode _stepsFocusNode = FocusNode();
-  final FocusNode _expectedFocusNode = FocusNode();
-  final FocusNode _actualFocusNode = FocusNode();
-  final FocusNode _emailFocusNode = FocusNode();
 
   bool _isSubmitting = false;
   Timer? _draftDebounce;
@@ -46,22 +32,14 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
   @override
   void initState() {
     super.initState();
-    _titleController.addListener(_onFieldChanged);
     _descriptionController.addListener(_onFieldChanged);
-    _stepsController.addListener(_onFieldChanged);
-    _expectedController.addListener(_onFieldChanged);
-    _actualController.addListener(_onFieldChanged);
-    _emailController.addListener(_onFieldChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initDraftAndUserEmail();
+      _initDraft();
     });
   }
 
-  Future<void> _initDraftAndUserEmail() async {
-    final userContext = ref.read(userContextProvider);
-    final userEmail = userContext.profile?.email;
-
+  Future<void> _initDraft() async {
     final draftService = ref.read(feedbackDraftServiceProvider);
     final draft = await draftService.loadDraft(FeedbackCategory.bugReport);
 
@@ -69,13 +47,7 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
       if (draft != null) {
         final payload = BugReportPayload.fromDraft(draft);
         setState(() {
-          _selectedModule = payload.module;
-          _titleController.text = payload.title;
           _descriptionController.text = payload.description;
-          _stepsController.text = payload.stepsToReproduce;
-          _expectedController.text = payload.expectedBehavior;
-          _actualController.text = payload.actualBehavior;
-          _emailController.text = payload.contactEmail ?? userEmail ?? '';
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -99,18 +71,12 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
             duration: const Duration(seconds: 3),
           ),
         );
-      } else if (userEmail != null &&
-          userEmail.isNotEmpty &&
-          _emailController.text.isEmpty) {
-        setState(() {
-          _emailController.text = userEmail;
-        });
       }
     }
   }
 
   void _onFieldChanged() {
-    setState(() {}); // Updates live validation status and character counters
+    setState(() {}); // Updates character counters and live validation
     _saveDraftDebounced();
   }
 
@@ -119,50 +85,52 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
     _draftDebounce = Timer(const Duration(milliseconds: 600), () {
       if (!mounted) return;
       final payload = _buildCurrentPayload();
-      ref
-          .read(feedbackDraftServiceProvider)
-          .saveDraft(
-            category: FeedbackCategory.bugReport,
-            module: _selectedModule,
-            message: payload.toSerializedMessage(),
-            contactEmail: _emailController.text.trim().isNotEmpty
-                ? _emailController.text.trim()
-                : null,
-            extraFields: payload.toDraftMap(),
-          );
+      if (payload.description.trim().isEmpty) {
+        ref
+            .read(feedbackDraftServiceProvider)
+            .clearDraft(FeedbackCategory.bugReport);
+      } else {
+        ref
+            .read(feedbackDraftServiceProvider)
+            .saveDraft(
+              category: FeedbackCategory.bugReport,
+              module: 'general',
+              message: payload.toSerializedMessage(),
+              contactEmail: payload.contactEmail,
+              extraFields: payload.toDraftMap(),
+            );
+      }
     });
   }
 
+  String _deriveTitle(String description) {
+    final clean = description.trim();
+    if (clean.isEmpty) return 'Bug Report';
+    final firstLine = clean.split('\n').first.trim();
+    if (firstLine.length <= 100) return firstLine;
+    return '${firstLine.substring(0, 97)}...';
+  }
+
   BugReportPayload _buildCurrentPayload() {
+    final userContext = ref.read(userContextProvider);
+    final userEmail = userContext.profile?.email;
+    final description = _descriptionController.text.trim();
     return BugReportPayload(
-      module: _selectedModule,
-      title: _titleController.text.trim(),
-      description: _descriptionController.text.trim(),
-      stepsToReproduce: _stepsController.text.trim(),
-      expectedBehavior: _expectedController.text.trim(),
-      actualBehavior: _actualController.text.trim(),
-      contactEmail: _emailController.text.trim().isNotEmpty
-          ? _emailController.text.trim()
-          : null,
+      module: 'general',
+      title: _deriveTitle(description),
+      description: description,
+      stepsToReproduce: '',
+      expectedBehavior: '',
+      actualBehavior: '',
+      contactEmail: userEmail,
     );
   }
 
   @override
   void dispose() {
     _draftDebounce?.cancel();
-    _titleController.dispose();
     _descriptionController.dispose();
-    _stepsController.dispose();
-    _expectedController.dispose();
-    _actualController.dispose();
-    _emailController.dispose();
-
-    _titleFocusNode.dispose();
     _descFocusNode.dispose();
-    _stepsFocusNode.dispose();
-    _expectedFocusNode.dispose();
-    _actualFocusNode.dispose();
-    _emailFocusNode.dispose();
     super.dispose();
   }
 
@@ -192,7 +160,7 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
 
       final result = await repository.submitFeedback(
         category: FeedbackCategory.bugReport,
-        module: _selectedModule,
+        module: 'general',
         message: payload.toSerializedMessage(),
         contactEmail: payload.contactEmail,
       );
@@ -216,7 +184,7 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
           .read(feedbackDraftServiceProvider)
           .saveDraft(
             category: FeedbackCategory.bugReport,
-            module: _selectedModule,
+            module: 'general',
             message: payload.toSerializedMessage(),
             contactEmail: payload.contactEmail,
             extraFields: payload.toDraftMap(),
@@ -303,7 +271,7 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Your technical problem report has been dispatched to our engineering team for investigation.',
+              'Your report has been dispatched to our engineering team for investigation.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: isDark
                     ? AppColors.textSecondaryDark
@@ -329,7 +297,7 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'Ticket: ${feedback.feedbackId.substring(0, 8)}...',
+                      'Ticket: ${feedback.feedbackId.substring(0, feedback.feedbackId.length > 8 ? 8 : feedback.feedbackId.length)}...',
                       style: theme.textTheme.labelMedium?.copyWith(
                         fontFamily: 'monospace',
                         color: isDark
@@ -388,8 +356,6 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final payload = _buildCurrentPayload();
-    final serializedLength = payload.toSerializedMessage().length;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
@@ -404,31 +370,14 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
             context.pop();
           },
         ),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: _diagnosticRedDim,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                LucideIcons.bug,
-                color: _diagnosticRed,
-                size: 18,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              'Report a Bug',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: isDark
-                    ? AppColors.textPrimaryDark
-                    : AppColors.textPrimaryLight,
-              ),
-            ),
-          ],
+        title: Text(
+          'Report a Bug',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : AppColors.textPrimaryLight,
+          ),
         ),
         actions: [
           IconButton(
@@ -444,434 +393,72 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
       body: SafeArea(
         child: Form(
           key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            children: [
-              // 1. Diagnostic Banner
-              _buildDiagnosticBanner(isDark),
-
-              const SizedBox(height: 20),
-
-              // 2. Section 01: Scope & Target Area
-              _buildSectionCard(
-                isDark: isDark,
-                sectionNumber: '01',
-                title: 'Affected Component',
-                description: 'Select the module where this issue occurs.',
-                icon: LucideIcons.layers,
-                child: _buildModuleDropdown(isDark),
-              ),
-
-              const SizedBox(height: 16),
-
-              // 3. Section 02: Issue Overview
-              _buildSectionCard(
-                isDark: isDark,
-                sectionNumber: '02',
-                title: 'Issue Summary',
-                description: 'A brief, concise title of the malfunction.',
-                icon: LucideIcons.type,
-                child: TextFormField(
-                  controller: _titleController,
-                  focusNode: _titleFocusNode,
-                  maxLength: 150,
-                  textInputAction: TextInputAction.next,
-                  style: TextStyle(
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  decoration: _buildInputDecoration(
-                    isDark: isDark,
-                    hintText: 'e.g. Task reminder triggers 10 minutes late',
-                    counterText: '${_titleController.text.length}/150',
-                  ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Please provide a short issue title.';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // 4. Section 03: Problem Details
-              _buildSectionCard(
-                isDark: isDark,
-                sectionNumber: '03',
-                title: 'Problem Description',
-                description:
-                    'Describe the symptoms, error popups, or abnormal behavior.',
-                icon: LucideIcons.fileWarning,
-                child: TextFormField(
-                  controller: _descriptionController,
-                  focusNode: _descFocusNode,
-                  maxLines: 4,
-                  minLines: 3,
-                  textInputAction: TextInputAction.next,
-                  style: TextStyle(
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
-                  ),
-                  decoration: _buildInputDecoration(
-                    isDark: isDark,
-                    hintText: 'Provide detailed context on what went wrong...',
-                  ),
-                  validator: (v) {
-                    if (v == null || v.trim().length < 10) {
-                      return 'Please enter at least 10 characters.';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // 5. Section 04: Steps to Reproduce
-              _buildSectionCard(
-                isDark: isDark,
-                sectionNumber: '04',
-                title: 'Steps to Reproduce',
-                description:
-                    'Numbered steps our engineers can execute to reproduce the bug.',
-                icon: LucideIcons.listOrdered,
-                child: TextFormField(
-                  controller: _stepsController,
-                  focusNode: _stepsFocusNode,
-                  maxLines: 4,
-                  minLines: 3,
-                  textInputAction: TextInputAction.next,
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 13,
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
-                  ),
-                  decoration: _buildInputDecoration(
-                    isDark: isDark,
-                    hintText:
-                        '1. Open Task Manager\n2. Create recurring task\n3. Rotate device to landscape',
-                  ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Steps to reproduce are required.';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // 6. Section 05: Expected vs. Actual Behavior
-              _buildSectionCard(
-                isDark: isDark,
-                sectionNumber: '05',
-                title: 'Diagnostic Contrast',
-                description:
-                    'Compare what you expected against what actually occurred.',
-                icon: LucideIcons.gitCompare,
-                child: Column(
-                  children: [
-                    // Expected Behavior
-                    TextFormField(
-                      controller: _expectedController,
-                      focusNode: _expectedFocusNode,
-                      maxLines: 3,
-                      minLines: 2,
-                      textInputAction: TextInputAction.next,
-                      style: TextStyle(
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight,
-                      ),
-                      decoration: _buildInputDecoration(
-                        isDark: isDark,
-                        labelText: 'Expected Behavior',
-                        hintText: 'What did you expect to happen?',
-                        prefixIcon: const Icon(
-                          LucideIcons.checkCircle2,
-                          color: AppColors.accent,
-                          size: 18,
-                        ),
-                      ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Expected behavior is required.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    // Actual Behavior
-                    TextFormField(
-                      controller: _actualController,
-                      focusNode: _actualFocusNode,
-                      maxLines: 3,
-                      minLines: 2,
-                      textInputAction: TextInputAction.next,
-                      style: TextStyle(
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight,
-                      ),
-                      decoration: _buildInputDecoration(
-                        isDark: isDark,
-                        labelText: 'Actual Behavior',
-                        hintText: 'What actually happened?',
-                        prefixIcon: const Icon(
-                          LucideIcons.xCircle,
-                          color: _diagnosticRed,
-                          size: 18,
-                        ),
-                      ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Actual behavior is required.';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // 7. Section 06: Diagnostic Follow-up (Optional)
-              _buildSectionCard(
-                isDark: isDark,
-                sectionNumber: '06',
-                title: 'Follow-up Contact (Optional)',
-                description:
-                    'Email address if we need additional diagnostic traces.',
-                icon: LucideIcons.mail,
-                child: TextFormField(
-                  controller: _emailController,
-                  focusNode: _emailFocusNode,
-                  keyboardType: TextInputType.emailAddress,
-                  style: TextStyle(
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
-                  ),
-                  decoration: _buildInputDecoration(
-                    isDark: isDark,
-                    hintText: 'engineer@example.com',
-                  ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return null;
-                    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
-                    if (!emailRegex.hasMatch(v.trim())) {
-                      return 'Please enter a valid email address.';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Payload Character Meter
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Diagnostic Payload Size',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isDark
-                          ? AppColors.textMutedDark
-                          : AppColors.textMutedLight,
-                    ),
-                  ),
-                  Text(
-                    '$serializedLength / 5,000 chars',
-                    style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: serializedLength > 5000
-                          ? _diagnosticRed
-                          : (isDark
-                                ? AppColors.textMutedDark
-                                : AppColors.textMutedLight),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // Submit Button
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _diagnosticRed,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: _diagnosticRed.withValues(
-                    alpha: 0.3,
-                  ),
-                  elevation: 2,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusButton),
-                  ),
-                ),
-                onPressed: _isSubmitting ? null : _submitBugReport,
-                child: _isSubmitting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                    : const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(LucideIcons.alertOctagon, size: 18),
-                          SizedBox(width: 8),
-                          Text(
-                            'Submit Bug Report',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
-
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDiagnosticBanner(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-        border: Border.all(
-          color: _diagnosticRed.withValues(alpha: 0.35),
-          width: 1.2,
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: _diagnosticRedDim,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(LucideIcons.cpu, color: _diagnosticRed, size: 22),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _diagnosticRedDim,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        'DIAGNOSTIC PROTOCOL',
-                        style: TextStyle(
-                          color: _diagnosticRed,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? AppColors.darkSurface
-                            : AppColors.lightBgSecondary,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        'v1.3.5',
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textMutedDark,
-                        ),
-                      ),
-                    ),
-                  ],
+                Expanded(
+                  child: _buildDescriptionCard(isDark),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  'Structured Technical Defect Report',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Fill in reproduction steps and behavior contrast to enable rapid root-cause isolation.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                    height: 1.4,
-                  ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: _buildSubmitButton(),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildSectionCard({
-    required bool isDark,
-    required String sectionNumber,
-    required String title,
-    required String description,
-    required IconData icon,
-    required Widget child,
-  }) {
+  Widget _buildSubmitButton() {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: _diagnosticRed,
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: _diagnosticRed.withValues(
+          alpha: 0.3,
+        ),
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+        ),
+      ),
+      onPressed: _isSubmitting ? null : _submitBugReport,
+      child: _isSubmitting
+          ? const SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Colors.white,
+                ),
+              ),
+            )
+          : const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(LucideIcons.alertOctagon, size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'Submit Bug Report',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildDescriptionCard(bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCard : AppColors.lightCard,
         borderRadius: BorderRadius.circular(AppTheme.radiusCard),
@@ -886,31 +473,23 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColors.darkSurface
-                      : AppColors.lightBgSecondary,
-                  borderRadius: BorderRadius.circular(4),
+                  color: _diagnosticRedDim,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
-                  sectionNumber,
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: _diagnosticRed,
-                  ),
+                child: const Icon(
+                  LucideIcons.fileWarning,
+                  size: 16,
+                  color: _diagnosticRed,
                 ),
               ),
-              const SizedBox(width: 8),
-              Icon(icon, size: 16, color: _diagnosticRed),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  title,
+                  'Problem Description',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                     color: isDark
                         ? AppColors.textPrimaryDark
@@ -920,69 +499,47 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
-            description,
+            'Describe the symptoms, error popups, or abnormal behavior.',
             style: TextStyle(
               fontSize: 12,
               color: isDark
                   ? AppColors.textSecondaryDark
                   : AppColors.textSecondaryLight,
+              height: 1.3,
             ),
           ),
-          const SizedBox(height: 12),
-          child,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildModuleDropdown(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.lightBgSecondary,
-        borderRadius: BorderRadius.circular(AppTheme.radiusInput),
-        border: Border.all(
-          color: isDark ? AppColors.borderMedium : AppColors.borderMediumLight,
-        ),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: _selectedModule,
-          isExpanded: true,
-          dropdownColor: isDark ? AppColors.darkCard : AppColors.lightCard,
-          items: FeedbackModuleInfo.modules.map((m) {
-            return DropdownMenuItem<String>(
-              value: m.key,
-              child: Row(
-                children: [
-                  Icon(m.icon, size: 18, color: _diagnosticRed),
-                  const SizedBox(width: 12),
-                  Text(
-                    m.label,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
-                    ),
-                  ),
-                ],
+          const SizedBox(height: 14),
+          Expanded(
+            child: TextFormField(
+              controller: _descriptionController,
+              focusNode: _descFocusNode,
+              expands: true,
+              maxLines: null,
+              minLines: null,
+              textAlignVertical: TextAlignVertical.top,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
               ),
-            );
-          }).toList(),
-          onChanged: (newVal) {
-            if (newVal != null) {
-              AppHaptics.selectionClick();
-              setState(() {
-                _selectedModule = newVal;
-              });
-              _saveDraftDebounced();
-            }
-          },
-        ),
+              decoration: _buildInputDecoration(
+                isDark: isDark,
+                hintText: 'Provide detailed context on what went wrong...',
+                counterText: '${_descriptionController.text.length} / 5,000',
+              ),
+              validator: (v) {
+                if (v == null || v.trim().length < 10) {
+                  return 'Please enter at least 10 characters.';
+                }
+                return null;
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -990,15 +547,11 @@ class _BugReportScreenState extends ConsumerState<BugReportScreen> {
   InputDecoration _buildInputDecoration({
     required bool isDark,
     String? hintText,
-    String? labelText,
     String? counterText,
-    Widget? prefixIcon,
   }) {
     return InputDecoration(
-      labelText: labelText,
       hintText: hintText,
       counterText: counterText,
-      prefixIcon: prefixIcon,
       hintStyle: TextStyle(
         fontSize: 13,
         color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
