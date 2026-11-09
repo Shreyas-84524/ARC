@@ -129,6 +129,15 @@ class FakeMoneyRepository implements MoneyRepository {
 
   @override
   Future<bool> syncPending() async => true;
+  @override
+  bool getAddIncomeToBudget() => false;
+  @override
+  Future<void> setAddIncomeToBudget(bool value) async {}
+  @override
+  bool hasCompletedMoneyOnboarding() => true;
+  @override
+  Future<void> setMoneyOnboardingCompleted(bool value) async {}
+
 }
 
 class FakeSettingsRepository implements SettingsRepository {

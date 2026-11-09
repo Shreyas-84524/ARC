@@ -48,6 +48,18 @@ app.*.map.json
 # Ignore markdown inside lib
 lib/**/*.md
 
+# Non-required markdown files & working docs
+Brain.md
+ai_development_guide.md
+SECURITY_ADMIN_SYSTEM.md
+docs/
+*.md
+!README.md
+!Resources for Design/**
+
+# Scratch and temporary folders
+scratch/
+
 # Cloudflare Workers & Credentials
 .dev.vars
 .dev.vars.*
